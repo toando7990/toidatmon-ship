@@ -1,0 +1,11 @@
+manifest_version = "0.1.0"
+
+[project]
+id = "019fd23a-25a0-71ca-94d0-c614d299aa1d"
+name = "Bunbohue65 Ship"
+
+[workspace]
+include = [ "src/**" ]
+
+[canisters.frontend]
+depends_on = [ "backend" ]

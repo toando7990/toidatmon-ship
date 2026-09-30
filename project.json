@@ -1,0 +1,20 @@
+{
+  "overview": "A multi-partner food ordering and delivery platform where each partner runs their own restaurant chain, menu, and branded storefront on their own subdomain.",
+  "features": [
+    "Each partner gets their own branded storefront on a dedicated subdomain",
+    "Partners manage their own restaurant chain and menus",
+    "Customers order, track, and review their order history per partner",
+    "Staff activate devices scoped to their partner and restaurant",
+    "Central admin creates and manages all partners",
+    "Complete data separation between partners"
+  ],
+  "category": "food-ordering",
+  "tags": [
+    "multi-tenant",
+    "food-delivery",
+    "restaurant",
+    "ordering",
+    "vietnam"
+  ],
+  "last_updated": "2026-09-25T16:58:39.962Z"
+}

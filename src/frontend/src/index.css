@@ -1,0 +1,483 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/assets/fonts/SpaceGrotesk.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --font-display: "Space Grotesk";
+    --font-body: "Plus Jakarta Sans";
+    --font-mono: "JetBrains Mono";
+    --radius: 0.5rem;
+
+    /* Warm cream base — light mode */
+    --background: 0.97 0.012 75;
+    --foreground: 0.2 0.02 50;
+    --card: 0.99 0.008 75;
+    --card-foreground: 0.2 0.02 50;
+    --popover: 0.99 0.008 75;
+    --popover-foreground: 0.2 0.02 50;
+
+    /* Vivid vermillion red — Vietnamese brand primary */
+    --primary: 0.55 0.22 28;
+    --primary-foreground: 0.98 0.008 75;
+
+    --secondary: 0.94 0.018 75;
+    --secondary-foreground: 0.28 0.025 50;
+    --muted: 0.94 0.015 75;
+    --muted-foreground: 0.5 0.02 50;
+
+    --accent: 0.55 0.22 28;
+    --accent-foreground: 0.98 0.008 75;
+
+    --destructive: 0.5 0.22 25;
+    --destructive-foreground: 0.98 0.008 25;
+
+    /* Functional status colors */
+    --success: 0.55 0.16 150;
+    --success-foreground: 0.98 0.01 150;
+    --warning: 0.72 0.16 70;
+    --warning-foreground: 0.2 0.04 70;
+    --info: 0.5 0.16 245;
+    --info-foreground: 0.98 0.01 245;
+
+    --border: 0.89 0.018 75;
+    --input: 0.89 0.018 75;
+    --ring: 0.55 0.22 28;
+
+    --chart-1: 0.55 0.22 28;
+    --chart-2: 0.55 0.16 150;
+    --chart-3: 0.5 0.16 245;
+    --chart-4: 0.72 0.16 70;
+    --chart-5: 0.5 0.22 25;
+
+    --sidebar: 0.985 0.008 75;
+    --sidebar-foreground: 0.2 0.02 50;
+    --sidebar-primary: 0.55 0.22 28;
+    --sidebar-primary-foreground: 0.98 0.008 75;
+    --sidebar-accent: 0.94 0.018 75;
+    --sidebar-accent-foreground: 0.28 0.025 50;
+    --sidebar-border: 0.89 0.018 75;
+    --sidebar-ring: 0.55 0.22 28;
+
+    --gradient-primary: linear-gradient(
+      135deg,
+      oklch(0.55 0.22 28),
+      oklch(0.6 0.2 45)
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      oklch(0.99 0.008 75),
+      oklch(0.96 0.015 75)
+    );
+    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* --- Tenant branding layer (multi-partner) -------------------------------
+       A partner's brand color is applied at runtime by setting these
+       properties on a wrapper element (inline style or a scoped class).
+       Defaults are aliases of the existing brand tokens, so when no partner
+       brand is set the look is byte-identical to the single-tenant app. */
+    --brand-primary: var(--primary);
+    --brand-primary-foreground: var(--primary-foreground);
+    --brand-accent: var(--accent);
+    --brand-accent-foreground: var(--accent-foreground);
+    --brand-surface: var(--card);
+    --brand-surface-foreground: var(--card-foreground);
+    --brand-on-surface-muted: var(--muted-foreground);
+    --brand-ring: var(--ring);
+    /* Neutral partner-logo slot; partner supplies its own image */
+    --brand-logo-size: 2.5rem;
+    --brand-lockup-gap: 0.75rem;
+  }
+
+  .dark {
+    /* Warm charcoal base — dark mode (driver outdoor use) */
+    --background: 0.16 0.015 50;
+    --foreground: 0.93 0.012 60;
+    --card: 0.2 0.018 50;
+    --card-foreground: 0.93 0.012 60;
+    --popover: 0.2 0.018 50;
+    --popover-foreground: 0.93 0.012 60;
+
+    /* Brighter vermillion for dark mode contrast */
+    --primary: 0.68 0.2 32;
+    --primary-foreground: 0.16 0.015 32;
+
+    --secondary: 0.24 0.02 50;
+    --secondary-foreground: 0.85 0.012 60;
+    --muted: 0.24 0.02 50;
+    --muted-foreground: 0.56 0.015 55;
+
+    --accent: 0.68 0.2 32;
+    --accent-foreground: 0.16 0.015 32;
+
+    --destructive: 0.6 0.22 25;
+    --destructive-foreground: 0.16 0.015 25;
+
+    --success: 0.65 0.16 150;
+    --success-foreground: 0.16 0.02 150;
+    --warning: 0.78 0.16 70;
+    --warning-foreground: 0.16 0.04 70;
+    --info: 0.6 0.16 245;
+    --info-foreground: 0.16 0.02 245;
+
+    --border: 0.3 0.02 50;
+    --input: 0.3 0.02 50;
+    --ring: 0.68 0.2 32;
+
+    --chart-1: 0.68 0.2 32;
+    --chart-2: 0.65 0.16 150;
+    --chart-3: 0.6 0.16 245;
+    --chart-4: 0.78 0.16 70;
+    --chart-5: 0.6 0.22 25;
+
+    --sidebar: 0.18 0.018 50;
+    --sidebar-foreground: 0.93 0.012 60;
+    --sidebar-primary: 0.68 0.2 32;
+    --sidebar-primary-foreground: 0.16 0.015 32;
+    --sidebar-accent: 0.24 0.02 50;
+    --sidebar-accent-foreground: 0.85 0.012 60;
+    --sidebar-border: 0.3 0.02 50;
+    --sidebar-ring: 0.68 0.2 32;
+
+    --gradient-primary: linear-gradient(
+      135deg,
+      oklch(0.68 0.2 32),
+      oklch(0.72 0.18 45)
+    );
+    --gradient-subtle: linear-gradient(
+      180deg,
+      oklch(0.2 0.018 50),
+      oklch(0.16 0.015 50)
+    );
+
+    /* Tenant branding layer — same aliases, resolved against dark tokens */
+    --brand-primary: var(--primary);
+    --brand-primary-foreground: var(--primary-foreground);
+    --brand-accent: var(--accent);
+    --brand-accent-foreground: var(--accent-foreground);
+    --brand-surface: var(--card);
+    --brand-surface-foreground: var(--card-foreground);
+    --brand-on-surface-muted: var(--muted-foreground);
+    --brand-ring: var(--ring);
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  .bg-gradient-primary {
+    background-image: var(--gradient-primary);
+  }
+  .bg-gradient-subtle {
+    background-image: var(--gradient-subtle);
+  }
+  .text-gradient-primary {
+    background-image: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Status badge utilities — functional, not decorative */
+  .badge-success {
+    @apply bg-success/15 text-success border-success/30;
+  }
+  .badge-warning {
+    @apply bg-warning/20 text-warning-foreground border-warning/40;
+  }
+  .badge-info {
+    @apply bg-info/15 text-info border-info/30;
+  }
+  .badge-destructive {
+    @apply bg-destructive/15 text-destructive border-destructive/30;
+  }
+}
+
+/* --- Bún Bò Huế 65: theme trắng kem / đỏ / xanh lá lấy từ 3 màu logo,
+   dùng cho trang Đặt hàng. Thay hoàn toàn tông sơn mài đỏ-đậm/vàng cũ. --- */
+.bbh-order-theme {
+  --background: 0.985 0.007 89;
+  --foreground: 0.267 0.013 52;
+  --card: 1 0 90;
+  --card-foreground: 0.267 0.013 52;
+  --popover: 1 0 90;
+  --popover-foreground: 0.267 0.013 52;
+  --primary: 0.527 0.181 30;
+  --primary-foreground: 0.99 0.006 89;
+  --secondary: 0.948 0.02 136;
+  --secondary-foreground: 0.324 0.07 145;
+  --muted: 0.96 0.012 89;
+  --muted-foreground: 0.499 0.021 70;
+  --accent: 0.412 0.096 145;
+  --accent-foreground: 0.99 0.006 89;
+  --destructive: 0.55 0.2 25;
+  --destructive-foreground: 0.98 0.008 25;
+  --border: 0.93 0.016 83;
+  --input: 0.93 0.016 83;
+  --ring: 0.527 0.181 30;
+  --bbh-gold: 0.412 0.096 145;
+  --gradient-primary: linear-gradient(
+    135deg,
+    oklch(0.527 0.181 30),
+    oklch(0.58 0.17 32)
+  );
+  --gradient-subtle: linear-gradient(180deg, oklch(1 0 90), oklch(0.97 0.01 89));
+}
+
+/* --- Bún Bò Huế 65: theme sáng thân thiện cho màn hình xác nhận email / OTP --- */
+.bbh-verify-theme {
+  --background: 0.975 0.014 75;
+  --foreground: 0.24 0.025 50;
+  --card: 0.99 0.008 75;
+  --card-foreground: 0.24 0.025 50;
+  --popover: 0.99 0.008 75;
+  --popover-foreground: 0.24 0.025 50;
+  --primary: 0.55 0.22 28;
+  --primary-foreground: 0.98 0.008 75;
+  --secondary: 0.94 0.018 75;
+  --secondary-foreground: 0.3 0.025 50;
+  --muted: 0.94 0.015 75;
+  --muted-foreground: 0.5 0.02 50;
+  --accent: 0.55 0.22 28;
+  --accent-foreground: 0.98 0.008 75;
+  --destructive: 0.5 0.22 25;
+  --destructive-foreground: 0.98 0.008 25;
+  --success: 0.55 0.16 150;
+  --success-foreground: 0.98 0.01 150;
+  --warning: 0.72 0.16 70;
+  --warning-foreground: 0.2 0.04 70;
+  --info: 0.5 0.16 245;
+  --info-foreground: 0.98 0.01 245;
+  --border: 0.9 0.016 75;
+  --input: 0.9 0.016 75;
+  --ring: 0.55 0.22 28;
+  --bbh-gold: 0.78 0.11 80;
+  --gradient-primary: linear-gradient(
+    135deg,
+    oklch(0.55 0.22 28),
+    oklch(0.6 0.2 45)
+  );
+  --gradient-subtle: linear-gradient(
+    180deg,
+    oklch(0.99 0.008 75),
+    oklch(0.96 0.015 75)
+  );
+}
+
+/* --- Bún Bò Huế 65: theme doanh nghiệp — màn hình quản lý cấp doanh nghiệp
+   (hàng đợi thanh toán, kế toán, báo cáo bán hàng & KM). Nền trung tính lạnh,
+   mật độ thông tin cao, trạng thái thanh toán rõ ràng, giữ vermillion thương hiệu. --- */
+.bbh-enterprise-theme {
+  --background: 0.972 0.006 240;
+  --foreground: 0.22 0.012 250;
+  --card: 0.995 0.004 240;
+  --card-foreground: 0.22 0.012 250;
+  --popover: 0.995 0.004 240;
+  --popover-foreground: 0.22 0.012 250;
+  --primary: 0.53 0.21 28;
+  --primary-foreground: 0.99 0.006 240;
+  --secondary: 0.945 0.008 240;
+  --secondary-foreground: 0.3 0.014 250;
+  --muted: 0.945 0.008 240;
+  --muted-foreground: 0.49 0.015 250;
+  --accent: 0.53 0.21 28;
+  --accent-foreground: 0.99 0.006 240;
+  --destructive: 0.52 0.21 25;
+  --destructive-foreground: 0.99 0.006 25;
+  --success: 0.52 0.15 150;
+  --success-foreground: 0.99 0.006 150;
+  --warning: 0.72 0.15 75;
+  --warning-foreground: 0.2 0.04 75;
+  --info: 0.5 0.15 250;
+  --info-foreground: 0.99 0.006 250;
+  --border: 0.9 0.01 240;
+  --input: 0.9 0.01 240;
+  --ring: 0.53 0.21 28;
+  --sidebar: 0.985 0.005 240;
+  --sidebar-foreground: 0.24 0.012 250;
+  --sidebar-primary: 0.53 0.21 28;
+  --sidebar-primary-foreground: 0.99 0.006 240;
+  --sidebar-accent: 0.945 0.008 240;
+  --sidebar-accent-foreground: 0.3 0.014 250;
+  --sidebar-border: 0.9 0.01 240;
+  --sidebar-ring: 0.53 0.21 28;
+  --chart-1: 0.53 0.21 28;
+  --chart-2: 0.5 0.15 250;
+  --chart-3: 0.52 0.15 150;
+  --chart-4: 0.72 0.15 75;
+  --chart-5: 0.52 0.21 25;
+  --gradient-primary: linear-gradient(
+    135deg,
+    oklch(0.53 0.21 28),
+    oklch(0.58 0.19 35)
+  );
+  --gradient-subtle: linear-gradient(
+    180deg,
+    oklch(0.995 0.004 240),
+    oklch(0.965 0.008 240)
+  );
+}
+
+@layer utilities {
+  /* OTP 6-ô nhập mã — hộp vuông riêng cho từng ký tự */
+  .otp-input {
+    @apply h-14 w-12 rounded-xl border bg-card text-center font-mono text-2xl font-semibold text-foreground transition-smooth focus:border-primary focus:ring-2 focus:ring-ring/40 outline-none;
+  }
+  .otp-input-filled {
+    @apply border-primary bg-primary/5;
+  }
+  .otp-input-error {
+    @apply border-destructive bg-destructive/5 animate-otp-shake;
+  }
+  /* Trạng thái đã xác nhận thành công */
+  .verify-success-mark {
+    @apply inline-flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-success;
+  }
+  /* --- Doanh nghiệp: bảng dữ liệu mật độ cao + thẻ KPI + thanh trạng thái --- */
+  .ent-table-row {
+    @apply border-b border-border text-sm transition-smooth last:border-0 hover:bg-muted/40;
+  }
+  .ent-th {
+    @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .ent-td {
+    @apply px-3 py-2.5 align-middle;
+  }
+  .ent-kpi {
+    @apply rounded-lg border border-border bg-card p-4 shadow-sm;
+  }
+  .ent-kpi-value {
+    @apply font-display text-2xl font-bold tracking-tight text-foreground;
+  }
+  .ent-kpi-label {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+  .ent-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .ent-toolbar {
+    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 shadow-sm;
+  }
+}
+
+/* --- Tenant branding (multi-partner) ------------------------------------
+   Brand scope wrapper: an ancestor element carries the partner's brand
+   overrides; descendants consume --brand-* only. When no partner brand is
+   set the --brand-* defaults fall back to the existing brand tokens. */
+.brand-scope {
+  --brand-primary: var(--primary);
+  --brand-primary-foreground: var(--primary-foreground);
+  --brand-accent: var(--accent);
+  --brand-accent-foreground: var(--accent-foreground);
+  --brand-surface: var(--card);
+  --brand-surface-foreground: var(--card-foreground);
+  --brand-on-surface-muted: var(--muted-foreground);
+  --brand-ring: var(--ring);
+}
+
+@layer utilities {
+  /* Partner-branded storefront header lockup: logo slot + display name */
+  .brand-header {
+    @apply sticky top-0 z-40 border-b border-border;
+    background-color: var(--brand-surface);
+    color: var(--brand-surface-foreground);
+  }
+  .brand-lockup {
+    @apply flex items-center;
+    gap: var(--brand-lockup-gap);
+  }
+  .brand-logo-slot {
+    @apply flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-background;
+    width: var(--brand-logo-size);
+    height: var(--brand-logo-size);
+  }
+  .brand-logo-slot img {
+    @apply h-full w-full object-contain;
+  }
+  /* Monogram fallback when a partner has no logo set */
+  .brand-logo-fallback {
+    @apply flex h-full w-full items-center justify-center font-display text-sm font-bold;
+    background-color: var(--brand-primary);
+    color: var(--brand-primary-foreground);
+  }
+  .brand-name {
+    @apply font-display text-lg font-bold leading-tight tracking-tight;
+  }
+  .brand-subname {
+    @apply text-xs font-medium;
+    color: var(--brand-on-surface-muted);
+  }
+  /* Partner accent rule under the lockup */
+  .brand-accent-rule {
+    @apply h-0.5 w-10 rounded-full;
+    background-color: var(--brand-accent);
+  }
+  /* Small pill marking the active partner context in the header */
+  .brand-partner-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold;
+    border-color: color-mix(in oklch, var(--brand-primary) 30%, transparent);
+    background-color: color-mix(in oklch, var(--brand-primary) 12%, transparent);
+    color: var(--brand-primary);
+  }
+
+  /* --- Partner not found / unavailable notice page --------------------- */
+  .partner-notice {
+    @apply flex min-h-[70vh] items-center justify-center px-6 py-16;
+    background-color: var(--background);
+  }
+  .partner-notice-card {
+    @apply w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-panel;
+  }
+  .partner-notice-mark {
+    @apply mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full;
+    background-color: color-mix(in oklch, var(--warning) 18%, transparent);
+    color: var(--warning);
+  }
+  .partner-notice-title {
+    @apply font-display text-2xl font-bold tracking-tight text-foreground;
+  }
+  .partner-notice-body {
+    @apply mt-2 text-sm leading-relaxed text-muted-foreground;
+  }
+  .partner-notice-slug {
+    @apply mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-3 py-1.5 font-mono text-xs text-muted-foreground;
+  }
+  .partner-notice-actions {
+    @apply mt-6 flex flex-wrap items-center justify-center gap-2;
+  }
+  /* Branded footer strip that carries the partner identity across pages */
+  .brand-footer {
+    @apply border-t border-border bg-muted/40;
+  }
+}

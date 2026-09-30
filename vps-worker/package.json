@@ -1,0 +1,30 @@
+{
+  "name": "bunbohue65-vps-worker",
+  "version": "1.0.0",
+  "description": "VPS worker cho Bunbohue65 — Ahamove + Tingee + Bkav integration, push state to IC canister",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@icp-sdk/core": "^5.3.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "axios": "^1.7.7",
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.14",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.33.5",
+    "tesseract.js": "^7.0.0",
+    "xml2js": "^0.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

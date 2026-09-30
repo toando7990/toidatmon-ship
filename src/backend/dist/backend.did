@@ -1,0 +1,663 @@
+type Voucher = 
+ record {
+   code: text;
+   email: text;
+   endDate: text;
+   issuedAt: int;
+   programCode: text;
+   startDate: text;
+   tenantId: TenantId;
+   used: bool;
+   value: nat;
+ };
+type VerifyResult = 
+ variant {
+   err: text;
+   ok;
+ };
+type Value = 
+ variant {
+   "bool": bool;
+   float: float64;
+   "int": int;
+   "nat": nat;
+   "null";
+   "text": text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UpgradeState = 
+ record {
+   devices: vec DeviceEntry;
+   menus: vec MenuEntry;
+   orders: vec OrderEntry;
+   pendingActivations: vec PendingActivationEntry;
+   restaurantMenuOverrides: vec RestaurantMenuOverrideEntry;
+   restaurants: vec RestaurantEntry;
+ };
+type Timestamp = nat;
+type TimeSlot = 
+ record {
+   durationMinutes: nat;
+   startHour: nat;
+   startMinute: nat;
+ };
+type TenantId = text;
+type Tenant = 
+ record {
+   active: bool;
+   address: text;
+   brandColor: text;
+   companyName: text;
+   createdAt: Timestamp;
+   logoUrl: text;
+   name: text;
+   phone: text;
+   slug: text;
+   taxCode: text;
+   tenantId: TenantId;
+   updatedAt: Timestamp;
+ };
+type StoreHours = 
+ record {
+   closeHour: nat;
+   closeMinute: nat;
+   openHour: nat;
+   openMinute: nat;
+ };
+type SendCodeResult = 
+ variant {
+   err: text;
+   ok;
+ };
+type SalesTier = 
+ record {
+   minSales: nat;
+   voucherValue: nat;
+ };
+type SalesPromo = 
+ record {
+   active: bool;
+   code: text;
+   enabledCounter: bool;
+   endDate: text;
+   monthlyTiers: vec SalesTier;
+   name: text;
+   startDate: text;
+   tenantId: TenantId;
+   termsUrl: text;
+   voucherValidDays: nat;
+   weeklyTiers: vec SalesTier;
+ };
+type Result__1 = 
+ record {
+   hasMore: bool;
+   rows: vec vec Cell;
+ };
+type Result_9 = 
+ variant {
+   err: text;
+   ok: vec SalesPromo;
+ };
+type Result_8 = 
+ variant {
+   err: text;
+   ok: Device;
+ };
+type Result_7 = 
+ variant {
+   err: text;
+   ok;
+ };
+type Result_6 = 
+ variant {
+   err: text;
+   ok: nat;
+ };
+type Result_5 = 
+ variant {
+   err: text;
+   ok: MenuItem;
+ };
+type Result_4 = 
+ variant {
+   err: text;
+   ok: Promotion;
+ };
+type Result_3 = 
+ variant {
+   err: text;
+   ok: RegistrationPromo;
+ };
+type Result_2 = 
+ variant {
+   err: text;
+   ok: Restaurant;
+ };
+type Result_18 = 
+ variant {
+   err: Error;
+   ok;
+ };
+type Result_16 = 
+ variant {
+   err: text;
+   ok: record {
+         discountAmount: nat;
+         promotionCode: text;
+       };
+ };
+type Result_15 = 
+ variant {
+   err: text;
+   ok: PendingActivation;
+ };
+type Result_14 = 
+ variant {
+   err: text;
+   ok: OrderStatus;
+ };
+type Result_13 = 
+ variant {
+   err: text;
+   ok: bool;
+ };
+type Result_12 = 
+ variant {
+   err: text;
+   ok: opt Voucher;
+ };
+type Result_11 = 
+ variant {
+   err: text;
+   ok: vec Promotion;
+ };
+type Result_10 = 
+ variant {
+   err: text;
+   ok: vec RegistrationPromo;
+ };
+type Result_1 = 
+ variant {
+   err: text;
+   ok: SalesPromo;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: Order;
+ };
+type RestaurantMenuOverrideEntry = 
+ record {
+   overrides: vec record {
+                    text;
+                    nat;
+                  };
+   restaurantId: text;
+ };
+type RestaurantId = text;
+type RestaurantEntry = 
+ record {
+   restaurant: Restaurant;
+   restaurantId: text;
+ };
+type Restaurant = 
+ record {
+   address: text;
+   lat: float64;
+   lng: float64;
+   name: text;
+   phone: text;
+   restaurantId: text;
+   tenantId: TenantId;
+   visible: bool;
+ };
+type RegistrationPromo = 
+ record {
+   active: bool;
+   code: text;
+   endDate: text;
+   name: text;
+   startDate: text;
+   tenantId: TenantId;
+   termsUrl: text;
+   voucherValidDays: nat;
+   voucherValue: nat;
+ };
+type Promotion = 
+ record {
+   active: bool;
+   code: text;
+   dailyOrderLimit: nat;
+   daysOfWeek: vec bool;
+   enabledCounter: bool;
+   enabledOnline: bool;
+   endDate: text;
+   name: text;
+   perCustomerDailyLimit: nat;
+   startDate: text;
+   tenantId: TenantId;
+   termsUrl: text;
+   tiers: vec DiscountTier;
+   timeSlots: vec TimeSlot;
+ };
+type PendingActivationEntry = 
+ record {
+   activation: PendingActivation;
+   code: text;
+ };
+type PendingActivation = 
+ record {
+   code: text;
+   createdAt: int;
+   expiresAt: int;
+   restaurantId: text;
+   role: DeviceRole;
+   tenantId: TenantId;
+   used: bool;
+ };
+type PaymentStatus = 
+ variant {
+   expired;
+   paid;
+   refunded;
+   unpaid;
+ };
+type OrderStatus = 
+ record {
+   bookingStatus: BookingStatus;
+   invoiceId: text;
+   invoiceStatus: InvoiceStatus;
+   paymentStatus: PaymentStatus;
+   pdfUrl: text;
+   sharedLink: text;
+   tingeeQrCode: text;
+   tingeeQrId: text;
+ };
+type OrderItem = 
+ record {
+   itemId: text;
+   name: text;
+   price: nat;
+   quantity: nat;
+   unitName: text;
+   vatRate: nat;
+ };
+type OrderId = text;
+type OrderEntry = 
+ record {
+   order: Order;
+   orderId: OrderId;
+ };
+type Order = 
+ record {
+   ahamoveOrderId: text;
+   amount: nat;
+   billId: opt text;
+   bookingStatus: BookingStatus;
+   createdAt: int;
+   cusAddress: text;
+   cusName: text;
+   cusPhone: text;
+   cusTaxCode: text;
+   expireAt: opt nat64;
+   goodsAmount: nat;
+   invoiceId: text;
+   invoiceStatus: InvoiceStatus;
+   items: vec OrderItem;
+   kmDiscountAmount: nat;
+   orderId: text;
+   paymentStatus: PaymentStatus;
+   paymentVerificationImage: text;
+   pdfUrl: text;
+   pickupCode: text;
+   qrCode: opt text;
+   receiverEmail: text;
+   restaurantId: text;
+   sharedLink: text;
+   shippingFee: nat;
+   taxTotal: nat;
+   tenantId: TenantId;
+   tingeeQrCode: text;
+   tingeeQrId: text;
+   updatedAt: int;
+   voucherDiscountAmount: nat;
+ };
+type MenuItem = 
+ record {
+   category: text;
+   image: blob;
+   itemId: text;
+   name: text;
+   price: nat;
+   tenantId: TenantId;
+   unitName: text;
+   vatRate: nat;
+   visible: bool;
+ };
+type MenuEntry = 
+ record {
+   itemId: text;
+   menu: MenuItem;
+ };
+type InvoiceStatus = 
+ variant {
+   failed;
+   invoiced;
+   none;
+ };
+type Hmac = text;
+type Error = 
+ variant {
+   AmbiguousAttribute: record {
+                         field: text;
+                         sources: vec text;
+                       };
+   FrontendOriginMismatch: record {
+                             expected: vec text;
+                             got: text;
+                           };
+   FrontendOriginsNotConfigured;
+   MalformedCandid;
+   MissingField: text;
+   MixedSsoSources: record {
+                      otherKeys: vec text;
+                      ssoKeys: vec text;
+                    };
+   NoAttributes;
+   Stale: record {ageNs: nat;};
+   UnknownNonce;
+   UntrustedSsoSource: record {domain: text;};
+ };
+type EnterpriseRole = 
+ variant {
+   accounting;
+   paymentQueue;
+   salesPromoReporting;
+ };
+type Email = text;
+type DiscountTier = 
+ record {
+   discountAmount: nat;
+   minOrderValue: nat;
+ };
+type DeviceRole = 
+ variant {
+   accounting;
+   admin;
+   cashier;
+   driver;
+   paymentQueue;
+   salesPromoReporting;
+   tenantAdmin;
+ };
+type DeviceId = text;
+type DeviceEntry = 
+ record {
+   device: Device;
+   deviceId: text;
+ };
+type Device = 
+ record {
+   activatedAt: int;
+   active: bool;
+   deviceId: text;
+   name: text;
+   phone: text;
+   restaurantId: text;
+   role: DeviceRole;
+   tenantId: TenantId;
+ };
+type Cell = 
+ record {
+   name: text;
+   value: Value;
+ };
+type BookingStatus = 
+ variant {
+   cancelled;
+   completed;
+   confirmed;
+   pending;
+   pickedUp;
+   shipping;
+ };
+service : {
+  _initialize_access_control: () -> ();
+  _internet_identity_sign_in_finish: () -> (Result_18);
+  _internet_identity_sign_in_start: () -> (blob);
+  activateDevice: (code: text, deviceId: DeviceId, name: text, phone:
+   text) -> (Result_8);
+  addItem: (tenantId: TenantId, deviceId: DeviceId, itemId: text, name: 
+   text, price: nat, unitName: text, vatRate: nat, category: text, image:
+   blob) -> (Result_5);
+  addRestaurant: (tenantId: TenantId, deviceId: DeviceId, restaurantId: 
+   text, name: text, address: text, phone: text, lat: float64, lng:
+   float64) -> (Result_2);
+  applyPromotion: (tenantId: TenantId, email: text, orderAmount: nat, hmac:
+   Hmac) -> (Result_16);
+  applyPromotionCounter: (tenantId: TenantId, orderAmount: nat, hmac:
+   Hmac) -> (Result_16);
+  applyVoucher: (tenantId: TenantId, email: text, code: text, orderAmount:
+   nat, hmac: Hmac) -> (Result_6);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  callerHasEnterpriseRole: (deviceId: DeviceId, tenantId: TenantId, role:
+   EnterpriseRole) -> (bool) query;
+  cancelOrder: (orderId: text, hmac: text) -> (Result);
+  changeOrderRestaurant: (orderId: text, newRestaurantId: text, hmac:
+   text) -> (Result);
+  claimOrderEmail: (tenantId: text, orderId: text, email: text) -> (Result);
+  cleanupExpiredActivations: () -> (nat);
+  cleanupOrderByDevice: (tenantId: text, deviceId: text, orderId: text) ->
+   (Result);
+  countVouchersByProgram: (tenantId: text, programCode: text) -> (nat) query;
+  createOrder: (tenantId: text, orderId: text, restaurantId: text, cusName:
+   text, cusPhone: text, cusAddress: text, cusTaxCode: text, receiverEmail:
+   text, items: vec OrderItem, amount: nat, goodsAmount: nat, shippingFee:
+   nat, taxTotal: nat, ahamoveOrderId: text, tingeeQrId: text, sharedLink:
+   text, tingeeQrCode: text, pickupCode: text, kmDiscountAmount: nat,
+   voucherDiscountAmount: nat, hmac: text) -> (Result);
+  createPromotion: (tenantId: TenantId, deviceId: text, name: text,
+   startDate: text, endDate: text, daysOfWeek: vec bool, timeSlots:
+   vec TimeSlot, dailyOrderLimit: nat, perCustomerDailyLimit: nat, tiers:
+   vec DiscountTier, termsUrl: text) -> (Result_4);
+  createRegistrationPromo: (tenantId: TenantId, deviceId: text, name: 
+   text, startDate: text, endDate: text, voucherValue: nat, voucherValidDays:
+   nat, termsUrl: text) -> (Result_3);
+  createSalesPromo: (tenantId: TenantId, deviceId: text, name: text,
+   startDate: text, endDate: text, weeklyTiers: vec SalesTier, monthlyTiers:
+   vec SalesTier, voucherValidDays: nat, termsUrl: text) -> (Result_1);
+  /// Tạo đối tác mới. Admin trung tâm only.
+  createTenant: (slug: text, name: text, logoUrl: text, companyName: 
+   text, taxCode: text, address: text, phone: text, brandColor: text) ->
+   (variant {
+      err: text;
+      ok: Tenant;
+    });
+  deactivateExpiredPromotions: (hmac: Hmac) -> (Result_6);
+  deleteItem: (tenantId: TenantId, deviceId: DeviceId, itemId: text) ->
+   (Result_7);
+  deletePromotion: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_7);
+  deleteRegistrationPromo: (tenantId: TenantId, deviceId: text, code:
+   text) -> (Result_7);
+  deleteRestaurant: (tenantId: TenantId, deviceId: DeviceId, restaurantId:
+   text) -> (Result_7);
+  deleteSalesPromo: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_7);
+  execute: (qJson: text) -> (Result__1) query;
+  generateActivationCode: (tenantId: TenantId, restaurantId: RestaurantId,
+   role: DeviceRole, deviceId: DeviceId) -> (Result_15);
+  getApiDoc: () -> (text) query;
+  getCallerUserRole: () -> (UserRole) query;
+  /// Returns the canister's own id as text, so the VPS knows which canister
+  /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own
+  /// canister principal at runtime (mo:core/IC.getCanisterId does not exist in
+  /// core 2.6.1).
+  getCanisterIdText: () -> (text) query;
+  getCurrentPromotion: (tenantId: TenantId) -> (opt Promotion) query;
+  getCurrentRegistrationPromo: (tenantId: TenantId) ->
+   (opt RegistrationPromo) query;
+  getCurrentSalesPromo: (tenantId: TenantId) -> (opt SalesPromo) query;
+  getItemImage: (itemId: text) -> (opt blob) query;
+  getKmDailyCount: (tenantId: TenantId, programCode: text) -> (nat) query;
+  getKmUsageCount: (tenantId: TenantId, email: text, programCode: text) ->
+   (nat) query;
+  getMenu: (tenantId: TenantId) -> (vec MenuItem) query;
+  getMenuForRestaurant: (tenantId: TenantId, restaurantId: text) ->
+   (vec MenuItem) query;
+  getOrder: (tenantId: text, orderId: text, deviceId: text) -> (Result);
+  getOrderStatus: (tenantId: text, orderId: text) -> (Result_14) query;
+  getOrdersByEmail: (tenantId: text, email: text, deviceId: text) ->
+   (vec Order);
+  /// Query: return the paymentMode for `tenantId` as its canonical Text
+  /// ("driver" or "customer"). Public — no caller gating; the value is not
+  /// sensitive. A tenant with no explicit config returns the default "driver".
+  getPaymentMode: (tenantId: TenantId) -> (text) query;
+  getPromotionByCode: (tenantId: TenantId, code: text) ->
+   (opt Promotion) query;
+  getRestaurants: (tenantId: TenantId) -> (vec Restaurant) query;
+  /// Query: return the storeHours config for `tenantId`. Public — no caller
+  /// gating; the value is not sensitive and the frontend needs it to render the
+  /// open/close state on both the driver and customer flows. A tenant with no
+  /// explicit config returns the default (00:00–23:59, always open).
+  getStoreHours: (tenantId: TenantId) -> (StoreHours) query;
+  /// Lấy đối tác theo tenantId. Công khai.
+  getTenant: (tenantId: TenantId) -> (opt Tenant) query;
+  /// Lấy đối tác theo slug — frontend dùng để phân giải đối tác từ hostname
+  /// subdomain hoặc tiền tố đường dẫn /<slug>. Công khai.
+  getTenantBySlug: (slug: text) -> (opt Tenant) query;
+  getUpgradeState: () -> (UpgradeState);
+  isCallerAdmin: () -> (bool) query;
+  isEmailVerified: (email: Email) -> (bool) query;
+  isPromotionUsed: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_13) query;
+  isRegistrationPromoUsed: (tenantId: TenantId, deviceId: text, code:
+   text) -> (Result_13) query;
+  isSalesPromoUsed: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_13) query;
+  /// Query: return whether the store of `tenantId` is currently open based on
+  /// the current time. Public — the frontend calls this on both the driver and
+  /// customer flows to decide whether to block order placement and show a
+  /// waiting screen instead of allowing item selection.
+  isStoreOpen: (tenantId: TenantId) -> (bool) query;
+  issueInvoiceByDevice: (tenantId: text, deviceId: text, orderId: text,
+   invoiceId: text, pdfUrl: text) -> (Result);
+  issueSalesBonus: (tenantId: TenantId, email: text, periodType: text,
+   periodKey: text, totalSales: nat, hmac: Hmac) -> (Result_12);
+  listDevicesByRestaurant: (tenantId: TenantId, restaurantId:
+   RestaurantId) -> (vec Device) query;
+  listDevicesByRole: (tenantId: TenantId, role: DeviceRole) ->
+   (vec Device) query;
+  listMenus: (tenantId: TenantId) -> (vec MenuItem) query;
+  listMyVouchers: (tenantId: TenantId, email: text) -> (vec Voucher) query;
+  listOrders: (tenantId: text, deviceId: text) -> (vec Order);
+  /// Query: return today's paid orders for the driver pickup queue — orders with
+  /// paymentStatus=#paid AND bookingStatus=#confirmed (not yet picked up),
+  /// created today (UTC+7 day boundary, same day-retention logic as
+  /// listPendingPaymentOrders). Admin sees the full records WITH PII;
+  /// non-admin/anonymous callers (the driver pickup-queue flow) get the records
+  /// with PII fields blanked, mirroring listPendingPaymentOrders gating.
+  listPaidOrdersForPickup: () -> (vec Order);
+  listPendingPaymentOrders: (tenantId: text, restaurantId: text) ->
+   (vec Order);
+  listPromotions: (tenantId: TenantId, deviceId: text) -> (Result_11) query;
+  listRegistrationPromos: (tenantId: TenantId, deviceId: text) ->
+   (Result_10) query;
+  listRestaurants: (tenantId: TenantId) -> (vec Restaurant) query;
+  listSalesPromos: (tenantId: TenantId, deviceId: text) -> (Result_9) query;
+  /// Liệt kê đối tác. Công khai. activeOnly=true chỉ trả đối tác đang hoạt
+  /// động (caller không phải admin luôn chỉ thấy đối tác đang hoạt động).
+  listTenants: (activeOnly: bool) -> (vec Tenant) query;
+  markPaymentExpired: (orderId: text, hmac: text) -> (Result);
+  /// Admin/driver update: mark an order as #pickedUp (Tài xế đã nhận hàng).
+  /// Only succeeds when the order is currently #confirmed AND #paid; this ends
+  /// the order lifecycle in customer mode. Returns the updated order on
+  /// success, or #err if the caller is not an admin/driver, the order does not
+  /// exist, or the order is not in the required state.
+  markPickedUp: (orderId: text) -> (Result);
+  pruneOldOrdersNow: (hmac: text) -> (Result_6);
+  restoreUpgradeState: ("blob": blob) -> (bool);
+  revokeDevice: (tenantId: TenantId, deviceId: DeviceId, adminDeviceId:
+   DeviceId) -> (Result_8);
+  schema: () -> (text) query;
+  seedMenuItems: (tenantId: TenantId, deviceId: DeviceId) -> (bool);
+  sendKmNotifyEmails: (emails: vec text, subject: text, htmlBody: text, hmac:
+   Hmac) -> (Result_7);
+  sendVerificationCode: (email: Email) -> (SendCodeResult);
+  setItemVisible: (tenantId: TenantId, deviceId: DeviceId, itemId: text,
+   visible: bool) -> (Result_5);
+  /// Admin-only update: set the paymentMode for `tenantId` to "driver" or
+  /// "customer". Rejects any other value with #err. Returns #ok on success,
+  /// #err if the caller is not an admin or the value is invalid. Mirrors
+  /// setVpsSecret in mixins/secret-api.mo.
+  setPaymentMode: (tenantId: TenantId, mode: text) -> (Result_7);
+  setRestaurantPriceOverride: (tenantId: TenantId, deviceId: DeviceId,
+   restaurantId: text, itemId: text, price: nat) -> (Result_7);
+  /// Admin-only update: set the store open/close hours for `tenantId`. Rejects
+  /// any caller that is not an admin with #err. Returns #ok on success, #err if
+  /// the caller is not an admin. Mirrors setPaymentMode in
+  /// mixins/payment-mode-config-api.mo.
+  setStoreHours: (tenantId: TenantId, hours: StoreHours) -> (Result_7);
+  /// Bật/tắt đối tác. Admin trung tâm only.
+  setTenantActive: (tenantId: TenantId, active: bool) ->
+   (variant {
+      err: text;
+      ok: Tenant;
+    });
+  /// Admin-only. Rotates the VPS secret: current `vpsSecret` is moved into
+  /// `vpsSecretPrevious` before `newSecret` is written to `vpsSecret`.
+  /// Returns `#ok` on success, `#err` if the caller is not an admin.
+  setVpsSecret: (newSecret: text) -> (variant {
+                                        err: text;
+                                        ok;
+                                      });
+  snapshotUpgradeState: () -> (blob);
+  stopPromotion: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_4);
+  stopRegistrationPromo: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_3);
+  stopSalesPromo: (tenantId: TenantId, deviceId: text, code: text) ->
+   (Result_1);
+  tryConsumeKmSlot: (tenantId: TenantId, email: text, programCode: text,
+   dailyLimit: nat, hmac: Hmac) -> (Result_6);
+  updateInvoiceStatus: (orderId: OrderId, invoiceStatus: InvoiceStatus,
+   invoiceId: text, pdfUrl: text, hmac: Hmac) -> (Result);
+  updateItem: (tenantId: TenantId, deviceId: DeviceId, itemId: text, name:
+   text, price: nat, unitName: text, vatRate: nat, category: text, image:
+   blob, visible: bool) -> (Result_5);
+  updateOrderQr: (orderId: text, qrCode: opt text, billId: opt text,
+   expireAt: opt nat64, hmac: text) -> (Result);
+  updatePaymentStatus: (orderId: OrderId, paymentStatus: PaymentStatus, hmac:
+   Hmac) -> (Result);
+  updatePromotion: (tenantId: TenantId, deviceId: text, code: text, name:
+   text, startDate: text, endDate: text, daysOfWeek: vec bool, timeSlots:
+   vec TimeSlot, dailyOrderLimit: nat, perCustomerDailyLimit: nat, tiers:
+   vec DiscountTier, active: bool, enabledOnline: bool, enabledCounter: 
+   bool, termsUrl: text) -> (Result_4);
+  updateRegistrationPromo: (tenantId: TenantId, deviceId: text, code: 
+   text, name: text, startDate: text, endDate: text, voucherValue: nat,
+   voucherValidDays: nat, active: bool, termsUrl: text) -> (Result_3);
+  updateRestaurant: (tenantId: TenantId, deviceId: DeviceId, restaurantId:
+   text, name: text, address: text, phone: text, visible: bool, lat: 
+   float64, lng: float64) -> (Result_2);
+  updateSalesPromo: (tenantId: TenantId, deviceId: text, code: text, name:
+   text, startDate: text, endDate: text, weeklyTiers: vec SalesTier,
+   monthlyTiers: vec SalesTier, voucherValidDays: nat, active: bool,
+   enabledCounter: bool, termsUrl: text) -> (Result_1);
+  updateStatus: (orderId: OrderId, bookingStatus: BookingStatus, hmac:
+   Hmac) -> (Result);
+  /// Cập nhật thông tin đối tác. Admin trung tâm only.
+  updateTenant: (tenantId: TenantId, name: text, logoUrl: text, companyName:
+   text, taxCode: text, address: text, phone: text, brandColor: text) ->
+   (variant {
+      err: text;
+      ok: Tenant;
+    });
+  verifyEmailCode: (tenantId: text, email: Email, code: text) ->
+   (VerifyResult);
+}

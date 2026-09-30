@@ -1,0 +1,11 @@
+{
+  "name": "bkav-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Proxy giải mã phản hồi Bkav eHoadon (AES-256-CBC + gzip) — service hệ thống riêng, độc lập với vps-worker chính.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

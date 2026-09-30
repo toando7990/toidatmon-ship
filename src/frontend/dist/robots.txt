@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /driver
+Disallow: /counter
+
+Sitemap: https://www.bunbohue65.com/sitemap.xml
