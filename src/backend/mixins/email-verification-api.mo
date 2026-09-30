@@ -134,7 +134,7 @@ mixin (
     hmac : HmacTypes.Hmac,
   ) : async Result.Result<(), Text> {
     var emailsJoined = "";
-    for (e in emails.vals()) {
+    for (e in emails.values()) {
       emailsJoined := emailsJoined # e # ",";
     };
     let payload = emailsJoined # "|" # subject;

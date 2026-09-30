@@ -50,7 +50,7 @@ mixin (
   };
 
   func hasIssuedSalesVoucher(tenantId : Common.TenantId, code : Text) : Bool {
-    for ((_voucherCode, v) in vouchers.toArray().vals()) {
+    for ((_voucherCode, v) in vouchers.toArray().values()) {
       if (v.tenantId == tenantId and v.programCode == code) { return true };
     };
     false;

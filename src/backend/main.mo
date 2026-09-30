@@ -249,7 +249,7 @@ actor Main {
     // 'Khác' category FOR EVERY TENANT so the VPS can fetch its unit price when
     // computing quotes. Runs on every install/upgrade; no-ops when the item
     // already exists for that tenant.
-    for ((tenantId, _t) in tenants.toArray().vals()) {
+    for ((tenantId, _t) in tenants.toArray().values()) {
       ignore MenuSeedLib.seedMenuItems(menus, tenantId);
     };
   };

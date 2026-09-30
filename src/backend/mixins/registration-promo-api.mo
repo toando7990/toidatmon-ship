@@ -40,7 +40,7 @@ mixin (
   // tra trực tiếp trên Voucher.programCode (field sẵn có, không cần lưu
   // thêm dữ liệu theo dõi riêng). Giới hạn trong 1 đối tác.
   func hasIssuedRegistrationVoucher(tenantId : Common.TenantId, code : Text) : Bool {
-    for ((_voucherCode, v) in vouchers.toArray().vals()) {
+    for ((_voucherCode, v) in vouchers.toArray().values()) {
       if (v.tenantId == tenantId and v.programCode == code) { return true };
     };
     false;
@@ -182,7 +182,7 @@ mixin (
   public query func getCurrentRegistrationPromo(tenantId : Common.TenantId) : async ?RegistrationPromoTypes.RegistrationPromo {
     let now = Time.now();
     let today = RegistrationPromoLib.vnDateKey(now);
-    for ((_code, promo) in registrationPromos.toArray().vals()) {
+    for ((_code, promo) in registrationPromos.toArray().values()) {
       if (promo.tenantId == tenantId and promo.active and today >= promo.startDate and today <= promo.endDate) {
         return ?promo;
       };

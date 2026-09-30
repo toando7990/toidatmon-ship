@@ -65,7 +65,7 @@ module {
   ) : () {
     state.adminAssigned := ref.adminAssigned;
     state.userRoles.clear();
-    for ((p, r) in ref.userRoles.vals()) {
+    for ((p, r) in ref.userRoles.values()) {
       state.userRoles.add(p, r);
     };
   };

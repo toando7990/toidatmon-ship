@@ -180,7 +180,7 @@ module {
     let wd = weekdayIndex(now);
     if (wd >= promo.daysOfWeek.size() or not promo.daysOfWeek[wd]) return false;
     let nowMin = vnMinuteOfDay(now);
-    for (slot in promo.timeSlots.vals()) {
+    for (slot in promo.timeSlots.values()) {
       let startMin = slot.startHour * 60 + slot.startMinute;
       let endMin = startMin + slot.durationMinutes;
       if (nowMin >= startMin and nowMin < endMin) return true;
@@ -196,7 +196,7 @@ module {
     orderAmountInclusiveVat : Nat,
   ) : ?PromotionTypes.DiscountTier {
     var best : ?PromotionTypes.DiscountTier = null;
-    for (tier in promo.tiers.vals()) {
+    for (tier in promo.tiers.values()) {
       if (orderAmountInclusiveVat >= tier.minOrderValue) {
         switch (best) {
           case null { best := ?tier };
@@ -265,7 +265,7 @@ module {
   ) : Nat {
     let today = vnDateKey(now);
     var count = 0;
-    for ((code, p) in store.toArray().vals()) {
+    for ((code, p) in store.toArray().values()) {
       if (p.active and today > p.endDate) {
         let updated : PromotionTypes.Promotion = { p with active = false };
         store.add(code, updated);
