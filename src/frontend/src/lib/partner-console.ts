@@ -30,6 +30,14 @@ export interface OrderPrep {
   handedAt: bigint;
 }
 
+/** Đơn tại quầy: ăn tại quán / mang về + ghi chú cho bếp. */
+export interface KitchenNote {
+  orderId: string;
+  dineIn: boolean;
+  note: string;
+  at: bigint;
+}
+
 type Result<T> = { __kind__: "ok"; ok: T } | { __kind__: "err"; err: string };
 
 interface ConsoleActor {
@@ -64,6 +72,14 @@ interface ConsoleActor {
     stage: "ready" | "handed",
   ): Promise<Result<OrderPrep>>;
   listOrderPrep(tenantId: string): Promise<OrderPrep[]>;
+  setOrderKitchenNote?(
+    tenantId: string,
+    deviceId: string,
+    orderId: string,
+    dineIn: boolean,
+    note: string,
+  ): Promise<Result<KitchenNote>>;
+  listKitchenNotes?(tenantId: string): Promise<KitchenNote[]>;
 }
 
 function api(actor: Backend): ConsoleActor {
@@ -301,6 +317,46 @@ export async function markPrep(
 
 export const listPrep = (actor: Backend, tenantId: string) =>
   api(actor).listOrderPrep(tenantId);
+
+/** Ghi "ăn tại quán / mang về" + ghi chú bếp. Bindings cũ chưa có → bỏ qua. */
+export async function setKitchenNote(
+  actor: Backend,
+  tenantId: string,
+  deviceId: string,
+  orderId: string,
+  dineIn: boolean,
+  note: string,
+) {
+  const fn = api(actor).setOrderKitchenNote;
+  if (typeof fn !== "function") return null;
+  return unwrap(
+    await fn.call(
+      actor,
+      tenantId,
+      credentialFor(deviceId),
+      orderId,
+      dineIn,
+      note.trim(),
+    ),
+  );
+}
+
+export async function listKitchenNotes(
+  actor: Backend,
+  tenantId: string,
+): Promise<KitchenNote[]> {
+  const fn = (actor as unknown as Partial<ConsoleActor>).listKitchenNotes;
+  if (typeof fn !== "function") return [];
+  return fn.call(actor, tenantId);
+}
+
+/** Mã đơn ngắn đọc cho khách / bếp (5 ký tự cuối). */
+export function shortCode(orderId: string): string {
+  return orderId
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(-5)
+    .toUpperCase();
+}
 
 export const listTenantOrders = (
   actor: Backend,

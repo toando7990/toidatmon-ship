@@ -25,6 +25,7 @@ declare module "@point-of-sale/receipt-printer-encoder" {
     newline(value?: number): this;
     line(value: string): this;
     bold(value: boolean): this;
+    size(width: number, height: number): this;
     underline(value: boolean): this;
     align(value: "left" | "center" | "right"): this;
     rule(options?: { style?: "single" | "double"; width?: number }): this;

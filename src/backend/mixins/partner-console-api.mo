@@ -30,6 +30,7 @@ mixin (
   soldOutItems : Types.SoldOutStore,
   orderPrep : Types.PrepStore,
   counterPlanUntil : PlatformParamsTypes.CounterPlanUntilStore,
+  kitchenNotes : Types.KitchenNoteStore,
 ) {
   func isAdmin(caller : Principal) : Bool = AccessControl.isAdmin(accessControlState, caller);
 
@@ -173,5 +174,27 @@ mixin (
   public query func listOrderPrep(tenantId : Common.TenantId) : async [Types.OrderPrep] {
     let since : Int = Time.now() - 2 * 24 * 3600 * 1_000_000_000;
     Lib.listPrep(orderPrep, tenantId, if (since > 0) since.toNat() else 0);
+  };
+
+  /// Máy quầy ghi "Ăn tại quán / Mang về" + ghi chú bếp cho đơn vừa tạo.
+  public shared ({ caller }) func setOrderKitchenNote(
+    tenantId : Common.TenantId,
+    deviceId : Common.DeviceId,
+    orderId : Text,
+    dineIn : Bool,
+    note : Text,
+  ) : async Result.Result<Types.KitchenNote, Text> {
+    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceAuth, deviceId, tenantId))) {
+      return #err("Máy này không có quyền");
+    };
+    if (note.size() > 200) { return #err("Ghi chú tối đa 200 ký tự") };
+    Lib.pruneKitchenNotes(kitchenNotes);
+    #ok(Lib.setKitchenNote(kitchenNotes, tenantId, orderId, dineIn, note));
+  };
+
+  /// Ghi chú bếp các đơn trong 2 ngày gần nhất của 1 đối tác.
+  public query func listKitchenNotes(tenantId : Common.TenantId) : async [Types.KitchenNote] {
+    let since : Int = Time.now() - 2 * 24 * 3600 * 1_000_000_000;
+    Lib.listKitchenNotes(kitchenNotes, tenantId, if (since > 0) since.toNat() else 0);
   };
 };

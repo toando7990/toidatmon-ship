@@ -32,10 +32,20 @@ module {
 
   public type PrepStage = { #ready; #handed };
 
+  /// Đơn bán tại quầy: ăn tại quán hay mang về + ghi chú cho bếp.
+  public type KitchenNote = {
+    orderId : Text;
+    dineIn : Bool;
+    note : Text;
+    at : Common.Timestamp;
+  };
+
   public type SettingsStore = Map.Map<Common.TenantId, PartnerSettings>;
   /// key "tenantId|itemId" → ngày (giờ VN, YYYYMMDD) mà món được báo hết.
   /// Chỉ có hiệu lực trong đúng ngày đó — sáng hôm sau tự "Còn" lại.
   public type SoldOutStore = Map.Map<Text, Nat>;
   /// key "tenantId|orderId"
   public type PrepStore = Map.Map<Text, OrderPrep>;
+  /// key "tenantId|orderId"
+  public type KitchenNoteStore = Map.Map<Text, KitchenNote>;
 };

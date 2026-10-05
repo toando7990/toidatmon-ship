@@ -207,6 +207,11 @@ const partnerConsoleMock = {
     err: "Mock: không hỗ trợ",
   }),
   listOrderPrep: async () => [],
+  setOrderKitchenNote: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  listKitchenNotes: async () => [],
 };
 // Tham số nền tảng + hạn gói bán quầy (mixins/platform-params-api.mo).
 const platformParamsMock = {

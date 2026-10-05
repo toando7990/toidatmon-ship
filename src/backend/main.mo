@@ -103,6 +103,7 @@ actor Main {
   let deviceAuth : DeviceAuthTypes.DeviceAuthState;
   let platformParams : PlatformParamsTypes.ParamStore;
   let counterPlanUntil : PlatformParamsTypes.CounterPlanUntilStore;
+  let kitchenNotes : PartnerConsoleTypes.KitchenNoteStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -314,7 +315,7 @@ actor Main {
   include PromoMaintenanceApi(promotions, registrationPromos, salesPromos, vouchers, secretState);
   include PaymentModeConfigApi(accessControlState, paymentModeState, coreState);
   include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);
-  include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil);
+  include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil, kitchenNotes);
   include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams);
 
   /// Returns the canister's own id as text, so the VPS knows which canister

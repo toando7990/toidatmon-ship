@@ -9,7 +9,7 @@
 
 import type { Device, MenuItem, Restaurant, StoreHours } from "@/backend";
 import { DeviceRole } from "@/backend";
-import { DeviceHeaderProvider } from "@/contexts/DeviceHeaderContext";
+import { CounterSell } from "@/components/CounterSell";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import {
@@ -26,6 +26,7 @@ import {
   getPartnerDevice,
   getPartnerSettings,
   listConsoleDevices,
+  listKitchenNotes,
   listPrep,
   listSoldOut,
   listTenantOrders,
@@ -38,6 +39,7 @@ import {
   setJoinPromo,
   setPaused,
   setSoldOut,
+  shortCode,
   timeOf,
   toConsoleOrders,
   updateMenuItem,
@@ -52,7 +54,7 @@ import {
   getPartnerParams,
 } from "@/lib/platform-params";
 import { cn, imageBytesToDataUrl } from "@/lib/utils";
-import CounterOrder from "@/pages/CounterOrder";
+import { confirmCashPaymentCounter } from "@/lib/vps-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Loader2,
@@ -361,6 +363,27 @@ function OrdersTab({ ctx }: { ctx: Ctx }) {
     enabled: ready,
     refetchInterval: 10_000,
   });
+  const notesQ = useQuery({
+    queryKey: ["console", "kitchenNotes", ctx.tenantId],
+    queryFn: () => listKitchenNotes(actor!, ctx.tenantId),
+    enabled: ready,
+    refetchInterval: 10_000,
+  });
+  const notes = useMemo(
+    () => new Map((notesQ.data ?? []).map((n) => [n.orderId, n])),
+    [notesQ.data],
+  );
+  const cash = useMutation({
+    mutationFn: async (orderId: string) => {
+      const r = await confirmCashPaymentCounter(orderId, ctx.device.deviceId);
+      if (!r.ok) throw new Error(r.message);
+    },
+    onSuccess: () => {
+      toast.success("Đã ghi nhận thu tiền mặt");
+      qc.invalidateQueries({ queryKey: ["console", "orders"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
+  });
   const list = useMemo(
     () => toConsoleOrders(ordersQ.data ?? [], prepQ.data ?? [], branch),
     [ordersQ.data, prepQ.data, branch],
@@ -444,11 +467,7 @@ function OrdersTab({ ctx }: { ctx: Ctx }) {
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-xl font-extrabold tracking-wide">
-                #
-                {o.orderId
-                  .replace(/[^A-Za-z0-9]/g, "")
-                  .slice(-5)
-                  .toUpperCase()}
+                #{shortCode(o.orderId)}
               </span>
               <span className="text-[13px] text-muted-foreground">
                 {timeOf(o.createdAt)}
@@ -465,7 +484,24 @@ function OrdersTab({ ctx }: { ctx: Ctx }) {
                 </li>
               ))}
             </ul>
+            {notes.get(o.orderId) && (
+              <p className="text-[15px]">
+                <span className="mr-1.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-extrabold text-amber-900">
+                  {notes.get(o.orderId)?.dineIn ? "Ăn tại quán" : "Mang về"}
+                </span>
+                {notes.get(o.orderId)?.note}
+              </p>
+            )}
             <p className="text-[13px] text-muted-foreground">{info}</p>
+            {isCounter && !paid && (
+              <BigButton
+                variant="outline"
+                disabled={cash.isPending}
+                onClick={() => cash.mutate(o.orderId)}
+              >
+                Đã thu tiền mặt {formatVnd(o.amount)}
+              </BigButton>
+            )}
             {next && (
               <BigButton
                 disabled={act.isPending}
@@ -530,9 +566,6 @@ function FeesCard({ params }: { params: EffectiveParam[] }) {
 // ---------- Bán quầy ----------
 
 function CounterTab({ ctx }: { ctx: Ctx }) {
-  // Màn bán quầy (CounterOrder) đọc thiết bị từ khoá riêng của nó khi mở —
-  // ghi sẵn để không phải nhập mã lần hai.
-  useState(() => saveConsoleDevice(ctx.device));
   if (!ctx.settings?.counterPlan) {
     return (
       <div
@@ -579,12 +612,76 @@ function CounterTab({ ctx }: { ctx: Ctx }) {
       </div>
     );
   }
-  return (
-    <DeviceHeaderProvider>
-      <div className="-mx-4">
-        <CounterOrder />
+  return <CounterBranch ctx={ctx} />;
+}
+
+const BRANCH_KEY = "tdm_counter_branch";
+
+/** Máy Chủ quán không gắn chi nhánh → chọn chi nhánh bán (nhớ trên máy). */
+function CounterBranch({ ctx }: { ctx: Ctx }) {
+  const { actor, isFetching } = useCanister();
+  const fixed = ctx.device.restaurantId;
+  const restQ = useQuery({
+    queryKey: ["console", "restaurants", ctx.tenantId],
+    queryFn: () => actor!.listRestaurants(ctx.tenantId),
+    enabled: !!actor && !isFetching && !fixed,
+  });
+  const [picked, setPicked] = useState<string>(() => {
+    try {
+      return localStorage.getItem(BRANCH_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const rests = (restQ.data ?? []).filter((r) => r.visible);
+  const branch =
+    fixed ||
+    (rests.length === 1
+      ? rests[0].restaurantId
+      : rests.some((r) => r.restaurantId === picked)
+        ? picked
+        : "");
+
+  if (!branch) {
+    if (restQ.isLoading) {
+      return (
+        <p className="py-8 text-center text-muted-foreground">Đang tải…</p>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-2.5 py-2">
+        <h2 className="text-lg font-extrabold">Máy này bán ở chi nhánh nào?</h2>
+        {rests.length === 0 && (
+          <p className="text-muted-foreground">
+            Quán chưa có chi nhánh nào đang mở.
+          </p>
+        )}
+        {rests.map((r) => (
+          <BigButton
+            key={r.restaurantId}
+            variant="outline"
+            onClick={() => {
+              setPicked(r.restaurantId);
+              try {
+                localStorage.setItem(BRANCH_KEY, r.restaurantId);
+              } catch {
+                /* bỏ qua */
+              }
+            }}
+          >
+            {r.name}
+          </BigButton>
+        ))}
       </div>
-    </DeviceHeaderProvider>
+    );
+  }
+  return (
+    <CounterSell
+      tenantId={ctx.tenantId}
+      tenantName={ctx.tenantName}
+      device={ctx.device}
+      restaurantId={branch}
+    />
   );
 }
 

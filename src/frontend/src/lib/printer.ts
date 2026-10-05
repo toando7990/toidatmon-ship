@@ -302,3 +302,49 @@ export async function printReceipt(input: PrintReceiptInput): Promise<void> {
   const bytes = buildReceiptBytes(input);
   await sendBytes(bytes);
 }
+
+// ---- Phiếu bếp (bán tại quầy) ----
+
+export interface KitchenTicketInput {
+  shopName: string;
+  code: string;
+  dineIn: boolean;
+  note: string;
+  lines: { name: string; qty: number }[];
+  paidLabel: string;
+  columns?: 32 | 42 | 48;
+}
+
+/** Phiếu bếp: mã đơn to, ăn tại quán / mang về, món + ghi chú. */
+export function buildKitchenTicketBytes(input: KitchenTicketInput): Uint8Array {
+  const { columns = 48 } = input;
+  const encoder = new ReceiptPrinterEncoder({
+    language: "esc-pos",
+    columns,
+    codepageMapping: { windows1258: 27 },
+  });
+  encoder.initialize().codepage("windows1258");
+  encoder
+    .align("center")
+    .line(input.shopName)
+    .bold(true)
+    .size(2, 2)
+    .line(`#${input.code}`)
+    .size(1, 1)
+    .line(input.dineIn ? "ĂN TẠI QUÁN" : "MANG VỀ")
+    .bold(false)
+    .line(formatDateTime(Date.now()))
+    .align("left")
+    .rule();
+  for (const l of input.lines) {
+    encoder.bold(true).text(`${l.qty} x `).bold(false).line(l.name);
+  }
+  encoder.rule();
+  if (input.note) encoder.bold(true).line(`Ghi chú: ${input.note}`).bold(false);
+  encoder.line(input.paidLabel).newline().newline().cut();
+  return encoder.encode();
+}
+
+export async function printKitchenTicket(input: KitchenTicketInput) {
+  await sendBytes(buildKitchenTicketBytes(input));
+}

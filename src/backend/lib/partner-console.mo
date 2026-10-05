@@ -118,4 +118,27 @@ module {
     ).map(func((k : Text, _p : Types.OrderPrep)) : Text = k).toArray();
     for (k in stale.values()) { store.remove(k) };
   };
+
+  // ---- Ghi chú bếp của đơn tại quầy ----
+
+  public func setKitchenNote(store : Types.KitchenNoteStore, tenantId : Text, orderId : Text, dineIn : Bool, note : Text) : Types.KitchenNote {
+    let n : Types.KitchenNote = { orderId; dineIn; note; at = Time.now().toNat() };
+    store.add(key(tenantId, orderId), n);
+    n;
+  };
+
+  public func listKitchenNotes(store : Types.KitchenNoteStore, tenantId : Text, since : Nat) : [Types.KitchenNote] {
+    let prefix = tenantId # "|";
+    store.entries().filter(
+      func((k, n) : (Text, Types.KitchenNote)) : Bool { k.startsWith(#text prefix) and n.at >= since }
+    ).map(func((_, n) : (Text, Types.KitchenNote)) : Types.KitchenNote = n).toArray();
+  };
+
+  /// Bỏ ghi chú cũ hơn 2 ngày.
+  public func pruneKitchenNotes(store : Types.KitchenNoteStore) {
+    let since : Int = Time.now() - 2 * DAY_NS();
+    if (since <= 0) return;
+    let old = store.entries().filter(func((_, n) : (Text, Types.KitchenNote)) : Bool { n.at < since.toNat() }).map(func((k, _) : (Text, Types.KitchenNote)) : Text = k).toArray();
+    for (k in old.values()) { store.remove(k) };
+  };
 };
