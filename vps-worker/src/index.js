@@ -66,7 +66,22 @@ app.use(express.json({
   limit: '2mb',
 }));
 
-app.use(cors({ origin: CORS_ORIGIN === '*' ? true : CORS_ORIGIN.split(',') }));
+// CORS_ORIGIN: danh sách cách nhau dấu phẩy; hỗ trợ ký tự đại diện cho
+// tên miền con của đối tác, vd "https://toidatmon.vn,https://*.toidatmon.vn".
+function corsMatcher(spec) {
+  if (spec === '*') return true;
+  const rules = spec.split(',').map((x) => x.trim()).filter(Boolean).map((x) =>
+    x.includes('*')
+      ? new RegExp('^' + x.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[a-z0-9-]+') + '$', 'i')
+      : x,
+  );
+  return (origin, cb) => {
+    if (!origin) return cb(null, true); // curl / máy chủ gọi máy chủ
+    const ok = rules.some((r) => (typeof r === 'string' ? r === origin : r.test(origin)));
+    cb(null, ok);
+  };
+}
+app.use(cors({ origin: corsMatcher(CORS_ORIGIN) }));
 
 // Static uploads
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });

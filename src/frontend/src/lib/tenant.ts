@@ -13,7 +13,10 @@
 // hidden slug resolves to a not-found state that the app renders as a notice
 // page, never as an empty screen.
 
-export const PARTNER_ROOT_DOMAIN = "toidatmon.com";
+/** Tên miền chính (hiển thị, đường dẫn gửi quán): ten-quan.toidatmon.vn */
+export const PARTNER_ROOT_DOMAIN = "toidatmon.vn";
+/** Tên miền được nhận diện quán từ tên miền con (giữ .com cho đường cũ). */
+export const PARTNER_ROOT_DOMAINS = ["toidatmon.vn", "toidatmon.com"];
 
 // Slug shape: lowercase letters, digits and single hyphens. Kept deliberately
 // strict so a path segment like "admin" or "assets" is never mistaken for a
@@ -66,8 +69,9 @@ export function slugFromHostname(hostname: string): string | null {
   if (typeof hostname !== "string") return null;
   const host = hostname.trim().toLowerCase().split(":")[0];
   if (host === "" || host === "localhost") return null;
-  if (!host.endsWith(`.${PARTNER_ROOT_DOMAIN}`)) return null;
-  const sub = host.slice(0, host.length - PARTNER_ROOT_DOMAIN.length - 1);
+  const root = PARTNER_ROOT_DOMAINS.find((d) => host.endsWith(`.${d}`));
+  if (!root) return null;
+  const sub = host.slice(0, host.length - root.length - 1);
   if (sub === "" || sub === "www") return null;
   // Only a single-label subdomain is a partner (phoba.toidatmon.com). A
   // multi-label host (a.b.toidatmon.com) is not a partner host.

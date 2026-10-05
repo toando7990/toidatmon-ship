@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useGetStoreHours, useIsStoreOpen } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
+import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
 import { tenantBrandStyle, tenantMonogram } from "@/lib/tenant-branding";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
@@ -380,7 +381,7 @@ function LayoutInner({ children }: { children: ReactNode }) {
                 <span className="brand-name truncate">{brandName}</span>
                 {tenant ? (
                   <span className="brand-subname truncate">
-                    {tenant.slug}.toidatmon.com
+                    {tenant.slug}.{PARTNER_ROOT_DOMAIN}
                   </span>
                 ) : (
                   <span className="brand-subname truncate">Ship</span>

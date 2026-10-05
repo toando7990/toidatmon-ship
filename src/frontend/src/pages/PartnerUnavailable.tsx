@@ -3,13 +3,16 @@
 // with the attempted host and a way back to the home page.
 
 import { useTenant } from "@/hooks/useTenant";
+import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Home } from "lucide-react";
 
 export function PartnerUnavailable() {
   const { slug } = useTenant();
   const host =
-    typeof window !== "undefined" ? window.location.hostname : "toidatmon.com";
+    typeof window !== "undefined"
+      ? window.location.hostname
+      : PARTNER_ROOT_DOMAIN;
 
   return (
     <section className="partner-notice" data-ocid="partner.notice">
@@ -25,7 +28,7 @@ export function PartnerUnavailable() {
           Vui lòng kiểm tra lại đường dẫn, hoặc quay về trang chủ để tiếp tục.
         </p>
         <p className="partner-notice-slug" data-ocid="partner.notice.slug">
-          {slug ? `${slug}.toidatmon.com` : host}
+          {slug ? `${slug}.${PARTNER_ROOT_DOMAIN}` : host}
         </p>
         <div className="partner-notice-actions">
           <Link
