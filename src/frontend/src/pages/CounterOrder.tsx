@@ -53,8 +53,10 @@ import {
   useCurrentPromotion,
   useMenuForRestaurant,
   useSoldOutToday,
+  useTenantId,
 } from "@/hooks/useQueries";
 import { getOrder as getOrderFn, useCanister } from "@/lib/canister";
+import { credentialFor } from "@/lib/device-credential";
 import { reconnectPrinter } from "@/lib/printer";
 import { create as vpsCreate } from "@/lib/vps-client";
 import type { CreateOrderPayload } from "@/types";
@@ -190,6 +192,7 @@ export default function CounterOrder() {
   const [deviceName, setDeviceName] = useState<string>(stored?.name ?? "");
 
   const { actor } = useCanister();
+  const tenantId = useTenantId();
   const { setDeviceHeader } = useDeviceHeader();
 
   // Đẩy tên/mã thiết bị lên header dùng chung (Layout.tsx) — thay cho
@@ -347,13 +350,19 @@ export default function CounterOrder() {
         shippingFee: 0,
         ahamoveOrderId: "",
         isCounterOrder: true,
+        deviceCredential: credentialFor(deviceId),
       };
-      const res = await vpsCreate(payload);
+      const res = await vpsCreate(payload, tenantId);
       if (!res.ok) {
         throw new Error(res.error ?? "VPS từ chối tạo đơn.");
       }
       // Lấy đầy đủ Order từ canister để CounterQRDisplay có amount/paymentStatus.
-      const order = await getOrderFn(actor, res.orderId);
+      const order = await getOrderFn(
+        actor,
+        res.orderId,
+        deviceId ?? "",
+        tenantId,
+      );
       setActiveOrder(order);
       toast.success("Đặt đơn thành công!", {
         description: `Mã đơn: ${res.orderId}`,

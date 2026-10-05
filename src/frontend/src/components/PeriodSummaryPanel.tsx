@@ -47,13 +47,13 @@ export interface PeriodSummaryPanelProps {
 }
 
 export function PeriodSummaryPanel({ email, period }: PeriodSummaryPanelProps) {
+  const tenantId = useTenantId();
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["periodSummary", email, period],
-    queryFn: () => getPeriodSummary(email, period),
+    queryKey: ["periodSummary", email, period, tenantId],
+    queryFn: () => getPeriodSummary(email, period, tenantId),
     refetchOnWindowFocus: false,
   });
   const { data: salesPromo } = useCurrentSalesPromo();
-  const tenantId = useTenantId();
 
   const total = data?.total ?? 0;
   const orders = (data?.orders ?? []).map((h) => toOrder(h, tenantId));

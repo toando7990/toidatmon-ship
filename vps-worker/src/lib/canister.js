@@ -13,6 +13,10 @@ const CANISTER_ID = process.env.CANISTER_ID;
 const IC_HOST = process.env.IC_HOST || 'http://127.0.0.1:4943';
 const VPS_SECRET = process.env.VPS_SECRET;
 
+// Đối tác mặc định (đơn cũ trước khi VPS biết nhiều đối tác, và request
+// không gửi tenantId). tenantId = slug đã chuẩn hoá, xem lib/tenant.mo.
+const DEFAULT_TENANT_ID = (process.env.DEFAULT_TENANT_ID || 'bunbohue65').trim();
+
 if (!CANISTER_ID) throw new Error('CANISTER_ID env var required');
 if (!VPS_SECRET) throw new Error('VPS_SECRET env var required');
 
@@ -70,20 +74,18 @@ const IDL_FACTORY = ({ IDL }) => {
   const InvoiceStatus = IDL.Variant({
     none: IDL.Null, invoiced: IDL.Null, failed: IDL.Null,
   });
-  // EnterpriseRole — dùng cho callerHasEnterpriseRole (kiểm tra role trước
-  // khi trả dữ liệu toàn chuỗi cho route /orders/enterprise-history mới).
-  const EnterpriseRole = IDL.Variant({
-    paymentQueue: IDL.Null, accounting: IDL.Null, salesPromoReporting: IDL.Null,
-  });
-  // DeviceRole/Device — dùng cho listDevicesByRestaurant (route mới
-  // /order/:id/confirm-cash-counter: xác nhận deviceId gọi tới là thiết bị
-  // /counter ĐANG active của ĐÚNG nhà hàng, trước khi cho đánh dấu 1 đơn là
-  // đã thanh toán tiền mặt).
+  // DeviceRole/Device — dùng cho getPartnerDevice (lib/device-guard.js,
+  // routes/cash-payment.js, routes/create.js): biết máy gọi tới thuộc đối tác
+  // nào, vai trò gì trước khi cho xem/sửa dữ liệu.
+  // tenantAdmin = Chủ quán (trang /quan-ly). Thiếu biến thể nào ở đây là
+  // decode Device thất bại.
   const DeviceRole = IDL.Variant({
     accounting: IDL.Null, paymentQueue: IDL.Null, admin: IDL.Null,
     salesPromoReporting: IDL.Null, cashier: IDL.Null, driver: IDL.Null,
+    tenantAdmin: IDL.Null,
   });
   const Device = IDL.Record({
+    tenantId: IDL.Text,
     active: IDL.Bool,
     activatedAt: IDL.Int,
     name: IDL.Text,
@@ -159,9 +161,14 @@ const IDL_FACTORY = ({ IDL }) => {
     dailyOrderLimit: IDL.Nat, perCustomerDailyLimit: IDL.Nat,
     tiers: IDL.Vec(DiscountTier), active: IDL.Bool,
   });
+  // Chỉ khai các field VPS cần — candid cho phép bản ghi trả về có thêm field.
+  const TenantSummary = IDL.Record({
+    tenantId: IDL.Text, slug: IDL.Text, name: IDL.Text, active: IDL.Bool,
+  });
   return IDL.Service({
+    // Mọi lệnh theo đối tác nhận tenantId ĐẦU TIÊN (khớp backend nhiều đối tác).
     createOrder: IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text,
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text,
        IDL.Vec(OrderItem), IDL.Nat, IDL.Nat, IDL.Nat, IDL.Nat,
        IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Nat, IDL.Text],
       [ResultOrder], [],
@@ -181,37 +188,40 @@ const IDL_FACTORY = ({ IDL }) => {
     markPaymentExpired: IDL.Func(
       [IDL.Text, IDL.Text], [ResultOrder], [],
     ),
-    listPendingPaymentOrders: IDL.Func([IDL.Text], [IDL.Vec(Order)], []),
+    listPendingPaymentOrders: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(Order)], []),
     cancelOrder: IDL.Func([IDL.Text, IDL.Text], [ResultOrder], []),
     changeOrderRestaurant: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [ResultOrder], []),
-    getOrderStatus: IDL.Func([IDL.Text], [ResultOrderStatus], ['query']),
-    isStoreOpen: IDL.Func([], [IDL.Bool], ['query']),
-    callerHasEnterpriseRole: IDL.Func([IDL.Text, EnterpriseRole], [IDL.Bool], ['query']),
-    listDevicesByRestaurant: IDL.Func([IDL.Text], [IDL.Vec(Device)], ['query']),
-    listRestaurants: IDL.Func([], [IDL.Vec(Restaurant)], ['query']),
+    getOrderStatus: IDL.Func([IDL.Text, IDL.Text], [ResultOrderStatus], ['query']),
+    isStoreOpen: IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+    // Tra thiết bị theo thẻ xác thực "deviceId~khoá" (giai đoạn 1 bảo mật thiết bị).
+    getPartnerDevice: IDL.Func([IDL.Text], [IDL.Opt(Device)], ['query']),
+    listTenants: IDL.Func([IDL.Bool], [IDL.Vec(TenantSummary)], ['query']),
+    // counterPlan ở đây đã tính hạn gói (mixins/partner-console-api.mo).
+    getPartnerSettings: IDL.Func([IDL.Text], [IDL.Record({ counterPlan: IDL.Bool, paused: IDL.Bool })], ['query']),
+    listRestaurants: IDL.Func([IDL.Text], [IDL.Vec(Restaurant)], ['query']),
     isEmailVerified: IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     sendKmNotifyEmails: IDL.Func(
       [IDL.Vec(IDL.Text), IDL.Text, IDL.Text, IDL.Text],
       [IDL.Variant({ ok: IDL.Null, err: IDL.Text })],
       [],
     ),
-    getMenuForRestaurant: IDL.Func([IDL.Text], [IDL.Vec(MenuItemRecord)], ['query']),
-    getPaymentMode: IDL.Func([], [IDL.Text], ['query']),
-    getCurrentPromotion: IDL.Func([], [IDL.Opt(Promotion)], ['query']),
-    getPromotionByCode: IDL.Func([IDL.Text], [IDL.Opt(Promotion)], ['query']),
+    getMenuForRestaurant: IDL.Func([IDL.Text, IDL.Text], [IDL.Vec(MenuItemRecord)], ['query']),
+    getPaymentMode: IDL.Func([IDL.Text], [IDL.Text], ['query']),
+    getCurrentPromotion: IDL.Func([IDL.Text], [IDL.Opt(Promotion)], ['query']),
+    getPromotionByCode: IDL.Func([IDL.Text, IDL.Text], [IDL.Opt(Promotion)], ['query']),
     applyPromotion: IDL.Func(
-      [IDL.Text, IDL.Nat, IDL.Text],
+      [IDL.Text, IDL.Text, IDL.Nat, IDL.Text],
       [IDL.Variant({ ok: IDL.Record({ promotionCode: IDL.Text, discountAmount: IDL.Nat }), err: IDL.Text })],
       [],
     ),
     applyPromotionCounter: IDL.Func(
-      [IDL.Nat, IDL.Text],
+      [IDL.Text, IDL.Nat, IDL.Text],
       [IDL.Variant({ ok: IDL.Record({ promotionCode: IDL.Text, discountAmount: IDL.Nat }), err: IDL.Text })],
       [],
     ),
-    claimOrderEmail: IDL.Func([IDL.Text, IDL.Text], [ResultOrder], []),
+    claimOrderEmail: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [ResultOrder], []),
     issueSalesBonus: IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text],
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text],
       [IDL.Variant({
         ok: IDL.Opt(IDL.Record({
           code: IDL.Text, programCode: IDL.Text, email: IDL.Text, value: IDL.Nat,
@@ -232,12 +242,17 @@ const IDL_FACTORY = ({ IDL }) => {
       [],
     ),
     applyVoucher: IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Nat, IDL.Text],
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text],
       [IDL.Variant({ ok: IDL.Nat, err: IDL.Text })],
       [],
     ),
   });
 };
+
+function tenantOr(tenantId) {
+  const t = String(tenantId || '').trim();
+  return t || DEFAULT_TENANT_ID;
+}
 
 let _actor = null;
 function getActor() {
@@ -276,7 +291,7 @@ async function createOrder(order) {
     VPS_SECRET, order.orderId, order.restaurantId, amountInt, goodsAmountInt,
   );
   const result = await actor.createOrder(
-    order.orderId, order.restaurantId,
+    tenantOr(order.tenantId), order.orderId, order.restaurantId,
     order.cusName, order.cusPhone, order.cusAddress, order.cusTaxCode, order.receiverEmail,
     order.items.map((it) => ({
       itemId: it.itemId, name: it.name, price: BigInt(Math.round(Number(it.price))),
@@ -337,63 +352,63 @@ async function markPaymentExpired(orderId) {
 
 // getOrderStatus — query (frontend poll 5s có thể gọi trực tiếp canister,
 // nhưng VPS cũng dùng cho reconciliation).
-async function getOrderStatus(orderId) {
+async function getOrderStatus(tenantId, orderId) {
   const actor = getActor();
-  return await actor.getOrderStatus(orderId);
+  return await actor.getOrderStatus(tenantOr(tenantId), orderId);
 }
 
 // isStoreOpen — query, đã có sẵn ở canister (mixins/store-hours-config-
 // api.mo), dùng cho lib/sync.js: KHÔNG auto-cancel đơn "chưa từng có QR"
 // khi đang trong giờ mở cửa (đợi khách/tài xế xử lý trong giờ hoạt động
 // bình thường) — chỉ huỷ khi NGOÀI giờ mở cửa.
-async function isStoreOpen() {
+async function isStoreOpen(tenantId) {
   const actor = getActor();
-  return await actor.isStoreOpen();
+  return await actor.isStoreOpen(tenantOr(tenantId));
 }
 
-// callerHasEnterpriseRole — query đã có sẵn ở canister (mixins/devices-
-// api.mo), dùng cho route mới /orders/enterprise-history: kiểm tra deviceId
-// có đúng role accounting HAY salesPromoReporting không, TRƯỚC KHI trả về
-// dữ liệu đơn hàng TOÀN BỘ chuỗi (nhạy cảm — tên khách, SĐT, doanh thu mọi
-// nhà hàng) — không dùng HMAC vì đây là thiết bị doanh nghiệp gọi trực tiếp
-// từ trình duyệt, không phải VPS-nội-bộ. Gọi CẢ 2 role (Promise.all) vì
-// canister method chỉ nhận đúng 1 role mỗi lần — chỉ cần 1 trong 2 đúng.
-async function callerHasEnterpriseRole(deviceId) {
+// getDeviceByCredential — tra thiết bị theo thẻ "deviceId~khoá" mà trình
+// duyệt gửi (lib/device-credential.ts). Canister tự kiểm khoá (máy cũ chưa có
+// khoá được chấp nhận trong thời gian ân hạn). Trả Device hoặc null (sai khoá,
+// không tồn tại, đã bị gỡ). Device có tenantId/role/restaurantId để route giới
+// hạn dữ liệu đúng đối tác.
+async function getDeviceByCredential(credential) {
   const actor = getActor();
-  const [isAccounting, isSalesPromoReporting] = await Promise.all([
-    actor.callerHasEnterpriseRole(deviceId, { accounting: null }),
-    actor.callerHasEnterpriseRole(deviceId, { salesPromoReporting: null }),
-  ]);
-  return isAccounting || isSalesPromoReporting;
+  const r = await actor.getPartnerDevice(String(credential || ''));
+  const d = Array.isArray(r) ? r[0] : r;
+  if (!d || !d.active) return null;
+  return { ...d, role: Object.keys(d.role)[0] };
 }
 
-// Chỉ vai trò Kế toán (#accounting) — dùng cho các THAO TÁC GHI (dọn dẹp /
-// ghi nhận hoá đơn) ở routes/enterprise-actions.js, khớp đúng quyền
-// canister yêu cầu cho cleanupOrderByDevice/issueInvoiceByDevice (Báo cáo
-// bán hàng & KM chỉ được XEM, không được ghi).
-async function deviceHasAccountingRole(deviceId) {
+// Quán đang có gói bán tại quầy (đã tính hạn).
+async function getCounterPlanActive(tenantId) {
   const actor = getActor();
-  return await actor.callerHasEnterpriseRole(deviceId, { accounting: null });
+  const st = await actor.getPartnerSettings(tenantOr(tenantId));
+  return !!st.counterPlan;
 }
 
-// listDevicesByRestaurant — query có sẵn ở canister, dùng cho route mới
-// POST /order/:id/confirm-cash-counter: xác nhận deviceId gọi tới thực sự
-// là 1 thiết bị ĐANG active của ĐÚNG nhà hàng đang xử lý đơn (không cho
-// thiết bị nhà hàng A đánh dấu tiền mặt cho đơn của nhà hàng B), trước khi
-// cho phép đánh dấu đã thanh toán tiền mặt — không có bước đối chiếu tiền
-// thật nào khác (đã xác nhận với người dùng: đơn tiền mặt vẫn được tính
-// vào doanh thu nên có thể kiểm soát được qua đối soát định kỳ).
-async function listDevicesByRestaurant(restaurantId) {
+// Danh sách đối tác đang hoạt động (cron chạy lần lượt cho từng quán).
+// Nhớ 10 phút — danh sách đối tác ít thay đổi, cron gọi mỗi phút.
+let _tenantsCache = null;
+async function listActiveTenants() {
+  if (_tenantsCache && _tenantsCache.expiresAt > Date.now()) return _tenantsCache.rows;
   const actor = getActor();
-  return await actor.listDevicesByRestaurant(restaurantId);
+  const all = await actor.listTenants(true);
+  let rows = all.filter((t) => t.active).map((t) => ({ tenantId: t.tenantId, name: t.name }));
+  if (rows.length === 0) rows = [{ tenantId: DEFAULT_TENANT_ID, name: DEFAULT_TENANT_ID }];
+  _tenantsCache = { rows, expiresAt: Date.now() + 10 * 60 * 1000 };
+  return rows;
+}
+
+async function listActiveTenantIds() {
+  return (await listActiveTenants()).map((t) => t.tenantId);
 }
 
 // listRestaurants — query có sẵn ở canister, dùng cho route mới POST
 // /quote: cần toạ độ (lat/lng) nhà hàng để gọi Lalamove "Get Quotation"
 // làm điểm lấy hàng.
-async function listRestaurants() {
+async function listRestaurants(tenantId) {
   const actor = getActor();
-  return await actor.listRestaurants();
+  return await actor.listRestaurants(tenantOr(tenantId));
 }
 
 // isEmailVerified — query, dùng để CHẶN THẬT ở tầng VPS (routes/customers.js
@@ -424,9 +439,9 @@ async function sendKmNotifyEmails(emails, subject, htmlBody, hmac) {
 // frontend (bindgen) LUÔN khai ĐÚNG [] — chỉ riêng file viết tay này
 // (không qua build tool tự động) mới có nguy cơ bị lệch mỗi khi bị ghi
 // đè từ nguồn khác.
-async function listPendingPaymentOrders(restaurantId) {
+async function listPendingPaymentOrders(tenantId, restaurantId) {
   const actor = getActor();
-  return await actor.listPendingPaymentOrders(restaurantId);
+  return await actor.listPendingPaymentOrders(tenantOr(tenantId), restaurantId);
 }
 
 // cancelOrder — hủy đơn (bookingStatus=#cancelled). HMAC payload: orderId|cancelled
@@ -451,17 +466,17 @@ async function changeOrderRestaurant(orderId, newRestaurantId) {
 
 // getMenuForRestaurant — query. Trả [MenuItem] (price là BigInt Nat).
 // Dùng trong routes/quote.js để fetch price cho items khi frontend không gửi price.
-async function getMenuForRestaurant(restaurantId) {
+async function getMenuForRestaurant(tenantId, restaurantId) {
   const actor = getActor();
-  return await actor.getMenuForRestaurant(restaurantId);
+  return await actor.getMenuForRestaurant(tenantOr(tenantId), restaurantId);
 }
 
 // getPaymentMode — query. Trả 'driver' | 'customer'. Dùng để hiển thị đúng
 // luồng thanh toán (khách tự đặt tài xế qua app ngoài, không qua AhaMove).
 // Default 'driver' nếu canister trả giá trị bất thường.
-async function getPaymentMode() {
+async function getPaymentMode(tenantId) {
   const actor = getActor();
-  return await actor.getPaymentMode();
+  return await actor.getPaymentMode(tenantOr(tenantId));
 }
 
 // getCurrentPromotion — query, không cần HMAC. Trả chương trình KM Hệ 1
@@ -470,9 +485,9 @@ async function getPaymentMode() {
 // cron tự kiểm tra khớp khung giờ cụ thể (canister chỉ xác nhận đúng
 // ngày, không xác nhận đúng giờ — cùng quy ước đã dùng ở frontend
 // usePromotionCountdown.ts).
-async function getCurrentPromotion() {
+async function getCurrentPromotion(tenantId) {
   const actor = getActor();
-  return await actor.getCurrentPromotion();
+  return await actor.getCurrentPromotion(tenantOr(tenantId));
 }
 
 // getPromotionByCode — query, không cần HMAC. Trả ĐÚNG chương trình theo mã,
@@ -481,9 +496,9 @@ async function getCurrentPromotion() {
 // kể cả khi chương trình đã hết hạn/bị dừng. BUG THẬT đã sửa: trước đây chỉ
 // có getCurrentPromotion() nên khách xem lại đơn sau khi KM hết hạn không
 // tra được tên, thẻ đơn chỉ hiện mã.
-async function getPromotionByCode(code) {
+async function getPromotionByCode(tenantId, code) {
   const actor = getActor();
-  return await actor.getPromotionByCode(code);
+  return await actor.getPromotionByCode(tenantOr(tenantId), code);
 }
 
 // applyPromotion — kiểm tra + áp dụng KM (Hệ 1, theo khung giờ) lúc tạo
@@ -494,27 +509,27 @@ async function getPromotionByCode(code) {
 // (không có KM đang chạy, email chưa xác thực, đạt giới hạn...) KHÔNG
 // phải lỗi hệ thống — caller (routes/create.js) coi #err là "không áp
 // dụng KM", vẫn tạo đơn bình thường với giá gốc.
-async function applyPromotion(email, orderAmount) {
+async function applyPromotion(tenantId, email, orderAmount) {
   const actor = getActor();
   const orderAmountInt = Math.round(Number(orderAmount));
   const hmacSig = hmac.signApplyPromotion(VPS_SECRET, email, orderAmountInt);
-  return await actor.applyPromotion(email, BigInt(orderAmountInt), hmacSig);
+  return await actor.applyPromotion(tenantOr(tenantId), email, BigInt(orderAmountInt), hmacSig);
 }
 
 // applyPromotionCounter — Giờ Vàng tự động cho đơn quầy (không cần email).
-async function applyPromotionCounter(orderAmount) {
+async function applyPromotionCounter(tenantId, orderAmount) {
   const actor = getActor();
   const orderAmountInt = Math.round(Number(orderAmount));
   const hmacSig = hmac.signApplyPromotionCounter(VPS_SECRET, orderAmountInt);
-  return await actor.applyPromotionCounter(BigInt(orderAmountInt), hmacSig);
+  return await actor.applyPromotionCounter(tenantOr(tenantId), BigInt(orderAmountInt), hmacSig);
 }
 
 // claimOrderEmail — không có HMAC (client gọi trực tiếp qua VPS route mới,
 // xem routes/claim-order-email.js). VPS chỉ là cầu nối, KHÔNG tự ký gì —
 // canister tự bảo vệ bằng nguyên tắc "chỉ ghi 1 lần".
-async function claimOrderEmail(orderId, email) {
+async function claimOrderEmail(tenantId, orderId, email) {
   const actor = getActor();
-  return await actor.claimOrderEmail(orderId, email);
+  return await actor.claimOrderEmail(tenantOr(tenantId), orderId, email);
 }
 
 // issueSalesBonus — kiểm tra + phát thưởng doanh số (Giai đoạn 3d) cho 1
@@ -523,11 +538,11 @@ async function claimOrderEmail(orderId, email) {
 // tự quyết định có đạt mức nào không + chống phát trùng nếu cron gọi lại
 // cho cùng 1 kỳ — trả về { ok: [voucher] | [] } (mảng rỗng = không đủ
 // điều kiện, không phải lỗi) | { err: string } (chỉ khi periodType sai).
-async function issueSalesBonus(email, periodType, periodKey, totalSales) {
+async function issueSalesBonus(tenantId, email, periodType, periodKey, totalSales) {
   const actor = getActor();
   const totalSalesInt = Math.round(Number(totalSales));
   const hmacSig = hmac.signIssueSalesBonus(VPS_SECRET, email, periodType, periodKey, totalSalesInt);
-  return await actor.issueSalesBonus(email, periodType, periodKey, BigInt(totalSalesInt), hmacSig);
+  return await actor.issueSalesBonus(tenantOr(tenantId), email, periodType, periodKey, BigInt(totalSalesInt), hmacSig);
 }
 
 // deactivateExpiredPromotions — quét TOÀN BỘ 3 loại khuyến mại (Hệ 1/Đăng
@@ -560,11 +575,11 @@ async function pruneOldOrdersNow() {
 // vượt orderAmount) | { err: string } (phiếu không hợp lệ/đã dùng/hết
 // hạn/sai email) — #err KHÔNG chặn tạo đơn, chỉ đơn giản là không áp
 // dụng được phiếu đó.
-async function applyVoucher(email, code, orderAmount) {
+async function applyVoucher(tenantId, email, code, orderAmount) {
   const actor = getActor();
   const orderAmountInt = Math.round(Number(orderAmount));
   const hmacSig = hmac.signApplyVoucher(VPS_SECRET, email, code, orderAmountInt);
-  return await actor.applyVoucher(email, code, BigInt(orderAmountInt), hmacSig);
+  return await actor.applyVoucher(tenantOr(tenantId), email, code, BigInt(orderAmountInt), hmacSig);
 }
 
 module.exports = {
@@ -576,9 +591,12 @@ module.exports = {
   getCurrentPromotion,
   getPromotionByCode,
   isStoreOpen,
-  callerHasEnterpriseRole,
-  deviceHasAccountingRole,
-  listDevicesByRestaurant,
+  getDeviceByCredential,
+  getCounterPlanActive,
+  listActiveTenants,
+  listActiveTenantIds,
+  tenantOr,
+  DEFAULT_TENANT_ID,
   listRestaurants,
   isEmailVerified,
   sendKmNotifyEmails,

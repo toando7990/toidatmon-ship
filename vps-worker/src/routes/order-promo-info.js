@@ -19,7 +19,7 @@ const canister = require('../lib/canister');
 router.get('/order/:id/promo-info', async (req, res) => {
   const db = req.app.locals.db;
   const row = db
-    .prepare('SELECT km_program_code, km_program_name, voucher_code, cus_address FROM orders WHERE order_id = ?')
+    .prepare('SELECT tenant_id, km_program_code, km_program_name, voucher_code, cus_address FROM orders WHERE order_id = ?')
     .get(req.params.id);
   if (!row) return res.status(404).json({ ok: false, message: 'Không tìm thấy đơn hàng.' });
   let name = row.km_program_name || '';
@@ -32,7 +32,7 @@ router.get('/order/:id/promo-info', async (req, res) => {
   // luôn tra được tên kể cả chương trình đã hết hiệu lực.
   if (!name && row.km_program_code) {
     try {
-      const found = await canister.getPromotionByCode(row.km_program_code);
+      const found = await canister.getPromotionByCode(row.tenant_id, row.km_program_code);
       const promo = Array.isArray(found) ? found[0] : found;
       if (promo && promo.name) {
         name = String(promo.name);

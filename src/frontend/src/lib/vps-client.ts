@@ -2,6 +2,7 @@
 // Canister is only polled for status/QR (see hooks/useOrderStatus, hooks/usePendingOrders).
 // API keys live in VPS env vars only — never exposed to frontend/canister/git.
 
+import { credentialFor } from "@/lib/device-credential";
 import { getEnv } from "@/lib/env";
 import type {
   AnalyticsResponse,
@@ -245,7 +246,7 @@ export async function confirmCashPaymentCounter(
   return vpsFetch<{ ok: boolean; message: string }>({
     method: "POST",
     path: `/order/${encodeURIComponent(orderId)}/confirm-cash-counter`,
-    body: { deviceId },
+    body: { deviceId: credentialFor(deviceId) },
   });
 }
 
@@ -461,14 +462,18 @@ export async function getOrderHistory(
 export async function getPeriodSummary(
   email: string,
   period: "week" | "month",
+  tenantId = "",
 ): Promise<{ orders: VpsHistoryOrder[]; total: number }> {
+  const tenantQuery = tenantId
+    ? `&tenantId=${encodeURIComponent(tenantId)}`
+    : "";
   const res = await vpsFetch<{
     ok: boolean;
     orders: VpsHistoryOrder[];
     total: number;
   }>({
     method: "GET",
-    path: `/orders/period-summary?email=${encodeURIComponent(email)}&period=${period}`,
+    path: `/orders/period-summary?email=${encodeURIComponent(email)}&period=${period}${tenantQuery}`,
   });
   return { orders: res.orders, total: res.total };
 }
@@ -507,7 +512,7 @@ export async function getEnterpriseHistory(
   total: number;
 }> {
   const params = new URLSearchParams({
-    deviceId,
+    deviceId: credentialFor(deviceId),
     from,
     to,
     status: statuses.join(","),
@@ -592,7 +597,7 @@ export async function enterpriseDeleteOrder(
   return vpsFetch({
     method: "POST",
     path: `/orders/enterprise/${encodeURIComponent(orderId)}/delete`,
-    body: { deviceId },
+    body: { deviceId: credentialFor(deviceId) },
   });
 }
 
@@ -605,7 +610,7 @@ export async function enterpriseDeleteCancelledOrders(
   return vpsFetch({
     method: "POST",
     path: "/orders/enterprise/delete-cancelled",
-    body: { deviceId, dryRun },
+    body: { deviceId: credentialFor(deviceId), dryRun },
   });
 }
 
@@ -618,7 +623,7 @@ export async function enterpriseRecordInvoice(
   return vpsFetch({
     method: "POST",
     path: `/orders/enterprise/${encodeURIComponent(orderId)}/invoice`,
-    body: { deviceId, invoiceId, pdfUrl },
+    body: { deviceId: credentialFor(deviceId), invoiceId, pdfUrl },
   });
 }
 
@@ -633,7 +638,7 @@ export async function enterpriseReissueInvoice(
   return vpsFetch({
     method: "POST",
     path: `/orders/enterprise/${encodeURIComponent(orderId)}/reissue`,
-    body: { deviceId },
+    body: { deviceId: credentialFor(deviceId) },
   });
 }
 

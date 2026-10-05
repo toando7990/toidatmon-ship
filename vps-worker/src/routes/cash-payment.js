@@ -61,7 +61,7 @@ async function markPaidCash(db, order) {
 
 function loadOrderForCashConfirm(db, orderId) {
   return db.prepare(
-    `SELECT order_id, restaurant_id, amount, payment_status, booking_status,
+    `SELECT order_id, tenant_id, is_counter, restaurant_id, amount, payment_status, booking_status,
             pickup_code, tingee_qr_account, tingee_bill_id
      FROM orders WHERE order_id = ?`,
   ).get(orderId);
@@ -118,24 +118,34 @@ router.post('/order/:id/confirm-cash-counter', async (req, res, next) => {
       return res.status(400).json({ ok: false, message: 'Đơn này đã được xác nhận thanh toán rồi.' });
     }
 
-    const deviceId = String((req.body || {}).deviceId || '').trim();
-    if (!deviceId) {
-      return res.status(400).json({ ok: false, message: 'Thiếu deviceId.' });
+    // Chỉ đơn TẠI QUẦY: khách đứng tại quầy, máy quán xác nhận đã nhận tiền.
+    if (!order.is_counter) {
+      return res.status(400).json({ ok: false, message: 'Chỉ đơn tại quầy mới xác nhận tiền mặt tại máy quán.' });
     }
-    let devices;
+    // Thẻ xác thực "deviceId~khoá" (trường deviceId giữ tên cũ cho tương thích).
+    const credential = String((req.body || {}).deviceId || '').trim();
+    if (!credential) {
+      return res.status(400).json({ ok: false, message: 'Thiếu thông tin máy.' });
+    }
+    let device;
     try {
-      devices = await canister.listDevicesByRestaurant(order.restaurant_id);
+      device = await canister.getDeviceByCredential(credential);
     } catch (e) {
-      console.error('[cash-payment] listDevicesByRestaurant lỗi:', orderId, e.message);
+      console.error('[cash-payment] getDeviceByCredential lỗi:', orderId, e.message);
       return res.status(502).json({ ok: false, message: 'Không xác thực được thiết bị, vui lòng thử lại.' });
     }
-    const device = devices.find((d) => d.deviceId === deviceId);
-    if (!device || !device.active) {
+    const allowed =
+      device &&
+      device.tenantId === order.tenant_id &&
+      ['cashier', 'tenantAdmin'].includes(device.role) &&
+      (device.restaurantId === '' || device.restaurantId === order.restaurant_id);
+    if (!allowed) {
       return res.status(403).json({
         ok: false,
-        message: 'Thiết bị chưa được kích hoạt hoặc đã bị thu hồi quyền truy cập.',
+        message: 'Máy này không có quyền xác nhận thanh toán cho đơn này.',
       });
     }
+    const deviceId = device.deviceId;
 
     await markPaidCash(db, order);
     console.log('[cash-payment] xác nhận thanh toán tiền mặt (counter):', orderId, deviceId);

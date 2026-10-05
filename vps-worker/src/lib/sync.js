@@ -67,7 +67,7 @@ function startRetryQueue(db) {
         const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(row.order_id);
         try {
           const result = await canister.createOrder({
-            orderId: row.order_id, restaurantId: row.restaurant_id,
+            tenantId: row.tenant_id, orderId: row.order_id, restaurantId: row.restaurant_id,
             cusName: row.cus_name, cusPhone: row.cus_phone, cusAddress: row.cus_address,
             cusTaxCode: row.cus_tax_code, receiverEmail: row.receiver_email,
             items: items.map((it) => ({
@@ -79,6 +79,7 @@ function startRetryQueue(db) {
             ahamoveOrderId: row.ahamove_order_id, tingeeQrId: row.tingee_qr_id,
             sharedLink: row.shared_link, tingeeQrCode: row.tingee_qr_code,
             pickupCode: row.pickup_code,
+            kmDiscountAmount: row.km_discount_amount, voucherDiscountAmount: row.voucher_discount_amount,
           });
           if (result?.ok) {
             db.prepare(`UPDATE orders SET canister_synced = 1, updated_at = ? WHERE order_id = ?`)
@@ -108,12 +109,15 @@ function startReconciliation(db) {
     if (shutdown.shuttingDown) return;
     try {
       const synced = db.prepare(
-        `SELECT order_id, booking_status, payment_status, invoice_status, updated_at FROM orders WHERE canister_synced = 1`,
-      ).all();
+        // Canister chỉ giữ đơn trong ngày → chỉ đối chiếu đơn 24 giờ gần nhất
+        // (đơn cũ hơn đã bị canister dọn, đối chiếu sẽ báo lệch giả).
+        `SELECT order_id, tenant_id, booking_status, payment_status, invoice_status, updated_at
+         FROM orders WHERE canister_synced = 1 AND created_at >= ?`,
+      ).all(Date.now() - 24 * 60 * 60 * 1000);
       let driftCount = 0;
       for (const row of synced) {
         try {
-          const result = await canister.getOrderStatus(row.order_id);
+          const result = await canister.getOrderStatus(row.tenant_id, row.order_id);
           if (result?.err) {
             driftCount++;
             continue;
@@ -197,25 +201,34 @@ async function runUnpaidExpiryCheck(db) {
     // khách/tài xế xử lý trong giờ hoạt động bình thường); CHỈ huỷ khi
     // NGOÀI giờ mở cửa. Đơn #expired (đã từng có QR) KHÔNG bị ảnh hưởng
     // bởi điều kiện này — vẫn xét huỷ như cũ bất kể giờ mở cửa.
-    let storeOpen = true;
-    try {
-      storeOpen = await canister.isStoreOpen();
-    } catch (e) {
-      console.error('[sync] isStoreOpen error (mặc định coi như đang mở cửa):', e.message);
+    // Giờ mở cửa theo từng đối tác — hỏi 1 lần mỗi đối tác mỗi vòng.
+    const storeOpenByTenant = new Map();
+    async function storeOpenFor(tenantId) {
+      if (storeOpenByTenant.has(tenantId)) return storeOpenByTenant.get(tenantId);
+      let open = true;
+      try {
+        open = await canister.isStoreOpen(tenantId);
+      } catch (e) {
+        console.error('[sync] isStoreOpen error (mặc định coi như đang mở cửa):', tenantId, e.message);
+      }
+      storeOpenByTenant.set(tenantId, open);
+      return open;
     }
 
     const restaurants = db.prepare(
-      `SELECT DISTINCT restaurant_id FROM orders WHERE booking_status != 'cancelled'`,
-    ).all();
-    for (const { restaurant_id } of restaurants) {
+      `SELECT DISTINCT tenant_id, restaurant_id FROM orders WHERE booking_status != 'cancelled'
+         AND created_at >= ?`,
+    ).all(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    for (const { tenant_id, restaurant_id } of restaurants) {
       let pending;
       try {
-        const result = await canister.listPendingPaymentOrders(restaurant_id);
+        const result = await canister.listPendingPaymentOrders(tenant_id, restaurant_id);
         pending = Array.isArray(result) ? result : (result?.ok || []);
       } catch (e) {
-        console.error('[sync] listPendingPaymentOrders error:', restaurant_id, e.message);
+        console.error('[sync] listPendingPaymentOrders error:', tenant_id, restaurant_id, e.message);
         continue;
       }
+      const storeOpen = await storeOpenFor(tenant_id);
       for (const order of pending) {
         const local = db.prepare(
           `SELECT payment_status, tingee_qr_account, tingee_bill_id, updated_at FROM orders WHERE order_id = ?`,

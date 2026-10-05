@@ -46,6 +46,8 @@ router.get('/orders/history', (req, res) => {
   }
 
   const boundary = startOfTodayUtc7(Date.now());
+  // Trang của 1 quán chỉ xem đơn quán đó; trang chung (không gửi) xem tất cả.
+  const tenantId = String(req.query.tenantId || '').trim();
 
   const orderRows = db.prepare(
     `SELECT order_id, restaurant_id, cus_name, cus_phone, amount, goods_amount,
@@ -54,9 +56,10 @@ router.get('/orders/history', (req, res) => {
             km_discount_amount, voucher_discount_amount
      FROM orders
      WHERE receiver_email = ? AND created_at < ?
+       AND (? = '' OR tenant_id = ?)
      ORDER BY created_at DESC
      LIMIT ?`,
-  ).all(email, boundary, MAX_ORDERS);
+  ).all(email, boundary, tenantId, tenantId, MAX_ORDERS);
 
   if (orderRows.length === 0) {
     return res.json({ ok: true, orders: [] });
@@ -166,6 +169,8 @@ router.get('/orders/period-summary', (req, res) => {
     return res.status(400).json({ ok: false, error: "period must be 'week' or 'month'" });
   }
 
+  // Thưởng doanh số tính riêng theo từng quán.
+  const tenantId = String(req.query.tenantId || '').trim();
   const now = Date.now();
   const range = period === 'week' ? computeThisWeekRange(now) : computeThisMonthRange(now);
 
@@ -177,9 +182,10 @@ router.get('/orders/period-summary', (req, res) => {
      FROM orders
      WHERE receiver_email = ? AND payment_status = 'paid'
        AND created_at >= ? AND created_at < ?
+       AND (? = '' OR tenant_id = ?)
      ORDER BY created_at DESC
      LIMIT ?`,
-  ).all(email, range.start.getTime(), range.endExclusive, MAX_ORDERS);
+  ).all(email, range.start.getTime(), range.endExclusive, tenantId, tenantId, MAX_ORDERS);
 
   const total = orderRows.reduce((s, r) => s + r.amount, 0);
 

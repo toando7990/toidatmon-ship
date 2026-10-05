@@ -30,9 +30,9 @@ const PREP_TIME_MINUTES = 15;
 // Lấy toạ độ nhà hàng làm điểm lấy hàng cho Lalamove — trả null nếu
 // không tìm thấy nhà hàng hoặc nhà hàng chưa nhập toạ độ (lat=0,lng=0 —
 // giá trị mặc định khi thêm field, xem Phần 1/6).
-async function findRestaurantCoordinates(restaurantId) {
+async function findRestaurantCoordinates(tenantId, restaurantId) {
   try {
-    const restaurants = await canister.listRestaurants();
+    const restaurants = await canister.listRestaurants(tenantId);
     const r = restaurants.find((r) => r.restaurantId === restaurantId);
     if (!r || (r.lat === 0 && r.lng === 0)) return null;
     return { lat: r.lat, lng: r.lng, address: r.address };
@@ -45,9 +45,9 @@ async function findRestaurantCoordinates(restaurantId) {
 // Lấy price cho mỗi item từ canister getMenuForRestaurant (nếu frontend không gửi price).
 // Trả Map<itemId, price> (price là Number, VND). Nếu canister call fail → trả null
 // để caller dùng fallback price=0.
-async function fetchItemPrices(restaurantId, itemIds) {
+async function fetchItemPrices(tenantId, restaurantId, itemIds) {
   try {
-    const menu = await canister.getMenuForRestaurant(restaurantId);
+    const menu = await canister.getMenuForRestaurant(tenantId, restaurantId);
     if (!Array.isArray(menu)) return null;
     const priceMap = new Map();
     for (const item of menu) {
@@ -64,12 +64,12 @@ async function fetchItemPrices(restaurantId, itemIds) {
 
 // Tính goodsAmount từ items. Nếu item có price → dùng; không → fetch prices;
 // fetch fail hoặc item không có trong menu → price=0 + warning rõ ràng.
-async function computeGoodsAmount(restaurantId, items) {
+async function computeGoodsAmount(tenantId, restaurantId, items) {
   const needsPrice = items.some((it) => it.price == null);
   if (!needsPrice) {
     return items.reduce((s, it) => s + Number(it.price) * Number(it.quantity), 0);
   }
-  const priceMap = await fetchItemPrices(restaurantId, items.map((it) => it.itemId));
+  const priceMap = await fetchItemPrices(tenantId, restaurantId, items.map((it) => it.itemId));
   return items.reduce((s, it) => {
     let price;
     if (it.price != null) {
@@ -95,7 +95,8 @@ router.post('/quote', async (req, res, next) => {
       return res.status(400).json({ error: 'items required' });
     }
 
-    const goodsAmount = await computeGoodsAmount(restaurantId, items);
+    const tenantId = canister.tenantOr((req.body || {}).tenantId);
+    const goodsAmount = await computeGoodsAmount(tenantId, restaurantId, items);
     // Giá menu đã gồm VAT → không cộng thêm 8% VAT.
     const taxTotal = 0;
 
@@ -117,7 +118,7 @@ router.post('/quote', async (req, res, next) => {
     // lý, không chặn tạo đơn).
     let lalamovePickupStopId = '';
     let lalamoveDropStopId = '';
-    const pickup = await findRestaurantCoordinates(restaurantId);
+    const pickup = await findRestaurantCoordinates(tenantId, restaurantId);
     if (!pickup) {
       console.warn('[quote] Chưa có toạ độ nhà hàng hợp lệ cho', restaurantId, '— bỏ qua Lalamove');
     } else if (dropLat == null || dropLng == null) {

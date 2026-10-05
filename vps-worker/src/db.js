@@ -355,6 +355,20 @@ function initSchema(db) {
     );
   }
 
+  // Nhiều đối tác (Tôi Đặt Món): mỗi đơn thuộc 1 đối tác. Đơn cũ (trước khi
+  // VPS biết nhiều đối tác) gán cho đối tác mặc định. is_counter = đơn tại
+  // quầy (chỉ đơn này được máy quán xác nhận tiền mặt).
+  if (!colNames.has('tenant_id')) {
+    db.exec("ALTER TABLE orders ADD COLUMN tenant_id TEXT NOT NULL DEFAULT ''");
+    db.prepare("UPDATE orders SET tenant_id = ? WHERE tenant_id = ''")
+      .run((process.env.DEFAULT_TENANT_ID || 'bunbohue65').trim());
+  }
+  if (!colNames.has('is_counter')) {
+    db.exec('ALTER TABLE orders ADD COLUMN is_counter INTEGER NOT NULL DEFAULT 0');
+    db.exec("UPDATE orders SET is_counter = 1 WHERE cus_name = 'Khách tại quầy'");
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_orders_tenant_created ON orders (tenant_id, created_at)');
+
   // customers: thêm km_notify_opt_in (Giai đoạn 4b) nếu DB cũ chưa có.
   const customerCols = db.prepare('PRAGMA table_info(customers)').all();
   const customerColNames = new Set(customerCols.map((c) => c.name));

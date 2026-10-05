@@ -25,20 +25,12 @@ const { rateLimit } = require('../middleware/rate-limit');
 const router = express.Router();
 router.use('/orders/enterprise', rateLimit({ windowMs: 60000, max: 30, message: 'Too many requests' }));
 
-const ROLE_CACHE_TTL_MS = 5 * 60 * 1000;
-const roleCache = new Map();
+const { authorizeDevice, deviceIdOf } = require('../lib/device-guard');
 
-async function isAccountingDevice(deviceId) {
-  const cached = roleCache.get(deviceId);
-  if (cached && cached.expiresAt > Date.now()) return cached.ok;
-  let ok = false;
-  try {
-    ok = await canister.deviceHasAccountingRole(deviceId);
-  } catch (e) {
-    console.error('[enterprise-actions] role check error:', deviceId, e.message);
-  }
-  roleCache.set(deviceId, { ok, expiresAt: Date.now() + ROLE_CACHE_TTL_MS });
-  return ok;
+// Thao tác GHI (xoá đơn huỷ, phát hành lại / ghi nhận hoá đơn): chỉ Kế toán.
+// Mọi đơn phải thuộc đúng đối tác của máy.
+function accountingDevice(credential) {
+  return authorizeDevice(credential, ['accounting']);
 }
 
 async function guard(req, res) {
@@ -47,17 +39,20 @@ async function guard(req, res) {
     res.status(400).json({ ok: false, error: 'Missing deviceId' });
     return null;
   }
-  if (!(await isAccountingDevice(deviceId))) {
+  const device = await accountingDevice(deviceId);
+  if (!device) {
     res.status(403).json({ ok: false, error: 'Chỉ thiết bị Kế toán được thực hiện thao tác này.' });
     return null;
   }
   const db = req.app.locals.db;
-  const order = db.prepare('SELECT order_id, booking_status FROM orders WHERE order_id = ?').get(req.params.id);
+  const order = db
+    .prepare('SELECT order_id, booking_status FROM orders WHERE order_id = ? AND tenant_id = ?')
+    .get(req.params.id, device.tenantId);
   if (!order) {
     res.status(404).json({ ok: false, error: 'Không tìm thấy đơn hàng trên máy chủ.' });
     return null;
   }
-  return { db, order };
+  return { db, order, device };
 }
 
 function isNotFound(result) {
@@ -153,7 +148,7 @@ router.post('/orders/enterprise/:id/delete', async (req, res, next) => {
     const o = g.db.prepare('SELECT * FROM orders WHERE order_id = ?').get(req.params.id);
     const reason = notDeletableReason(o, startOfTodayUtc7(Date.now()));
     if (reason) return res.status(409).json({ ok: false, error: reason });
-    deleteOrdersTx(g.db, [o], String(req.body.deviceId).trim());
+    deleteOrdersTx(g.db, [o], deviceIdOf(req.body.deviceId));
     res.json({ ok: true, deleted: 1 });
   } catch (e) {
     next(e);
@@ -166,13 +161,16 @@ router.post('/orders/enterprise/delete-cancelled', async (req, res, next) => {
   try {
     const deviceId = String((req.body || {}).deviceId || '').trim();
     if (!deviceId) return res.status(400).json({ ok: false, error: 'Missing deviceId' });
-    if (!(await isAccountingDevice(deviceId))) {
+    const device = await accountingDevice(deviceId);
+    if (!device) {
       return res.status(403).json({ ok: false, error: 'Chỉ thiết bị Kế toán được thực hiện thao tác này.' });
     }
     const db = req.app.locals.db;
-    const rows = db.prepare(`SELECT * FROM orders WHERE ${DELETABLE_WHERE}`).all(startOfTodayUtc7(Date.now()));
+    const rows = db
+      .prepare(`SELECT * FROM orders WHERE tenant_id = ? AND ${DELETABLE_WHERE}`)
+      .all(device.tenantId, startOfTodayUtc7(Date.now()));
     if (req.body.dryRun === true) return res.json({ ok: true, count: rows.length });
-    if (rows.length > 0) deleteOrdersTx(db, rows, deviceId);
+    if (rows.length > 0) deleteOrdersTx(db, rows, deviceIdOf(deviceId));
     res.json({ ok: true, deleted: rows.length });
   } catch (e) {
     next(e);
@@ -213,7 +211,7 @@ router.post('/orders/enterprise/:id/reissue', async (req, res, next) => {
       `UPDATE orders SET invoice_status = 'none', invoice_retry_count = 1, invoice_error = '', updated_at = ? WHERE order_id = ? AND invoice_status = 'failed'`,
     ).run(Date.now(), o.order_id);
     g.db.prepare(`INSERT INTO bkav_logs (order_id, command, error, created_at) VALUES (?, 'Reissue', ?, ?)`)
-      .run(o.order_id, `Kế toán yêu cầu phát hành lại (thiết bị ${String(req.body.deviceId).trim()})`, Date.now());
+      .run(o.order_id, `Kế toán yêu cầu phát hành lại (thiết bị ${deviceIdOf(req.body.deviceId)})`, Date.now());
     res.json({ ok: true, queued: r.changes === 1 });
   } catch (e) {
     next(e);

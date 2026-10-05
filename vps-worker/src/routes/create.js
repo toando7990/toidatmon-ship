@@ -30,6 +30,41 @@ const VAT_RATE = 0.08;
 // đã tự phát hiện + sửa lỗi này).
 router.use('/order/create', rateLimit({ windowMs: 60000, max: 30, message: 'Too many create requests' }));
 
+// Danh sách chi nhánh theo đối tác, nhớ 60 giây (kiểm tra mỗi đơn).
+const restaurantCache = new Map(); // tenantId → { ids:Set, expiresAt }
+async function restaurantBelongsTo(tenantId, restaurantId) {
+  const hit = restaurantCache.get(tenantId);
+  if (hit && hit.expiresAt > Date.now() && hit.ids.has(restaurantId)) return true;
+  const list = await canister.listRestaurants(tenantId);
+  const ids = new Set(list.map((r) => r.restaurantId));
+  restaurantCache.set(tenantId, { ids, expiresAt: Date.now() + 60000 });
+  return ids.has(restaurantId);
+}
+
+async function checkCounterDevice(tenantId, restaurantId, credential) {
+  if (!credential) return { ok: false, status: 403, error: 'Máy này chưa được kích hoạt bán quầy.' };
+  let device;
+  let plan;
+  try {
+    [device, plan] = await Promise.all([
+      canister.getDeviceByCredential(credential),
+      canister.getCounterPlanActive(tenantId),
+    ]);
+  } catch (e) {
+    console.error('[create] kiểm tra máy quầy lỗi:', tenantId, e.message);
+    return { ok: false, status: 502, error: 'Không kiểm tra được máy quầy, vui lòng thử lại.' };
+  }
+  const roleOk = device && ['cashier', 'tenantAdmin'].includes(device.role);
+  const restOk = device && (device.restaurantId === '' || device.restaurantId === restaurantId);
+  if (!roleOk || device.tenantId !== tenantId || !restOk) {
+    return { ok: false, status: 403, error: 'Máy này không có quyền bán tại quầy của quán.' };
+  }
+  if (!plan) {
+    return { ok: false, status: 403, error: 'Quán chưa đăng ký gói bán tại quầy.' };
+  }
+  return { ok: true, device };
+}
+
 // POST /order/create
 router.post('/order/create', async (req, res, next) => {
   try {
@@ -41,6 +76,8 @@ router.post('/order/create', async (req, res, next) => {
       lalamovePickupStopId, lalamoveDropStopId,
       voucherCode, isCounterOrder,
     } = body;
+    // Đối tác của đơn (frontend gửi kèm tenantId). Thiếu → đối tác mặc định.
+    const tenantId = canister.tenantOr(body.tenantId);
     const orderId = `ORD-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
     const now = Date.now();
     // Mã 6 ký tự khách xem trong "Theo dõi đơn" và tự báo cho tài xế —
@@ -50,6 +87,24 @@ router.post('/order/create', async (req, res, next) => {
     // Validate required fields.
     if (!restaurantId || !cusName || !cusPhone || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ ok: false, error: 'Missing required fields' });
+    }
+
+    // Đơn tại quầy: phải do máy Chủ quán / Nhân viên của đúng quán tạo, và
+    // quán đang có gói bán quầy (đơn quầy được Giờ Vàng không cần email và
+    // được xác nhận tiền mặt — không để ai gửi isCounterOrder tuỳ ý).
+    if (isCounterOrder) {
+      const check = await checkCounterDevice(tenantId, restaurantId, body.deviceCredential);
+      if (!check.ok) return res.status(check.status).json({ ok: false, error: check.error });
+    }
+
+    // Chi nhánh phải thuộc đúng đối tác (không cho tạo đơn chéo đối tác).
+    try {
+      if (!(await restaurantBelongsTo(tenantId, restaurantId))) {
+        return res.status(400).json({ ok: false, error: 'Chi nhánh không thuộc quán này.' });
+      }
+    } catch (e) {
+      console.error('[create] listRestaurants lỗi:', tenantId, e.message);
+      return res.status(502).json({ ok: false, error: 'Không kiểm tra được chi nhánh, vui lòng thử lại.' });
     }
 
     // Tính tiền (frontend gửi price + vatRate trong items)
@@ -75,7 +130,7 @@ router.post('/order/create', async (req, res, next) => {
     let kmDiscountAmount = 0;
     if (isCounterOrder) {
       try {
-        const kmResult = await canister.applyPromotionCounter(goodsAmount);
+        const kmResult = await canister.applyPromotionCounter(tenantId, goodsAmount);
         if (kmResult?.ok) {
           kmProgramCode = kmResult.ok.promotionCode;
           kmDiscountAmount = Number(kmResult.ok.discountAmount);
@@ -85,7 +140,7 @@ router.post('/order/create', async (req, res, next) => {
       }
     } else if (receiverEmail) {
       try {
-        const kmResult = await canister.applyPromotion(receiverEmail, goodsAmount);
+        const kmResult = await canister.applyPromotion(tenantId, receiverEmail, goodsAmount);
         if (kmResult?.ok) {
           kmProgramCode = kmResult.ok.promotionCode;
           kmDiscountAmount = Number(kmResult.ok.discountAmount);
@@ -113,7 +168,7 @@ router.post('/order/create', async (req, res, next) => {
     let voucherDiscountAmount = 0;
     if (voucherCode && receiverEmail) {
       try {
-        const voucherResult = await canister.applyVoucher(receiverEmail, voucherCode, amountAfterDiscount);
+        const voucherResult = await canister.applyVoucher(tenantId, receiverEmail, voucherCode, amountAfterDiscount);
         if (voucherResult?.ok !== undefined) {
           voucherCodeApplied = voucherCode;
           voucherDiscountAmount = Number(voucherResult.ok);
@@ -154,7 +209,7 @@ router.post('/order/create', async (req, res, next) => {
     let kmProgramName = '';
     if (kmProgramCode) {
       try {
-        const found = await canister.getPromotionByCode(kmProgramCode);
+        const found = await canister.getPromotionByCode(tenantId, kmProgramCode);
         const promo = Array.isArray(found) ? found[0] : found;
         if (promo) kmProgramName = String(promo.name || '');
       } catch (e) {
@@ -167,18 +222,21 @@ router.post('/order/create', async (req, res, next) => {
         receiver_email, amount, goods_amount, shipping_fee, tax_total,
         ahamove_order_id, tingee_qr_id, tingee_qr_account, tingee_bill_id, tingee_qr_code, shared_link,
         pickup_code, km_program_code, km_program_name, km_discount_amount, voucher_code, voucher_discount_amount,
-        booking_status, payment_status, invoice_status, canister_synced, created_at, updated_at)
+        booking_status, payment_status, invoice_status, canister_synced, created_at, updated_at,
+        tenant_id, is_counter)
       VALUES (@orderId, @restaurantId, @cusName, @cusPhone, @cusAddress, @cusTaxCode,
         @receiverEmail, @amount, @goodsAmount, @shippingFee, @taxTotal,
         @ahamoveOrderId, @tingeeQrId, @tingeeQrAccount, @tingeeBillId, @tingeeQrCode, @sharedLink,
         @pickupCode, @kmProgramCode, @kmProgramName, @kmDiscountAmount, @voucherCodeApplied, @voucherDiscountAmount,
-        @bookingStatus, 'unpaid', 'none', 0, @now, @now)
+        @bookingStatus, 'unpaid', 'none', 0, @now, @now,
+        @tenantId, @isCounter)
     `);
     insertOrder.run({
       orderId, restaurantId, cusName, cusPhone, cusAddress, cusTaxCode: cusTaxCode || '',
       receiverEmail: receiverEmail || '', amount, goodsAmount, shippingFee, taxTotal,
       ahamoveOrderId, tingeeQrId, tingeeQrAccount, tingeeBillId, tingeeQrCode, sharedLink,
       pickupCode, kmProgramCode, kmProgramName, kmDiscountAmount, voucherCodeApplied, voucherDiscountAmount, bookingStatus, now,
+      tenantId, isCounter: isCounterOrder ? 1 : 0,
     });
     const insertItem = db.prepare(`
       INSERT INTO order_items (order_id, item_id, name, price, quantity, unit_name, vat_rate)
@@ -214,7 +272,7 @@ router.post('/order/create', async (req, res, next) => {
     let canisterError = undefined;
     try {
       const result = await canister.createOrder({
-        orderId, restaurantId, cusName, cusPhone, cusAddress, cusTaxCode: cusTaxCode || '',
+        tenantId, orderId, restaurantId, cusName, cusPhone, cusAddress, cusTaxCode: cusTaxCode || '',
         receiverEmail: receiverEmail || '', items, amount, goodsAmount, shippingFee, taxTotal,
         ahamoveOrderId, tingeeQrId, sharedLink, tingeeQrCode, pickupCode,
         kmDiscountAmount, voucherDiscountAmount,
@@ -249,7 +307,7 @@ router.post('/order/create', async (req, res, next) => {
       lalamoveDropStopId
     ) {
       try {
-        const restaurants = await canister.listRestaurants();
+        const restaurants = await canister.listRestaurants(tenantId);
         const restaurant = restaurants.find((r) => r.restaurantId === restaurantId);
         // Link ảnh QR "nhận hàng" — chỉ nhúng nếu VPS_PUBLIC_URL đã cấu
         // hình (không bắt buộc). Vẫn giữ mã chữ trong mọi trường hợp làm

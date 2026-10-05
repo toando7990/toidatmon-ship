@@ -125,6 +125,9 @@ export interface CreateOrderPayload {
    * applyPromotion (yêu cầu email đã xác thực). Bỏ trống/false = đơn
    * online, hành vi cũ không đổi. */
   isCounterOrder?: boolean;
+  /** Đơn tại quầy: thẻ xác thực của máy quầy ("deviceId~khoá") — VPS kiểm
+   * máy thuộc đúng quán, đúng vai trò và quán còn gói bán quầy. */
+  deviceCredential?: string;
 }
 
 // VPS create-order response — canister orderId + signed payload confirmation.

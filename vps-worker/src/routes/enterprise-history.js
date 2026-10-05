@@ -12,7 +12,7 @@
 // BẢO MẬT (đã xác nhận với người dùng): đây là dữ liệu nhạy cảm (tên khách,
 // SĐT, doanh thu TOÀN BỘ chuỗi) — không thể để mở như order-history.js
 // (chỉ cần khớp email). Xác thực bằng deviceId — VPS gọi canister
-// callerHasEnterpriseRole(deviceId) để xác nhận thiết bị có đúng role
+// getPartnerDevice (lib/device-guard.js) để xác nhận thiết bị có đúng role
 // accounting/salesPromoReporting không, KẾT QUẢ CACHE 5 PHÚT (Map trong bộ
 // nhớ) để tránh gọi canister lặp lại mỗi lần đổi bộ lọc — đã xác nhận với
 // người dùng đây là phương án cân bằng tốc độ/an toàn hơn gọi canister mỗi
@@ -20,7 +20,6 @@
 // ============================================================
 
 const express = require('express');
-const canister = require('../lib/canister');
 const { rateLimit } = require('../middleware/rate-limit');
 
 const router = express.Router();
@@ -32,29 +31,11 @@ router.use(
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_ORDERS = 500;
-const ROLE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 phút — theo phương án đã chốt
+const { authorizeDevice } = require('../lib/device-guard');
 
-// Cache kết quả xác thực role — Map<deviceId, { ok: boolean, expiresAt: number }>.
-// Bộ nhớ tiến trình (không cần Redis/DB riêng) — đủ dùng vì mỗi VPS worker
-// chỉ có 1 tiến trình, và cache mất đi khi restart chỉ khiến lần gọi đầu
-// tiên sau restart phải xác thực lại (không phải lỗi bảo mật).
-const roleCache = new Map();
-
-async function isAuthorizedDevice(deviceId) {
-  const cached = roleCache.get(deviceId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.ok;
-  }
-  let ok = false;
-  try {
-    ok = await canister.callerHasEnterpriseRole(deviceId);
-  } catch (e) {
-    console.error('[enterprise-history] callerHasEnterpriseRole error:', deviceId, e.message);
-    ok = false;
-  }
-  roleCache.set(deviceId, { ok, expiresAt: Date.now() + ROLE_CACHE_TTL_MS });
-  return ok;
-}
+// Kế toán / Báo cáo bán hàng & KM xem lịch sử đơn; Chủ quán cũng xem được
+// (cùng đối tác). Dữ liệu luôn giới hạn theo đối tác của máy.
+const HISTORY_ROLES = ['accounting', 'salesPromoReporting', 'tenantAdmin'];
 
 // "dd/mm/yyyy" (giờ VN) -> epoch ms đầu ngày đó (UTC+7 tuyệt đối, không phụ
 // thuộc múi giờ máy chủ) — cùng kỹ thuật Date.UTC trừ offset đã dùng ở
@@ -74,8 +55,8 @@ router.get('/orders/enterprise-history', async (req, res, next) => {
       return res.status(400).json({ ok: false, error: 'Missing deviceId' });
     }
 
-    const authorized = await isAuthorizedDevice(deviceId);
-    if (!authorized) {
+    const device = await authorizeDevice(deviceId, HISTORY_ROLES);
+    if (!device) {
       return res.status(403).json({ ok: false, error: 'Thiết bị không có quyền truy cập dữ liệu này.' });
     }
 
@@ -107,10 +88,10 @@ router.get('/orders/enterprise-history', async (req, res, next) => {
       `SELECT order_id, restaurant_id, cus_name, cus_phone, amount,
               booking_status, payment_status, payment_method, invoice_status, invoice_error, created_at
        FROM orders
-       WHERE created_at >= ? AND created_at < ? AND (${conditions.join(' OR ')})
+       WHERE tenant_id = ? AND created_at >= ? AND created_at < ? AND (${conditions.join(' OR ')})
        ORDER BY created_at DESC
        LIMIT ?`,
-    ).all(fromMs, toMsExclusive, MAX_ORDERS);
+    ).all(device.tenantId, fromMs, toMsExclusive, MAX_ORDERS);
 
     const total = rows.reduce((sum, r) => sum + r.amount, 0);
 

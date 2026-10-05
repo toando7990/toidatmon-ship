@@ -38,12 +38,14 @@ router.post(
         return res.status(400).json({ ok: false, error: 'Email không hợp lệ' });
       }
 
-      const result = await canister.claimOrderEmail(orderId, email);
+      const db = req.app.locals.db;
+      const row = db.prepare('SELECT tenant_id FROM orders WHERE order_id = ?').get(orderId);
+      const tenantId = row ? row.tenant_id : (req.body?.tenantId || '');
+      const result = await canister.claimOrderEmail(tenantId, orderId, email);
       if (result?.err) {
         return res.status(400).json({ ok: false, error: result.err });
       }
 
-      const db = req.app.locals.db;
       db.prepare(`UPDATE orders SET receiver_email = ?, updated_at = ? WHERE order_id = ?`)
         .run(email, Date.now(), orderId);
 

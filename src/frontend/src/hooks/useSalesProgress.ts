@@ -10,7 +10,7 @@
 // cảnh). Thêm tierProgress — vị trí % của TỪNG mốc trên thang (so với mốc
 // cao nhất) + đã đạt hay chưa, để vẽ chấm tròn dọc theo thanh.
 
-import { useCurrentSalesPromo } from "@/hooks/useQueries";
+import { useCurrentSalesPromo, useTenantId } from "@/hooks/useQueries";
 import { getPeriodSummary } from "@/lib/vps-client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -48,11 +48,12 @@ export function useSalesProgress(
   period: "week" | "month",
   email: string | null,
 ) {
+  const tenantId = useTenantId();
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["periodSummary", email, period],
+    queryKey: ["periodSummary", email, period, tenantId],
     queryFn: () =>
       email
-        ? getPeriodSummary(email, period)
+        ? getPeriodSummary(email, period, tenantId)
         : Promise.resolve({ orders: [], total: 0 }),
     enabled: !!email,
     refetchOnWindowFocus: false,

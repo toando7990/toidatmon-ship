@@ -83,15 +83,18 @@ function formatHm(hour, minute) {
   return `${pad(Number(hour), 2)}:${pad(Number(minute), 2)}`;
 }
 
-async function sendKmNotifyEmails(db, promotion, slot, slotIndex) {
+async function sendKmNotifyEmails(db, tenant, promotion, slot, slotIndex) {
+  // Chỉ khách đã bật nhận tin VÀ từng đặt ở đúng quán này.
   const rows = db.prepare(
-    'SELECT email FROM customers WHERE km_notify_opt_in = 1',
-  ).all();
+    `SELECT DISTINCT c.email FROM customers c
+     JOIN orders o ON o.receiver_email = c.email
+     WHERE c.km_notify_opt_in = 1 AND o.tenant_id = ?`,
+  ).all(tenant.tenantId);
   if (rows.length === 0) return;
   const emails = rows.map((r) => r.email);
 
   const timeStr = formatHm(slot.startHour, slot.startMinute);
-  const subject = `Khuyến mãi giờ vàng sắp bắt đầu lúc ${timeStr} — Bunbohue65`;
+  const subject = `Khuyến mãi giờ vàng sắp bắt đầu lúc ${timeStr} — ${tenant.name}`;
   const tierLines = (promotion.tiers || [])
     .map((t) => `- Đơn từ ${Number(t.minOrderValue).toLocaleString('vi-VN')}đ, giảm ${Number(t.discountAmount).toLocaleString('vi-VN')}đ`)
     .join('<br/>');
@@ -99,7 +102,7 @@ async function sendKmNotifyEmails(db, promotion, slot, slotIndex) {
     `<p>${promotion.name} sắp bắt đầu lúc ${timeStr} (còn 15 phút nữa), ` +
     `kéo dài ${slot.durationMinutes} phút.</p>` +
     `<p>Mức khuyến mại:<br/>${tierLines}</p>` +
-    `<p>Đặt món ngay trong khung giờ để nhận ưu đãi!</p><p>Bunbohue65</p>`;
+    `<p>Đặt món ngay trong khung giờ để nhận ưu đãi!</p><p>${tenant.name}</p>`;
 
   const hmac = hmacLib.signSendKmNotifyEmails(process.env.VPS_SECRET, emails, subject);
   try {
@@ -115,7 +118,17 @@ async function sendKmNotifyEmails(db, promotion, slot, slotIndex) {
 }
 
 async function checkAndNotify(db, now) {
-  const promotion = await canister.getCurrentPromotion();
+  for (const tenant of await canister.listActiveTenants()) {
+    try {
+      await checkAndNotifyTenant(db, tenant, now);
+    } catch (e) {
+      console.error('[km-notify-cron] lỗi đối tác', tenant.tenantId, e.message);
+    }
+  }
+}
+
+async function checkAndNotifyTenant(db, tenant, now) {
+  const promotion = await canister.getCurrentPromotion(tenant.tenantId);
   if (!promotion || promotion.length === 0) return; // Opt candid: [] | [Promotion]
   const promo = Array.isArray(promotion) ? promotion[0] : promotion;
   if (!promo) return;
@@ -137,7 +150,7 @@ async function checkAndNotify(db, now) {
       'INSERT INTO km_notifications_sent (date_key, promotion_code, slot_index, sent_at) VALUES (?, ?, ?, ?)',
     ).run(dateKey, promo.code, i, Date.now());
 
-    await sendKmNotifyEmails(db, promo, slot, i);
+    await sendKmNotifyEmails(db, tenant, promo, slot, i);
   }
 }
 

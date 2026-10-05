@@ -89,12 +89,12 @@ function computeLastMonthRange(now) {
 
 function computeSalesByEmail(db, start, endExclusive) {
   const rows = db.prepare(
-    `SELECT receiver_email AS email, COALESCE(SUM(amount), 0) AS total
+    `SELECT tenant_id AS tenantId, receiver_email AS email, COALESCE(SUM(amount), 0) AS total
      FROM orders
      WHERE payment_status = 'paid'
        AND receiver_email != ''
        AND created_at >= ? AND created_at < ?
-     GROUP BY receiver_email`,
+     GROUP BY tenant_id, receiver_email`,
   ).all(start.getTime(), endExclusive.getTime());
   return rows;
 }
@@ -106,7 +106,7 @@ async function runPeriod(db, periodType, range) {
   );
   for (const row of rows) {
     try {
-      const result = await canister.issueSalesBonus(row.email, periodType, range.periodKey, row.total);
+      const result = await canister.issueSalesBonus(row.tenantId, row.email, periodType, range.periodKey, row.total);
       if (result?.err) {
         console.error(`[sales-bonus-cron] issueSalesBonus lỗi cho ${row.email}:`, result.err);
       } else if (result?.ok?.length > 0) {
