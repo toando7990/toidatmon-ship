@@ -1,8 +1,8 @@
 manifest_version = "0.1.0"
 
 [project]
-id = "019fd23a-25a0-71ca-94d0-c614d299aa1d"
-name = "Bunbohue65 Ship"
+id = "01a0d967-874b-70ea-81a8-517a190a86b4"
+name = "Toidatmon ship"
 
 [workspace]
 include = [ "src/**" ]

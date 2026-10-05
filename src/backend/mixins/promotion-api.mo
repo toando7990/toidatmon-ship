@@ -246,7 +246,7 @@ mixin (
     let now = Time.now();
     let today = PromotionLib.vnDateKey(now);
     let wd = PromotionLib.weekdayIndex(now);
-    for ((_code, promo) in promotions.toArray().vals()) {
+    for ((_code, promo) in promotions.toArray().values()) {
       if (
         promo.tenantId == tenantId and promo.active and today >= promo.startDate and today <= promo.endDate and
         wd < promo.daysOfWeek.size() and promo.daysOfWeek[wd]
@@ -298,7 +298,7 @@ mixin (
     };
     let now = Time.now();
     var found : ?PromotionTypes.Promotion = null;
-    for ((_code, promo) in promotions.toArray().vals()) {
+    for ((_code, promo) in promotions.toArray().values()) {
       if (found == null and promo.tenantId == tenantId and PromotionLib.isPromotionActiveNow(promo, now) and promo.enabledOnline) {
         found := ?promo;
       };
@@ -347,7 +347,7 @@ mixin (
     };
     let now = Time.now();
     var found : ?PromotionTypes.Promotion = null;
-    for ((_code, promo) in promotions.toArray().vals()) {
+    for ((_code, promo) in promotions.toArray().values()) {
       if (found == null and promo.tenantId == tenantId and PromotionLib.isPromotionActiveNow(promo, now) and promo.enabledCounter) {
         found := ?promo;
       };

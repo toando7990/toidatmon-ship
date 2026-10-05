@@ -57,7 +57,7 @@ module {
     tenantId : Text,
     now : Int,
   ) : ?SalesPromoTypes.SalesPromo {
-    for ((_code, promo) in store.toArray().vals()) {
+    for ((_code, promo) in store.toArray().values()) {
       if (promo.tenantId == tenantId and isSalesPromoActiveNow(promo, now)) {
         return ?promo;
       };
@@ -70,7 +70,7 @@ module {
     totalSales : Nat,
   ) : ?SalesPromoTypes.SalesTier {
     var best : ?SalesPromoTypes.SalesTier = null;
-    for (tier in tiers.vals()) {
+    for (tier in tiers.values()) {
       if (totalSales >= tier.minSales) {
         switch (best) {
           case null { best := ?tier };
@@ -144,7 +144,7 @@ module {
   ) : Nat {
     let today = vnDateKey(now);
     var count = 0;
-    for ((code, p) in store.toArray().vals()) {
+    for ((code, p) in store.toArray().values()) {
       if (p.active and today > p.endDate) {
         let updated : SalesPromoTypes.SalesPromo = { p with active = false };
         store.add(code, updated);

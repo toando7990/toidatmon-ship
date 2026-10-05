@@ -113,7 +113,7 @@ module {
     tenantId : Text,
     now : Int,
   ) : ?RegistrationPromoTypes.RegistrationPromo {
-    for ((_code, promo) in store.toArray().vals()) {
+    for ((_code, promo) in store.toArray().values()) {
       if (promo.tenantId == tenantId and isRegistrationPromoActiveNow(promo, now)) {
         return ?promo;
       };
@@ -175,7 +175,7 @@ module {
   ) : Nat {
     let today = vnDateKey(now);
     var count = 0;
-    for ((code, p) in store.toArray().vals()) {
+    for ((code, p) in store.toArray().values()) {
       if (p.active and today > p.endDate) {
         let updated : RegistrationPromoTypes.RegistrationPromo = { p with active = false };
         store.add(code, updated);

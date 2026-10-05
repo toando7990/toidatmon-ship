@@ -56,7 +56,7 @@ mixin (
 
   public query func countVouchersByProgram(tenantId : Text, programCode : Text) : async Nat {
     var count = 0;
-    for ((_code, v) in vouchers.toArray().vals()) {
+    for ((_code, v) in vouchers.toArray().values()) {
       if (v.tenantId == tenantId and v.programCode == programCode) {
         count += 1;
       };

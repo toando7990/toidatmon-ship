@@ -37,7 +37,7 @@ interface TenantFormProps {
 
 // Danh sách slug dành riêng — khớp reservedSlugs trong backend
 // (src/backend/types/tenant.mo). Giữ đồng bộ để lỗi hiện ngay tại chỗ.
-const RESERVED_SLUGS = new Set([
+export const RESERVED_SLUGS = new Set([
   "www",
   "admin",
   "api",

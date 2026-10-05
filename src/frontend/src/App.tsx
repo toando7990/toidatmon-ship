@@ -25,8 +25,11 @@ import OrderHistory from "@/pages/OrderHistory";
 import OrderList from "@/pages/OrderList";
 import OrderTracker from "@/pages/OrderTracker";
 import OrderingPartners from "@/pages/OrderingPartners";
+import PartnerApplications from "@/pages/PartnerApplications";
+import PartnerApply from "@/pages/PartnerApply";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
+import PlatformHome from "@/pages/PlatformHome";
 import Profile from "@/pages/Profile";
 import PromotionManager from "@/pages/PromotionManager";
 import RegistrationPromoManager from "@/pages/RegistrationPromoManager";
@@ -39,6 +42,7 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -282,14 +286,30 @@ function TenantGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const rootRoute = createRootRouteWithContext()({
-  component: () => (
+// Trang đăng ký đối tác là trang của nền tảng, KHÔNG thuộc đối tác nào — không
+// bọc Layout/TenantGate (nếu không sẽ hiện thương hiệu của đối tác mặc định).
+// true khi đang ở tên miền chính của nền tảng (không phân giải được đối tác
+// từ hostname hay tiền tố đường dẫn).
+function isPlatformDomain(): boolean {
+  if (typeof window === "undefined") return false;
+  return resolveTenant().status === "default";
+}
+
+function RootShell() {
+  const pathname = useRouterState({ select: (st) => st.location.pathname });
+  if (pathname.startsWith("/dang-ky-doi-tac")) return <Outlet />;
+  if (pathname === "/" && isPlatformDomain()) return <Outlet />;
+  return (
     <Layout>
       <TenantGate>
         <Outlet />
       </TenantGate>
     </Layout>
-  ),
+  );
+}
+
+const rootRoute = createRootRouteWithContext()({
+  component: RootShell,
   notFoundComponent: () => <NotFoundNotice />,
 });
 
@@ -299,7 +319,9 @@ const indexRoute = createRoute({
   // Không còn bọc EmailVerificationGate ở đây — khách vào thẳng menu, chỉ bị
   // yêu cầu xác thực email đúng lúc bấm "Đặt món" lần đầu (xem
   // EmailVerificationDialog trong CreateOrder.tsx).
-  component: () => <CreateOrder />,
+  // Tên miền chính (không có đối tác trong hostname/đường dẫn) → trang chủ
+  // nhiều quán; có đối tác → trang đặt món của quán đó như cũ.
+  component: () => (isPlatformDomain() ? <PlatformHome /> : <CreateOrder />),
 });
 
 const trackRoute = createRoute({
@@ -462,6 +484,23 @@ const adminPartnersRoute = createRoute({
   ),
 });
 
+// Đăng ký đối tác (công khai) và hàng chờ duyệt (admin trung tâm).
+const partnerApplyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dang-ky-doi-tac",
+  component: () => <PartnerApply />,
+});
+
+const adminPartnerApplicationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/partner-applications",
+  component: () => (
+    <AdminGate>
+      <PartnerApplications />
+    </AdminGate>
+  ),
+});
+
 // Partner-unavailable notice as a standalone route — an unknown or hidden
 // slug renders this instead of a blank screen.
 const partnerUnavailableRoute = createRoute({
@@ -557,6 +596,8 @@ const router = createRouter({
     adminAnalyticsRoute,
     adminPromoDashboardRoute,
     adminPartnersRoute,
+    partnerApplyRoute,
+    adminPartnerApplicationsRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
   ]),
