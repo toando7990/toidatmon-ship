@@ -27,6 +27,7 @@ import PromoMaintenanceApi "mixins/promo-maintenance-api";
 import PaymentModeConfigApi "mixins/payment-mode-config-api";
 import StoreHoursConfigApi "mixins/store-hours-config-api";
 import TenantApi "mixins/tenant-api";
+import PartnerApplicationApi "mixins/partner-application-api";
 
 import CoreLib "lib/core";
 import CoreTypes "types/core";
@@ -44,6 +45,7 @@ import VoucherTypes "types/voucher";
 import RegistrationPromoTypes "types/registration-promo";
 import SalesPromoTypes "types/sales-promo";
 import TenantTypes "types/tenant";
+import PartnerApplicationTypes "types/partner-application";
 // Top-level Value modules so the OQL auto-derivation resolver picks them up
 // for the variant fields on the exposed entities.
 import DeviceRoleValue "types/DeviceRoleValue";
@@ -81,6 +83,10 @@ actor Main {
   // (slug đã chuẩn hoá). Đối tác do admin trung tâm tạo; migration backfill
   // đối tác mặc định 'bunbohue65' cho toàn bộ dữ liệu cũ.
   let tenants : TenantTypes.TenantStore;
+
+  // Đơn đăng ký làm đối tác (quán tự gửi, admin trung tâm duyệt). key =
+  // applicationId. Supplied by migrations/20261005_000000.mo.
+  let partnerApplications : PartnerApplicationTypes.ApplicationStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -273,6 +279,7 @@ actor Main {
   include MixinAuthorization(accessControlState, null);
   include ApiDocMixin();
   include TenantApi(tenants, accessControlState);
+  include PartnerApplicationApi(partnerApplications, tenants, accessControlState);
   include CoreApi(accessControlState, coreState);
   include HmacApi(orders, secretState);
   include DevicesApi(accessControlState, tenants, devices, pendingActivations);

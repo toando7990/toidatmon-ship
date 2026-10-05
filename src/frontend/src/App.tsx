@@ -25,6 +25,8 @@ import OrderHistory from "@/pages/OrderHistory";
 import OrderList from "@/pages/OrderList";
 import OrderTracker from "@/pages/OrderTracker";
 import OrderingPartners from "@/pages/OrderingPartners";
+import PartnerApplications from "@/pages/PartnerApplications";
+import PartnerApply from "@/pages/PartnerApply";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
 import Profile from "@/pages/Profile";
@@ -39,6 +41,7 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -282,14 +285,22 @@ function TenantGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const rootRoute = createRootRouteWithContext()({
-  component: () => (
+// Trang đăng ký đối tác là trang của nền tảng, KHÔNG thuộc đối tác nào — không
+// bọc Layout/TenantGate (nếu không sẽ hiện thương hiệu của đối tác mặc định).
+function RootShell() {
+  const pathname = useRouterState({ select: (st) => st.location.pathname });
+  if (pathname.startsWith("/dang-ky-doi-tac")) return <Outlet />;
+  return (
     <Layout>
       <TenantGate>
         <Outlet />
       </TenantGate>
     </Layout>
-  ),
+  );
+}
+
+const rootRoute = createRootRouteWithContext()({
+  component: RootShell,
   notFoundComponent: () => <NotFoundNotice />,
 });
 
@@ -462,6 +473,23 @@ const adminPartnersRoute = createRoute({
   ),
 });
 
+// Đăng ký đối tác (công khai) và hàng chờ duyệt (admin trung tâm).
+const partnerApplyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dang-ky-doi-tac",
+  component: () => <PartnerApply />,
+});
+
+const adminPartnerApplicationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/partner-applications",
+  component: () => (
+    <AdminGate>
+      <PartnerApplications />
+    </AdminGate>
+  ),
+});
+
 // Partner-unavailable notice as a standalone route — an unknown or hidden
 // slug renders this instead of a blank screen.
 const partnerUnavailableRoute = createRoute({
@@ -557,6 +585,8 @@ const router = createRouter({
     adminAnalyticsRoute,
     adminPromoDashboardRoute,
     adminPartnersRoute,
+    partnerApplyRoute,
+    adminPartnerApplicationsRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
   ]),

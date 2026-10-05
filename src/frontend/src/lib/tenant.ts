@@ -27,6 +27,7 @@ const RESERVED_PATH_SEGMENTS = new Set([
   "assets",
   "claim",
   "counter",
+  "dang-ky-doi-tac",
   "driver",
   "enterprise",
   "gioi-thieu",

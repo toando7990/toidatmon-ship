@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Building2,
+  ClipboardList,
   Clock,
   History,
   Info,
@@ -137,6 +138,12 @@ const ADMIN_NAV: NavItem[] = [
     to: "/admin/partners",
     label: "Đối tác",
     icon: Building2,
+    adminOnly: true,
+  },
+  {
+    to: "/admin/partner-applications",
+    label: "Đơn đăng ký đối tác",
+    icon: ClipboardList,
     adminOnly: true,
   },
   {
