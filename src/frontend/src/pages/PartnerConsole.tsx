@@ -42,6 +42,15 @@ import {
   toConsoleOrders,
   updateMenuItem,
 } from "@/lib/partner-console";
+import {
+  type EffectiveParam,
+  PARAM_BY_KEY,
+  currentValue,
+  formatParam,
+  formatVnDate,
+  getCounterPlan,
+  getPartnerParams,
+} from "@/lib/platform-params";
 import { cn, imageBytesToDataUrl } from "@/lib/utils";
 import CounterOrder from "@/pages/CounterOrder";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,6 +72,75 @@ interface Ctx {
   device: ConsoleDevice;
   role: ConsoleRole;
   settings: PartnerSettings | undefined;
+  /** Tham số Tôi Đặt Món áp dụng cho quán (phí, liên hệ…). */
+  params: EffectiveParam[];
+  /** Hạn gói bán quầy (ns), 0 = không hạn / chưa có. */
+  counterPlanUntil: bigint;
+}
+
+// ---------- Tham số từ Tôi Đặt Món ----------
+
+function ContactLinks({ params }: { params: EffectiveParam[] }) {
+  const phone = currentValue(params, "contact_phone");
+  const zalo = currentValue(params, "contact_zalo");
+  if (!phone && !zalo) return null;
+  const zaloHref = zalo.startsWith("http")
+    ? zalo
+    : `https://zalo.me/${zalo.replace(/[^\d]/g, "")}`;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {phone && (
+        <a
+          href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+          className="flex min-h-[44px] items-center rounded-xl bg-primary px-4 text-sm font-extrabold text-primary-foreground"
+        >
+          Gọi {phone}
+        </a>
+      )}
+      {zalo && (
+        <a
+          href={zaloHref}
+          target="_blank"
+          rel="noreferrer"
+          className="flex min-h-[44px] items-center rounded-xl border px-4 text-sm font-extrabold"
+        >
+          Nhắn Zalo
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** Thông báo thay đổi sắp tới (phí, lịch trả tiền…) — chỉ máy Chủ quán. */
+function ParamNotices({ params }: { params: EffectiveParam[] }) {
+  const upcoming = params.filter(
+    (p) => p.upcoming && PARAM_BY_KEY[p.key]?.showPartner,
+  );
+  if (upcoming.length === 0) return null;
+  return (
+    <div
+      className="mb-3 flex flex-col gap-1.5 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+      data-ocid="console.param_notices"
+    >
+      <p className="font-extrabold">Thông báo từ Tôi Đặt Món</p>
+      {upcoming.map((p) => {
+        const v = p.upcoming as NonNullable<EffectiveParam["upcoming"]>;
+        return (
+          <p key={p.key}>
+            Từ {formatVnDate(v.effectiveFrom)}: {PARAM_BY_KEY[p.key].label}{" "}
+            {v.value ? (
+              <>
+                là <b>{formatParam(p.key, v.value)}</b>
+              </>
+            ) : (
+              "không còn áp dụng"
+            )}
+            {v.note ? `. ${v.note}` : ""}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 // ---------- Khung chung ----------
@@ -403,6 +481,52 @@ function OrdersTab({ ctx }: { ctx: Ctx }) {
   );
 }
 
+/** Phí và lịch trả tiền đang áp dụng cho quán (do Tôi Đặt Món đặt). */
+function FeesCard({ params }: { params: EffectiveParam[] }) {
+  const rows = params
+    .filter(
+      (p) =>
+        PARAM_BY_KEY[p.key]?.showPartner &&
+        !p.key.startsWith("contact_") &&
+        p.current?.value,
+    )
+    .sort(
+      (a, b) =>
+        Object.keys(PARAM_BY_KEY).indexOf(a.key) -
+        Object.keys(PARAM_BY_KEY).indexOf(b.key),
+    );
+  const hasContact =
+    !!currentValue(params, "contact_phone") ||
+    !!currentValue(params, "contact_zalo");
+  if (rows.length === 0 && !hasContact) return null;
+  return (
+    <Card>
+      <h2 className="text-base font-extrabold">Phí và thanh toán</h2>
+      {rows.map((p) => (
+        <div
+          key={p.key}
+          className="flex items-baseline justify-between gap-3 text-[15px]"
+        >
+          <span className="text-muted-foreground">
+            {PARAM_BY_KEY[p.key].label}
+          </span>
+          <span className="text-right font-bold">
+            {formatParam(p.key, p.current?.value ?? "")}
+          </span>
+        </div>
+      ))}
+      {hasContact && (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Cần hỗ trợ? Liên hệ Tôi Đặt Món:
+          </p>
+          <ContactLinks params={params} />
+        </>
+      )}
+    </Card>
+  );
+}
+
 // ---------- Bán quầy ----------
 
 function CounterTab({ ctx }: { ctx: Ctx }) {
@@ -429,14 +553,28 @@ function CounterTab({ ctx }: { ctx: Ctx }) {
           <li>✓ Không tính phí theo đơn tại quầy</li>
         </ul>
         <Card>
-          <p className="text-[15px] font-bold">
-            Gói bán tại quầy · trả phí theo tháng
-          </p>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[15px] font-bold">Phí gói</p>
+            <p className="text-xl font-extrabold">
+              {currentValue(ctx.params, "counter_plan_fee")
+                ? formatParam(
+                    "counter_plan_fee",
+                    currentValue(ctx.params, "counter_plan_fee"),
+                  )
+                : "Theo tháng"}
+            </p>
+          </div>
+          {ctx.counterPlanUntil > 0n && (
+            <p className="text-sm text-red-700">
+              Gói đã hết hạn ngày {formatVnDate(ctx.counterPlanUntil - 1n)}.
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             {ctx.role === "owner"
               ? "Liên hệ Tôi Đặt Món để đăng ký, gói được bật ngay sau khi xác nhận."
               : "Nhờ chủ quán đăng ký gói với Tôi Đặt Món."}
           </p>
+          {ctx.role === "owner" && <ContactLinks params={ctx.params} />}
         </Card>
       </div>
     );
@@ -866,8 +1004,12 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
             <span className="text-base font-extrabold">Gói bán tại quầy</span>
             <span className="text-[13px] text-muted-foreground">
               {ctx.settings?.counterPlan
-                ? "Đang dùng · phí theo tháng"
-                : "Chưa đăng ký · liên hệ Tôi Đặt Món"}
+                ? ctx.counterPlanUntil > 0n
+                  ? `Đang dùng · đến hết ${formatVnDate(ctx.counterPlanUntil - 1n)}`
+                  : "Đang dùng · phí theo tháng"
+                : ctx.counterPlanUntil > 0n
+                  ? `Hết hạn ngày ${formatVnDate(ctx.counterPlanUntil - 1n)} · liên hệ Tôi Đặt Món`
+                  : "Chưa đăng ký · liên hệ Tôi Đặt Món"}
             </span>
           </span>
           <span
@@ -882,6 +1024,8 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
           </span>
         </div>
       </Card>
+
+      <FeesCard params={ctx.params} />
 
       <Card>
         <h2 className="text-base font-extrabold">Máy dùng trang quản lý</h2>
@@ -1068,6 +1212,18 @@ export default function PartnerConsole() {
     enabled: ready && !!tenantId && !!device,
     refetchInterval: 60_000,
   });
+  const paramsQ = useQuery({
+    queryKey: ["console", "params", tenantId, device?.deviceId],
+    queryFn: () => getPartnerParams(actor!, tenantId, device!.deviceId),
+    enabled: ready && !!tenantId && !!device,
+    staleTime: 5 * 60_000,
+  });
+  const planQ = useQuery({
+    queryKey: ["console", "counterPlan", tenantId],
+    queryFn: () => getCounterPlan(actor!, tenantId),
+    enabled: ready && !!tenantId && !!device,
+    refetchInterval: 5 * 60_000,
+  });
   const pause = useMutation({
     mutationFn: (paused: boolean) =>
       setPaused(actor!, tenantId, device!.deviceId, paused),
@@ -1130,6 +1286,8 @@ export default function PartnerConsole() {
     device,
     role,
     settings: settingsQ.data,
+    params: paramsQ.data ?? [],
+    counterPlanUntil: planQ.data?.enabled ? planQ.data.until : 0n,
   };
   const paused = !!settingsQ.data?.paused;
   const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
@@ -1208,6 +1366,9 @@ export default function PartnerConsole() {
             : "max-w-3xl",
         )}
       >
+        {role === "owner" && tab !== "counter" && (
+          <ParamNotices params={ctx.params} />
+        )}
         {tab === "orders" && <OrdersTab ctx={ctx} />}
         {tab === "counter" && <CounterTab ctx={ctx} />}
         {tab === "menu" && <MenuTab ctx={ctx} />}

@@ -31,6 +31,7 @@ import PartnerConsole from "@/pages/PartnerConsole";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
 import PlatformHome from "@/pages/PlatformHome";
+import PlatformSettings from "@/pages/PlatformSettings";
 import Profile from "@/pages/Profile";
 import PromotionManager from "@/pages/PromotionManager";
 import RegistrationPromoManager from "@/pages/RegistrationPromoManager";
@@ -510,6 +511,17 @@ const adminPartnerApplicationsRoute = createRoute({
   ),
 });
 
+// Tham số kinh doanh của nền tảng (phí, lịch trả tiền, kênh liên hệ…).
+const adminPlatformSettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/cai-dat",
+  component: () => (
+    <AdminGate>
+      <PlatformSettings />
+    </AdminGate>
+  ),
+});
+
 // Partner-unavailable notice as a standalone route — an unknown or hidden
 // slug renders this instead of a blank screen.
 const partnerUnavailableRoute = createRoute({
@@ -608,6 +620,7 @@ const router = createRouter({
     partnerApplyRoute,
     partnerConsoleRoute,
     adminPartnerApplicationsRoute,
+    adminPlatformSettingsRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
   ]),

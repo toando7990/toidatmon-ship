@@ -30,6 +30,7 @@ import {
   LogOut,
   type LucideIcon,
   Percent,
+  Settings2,
   ShieldCheck,
   Smartphone,
   Store,
@@ -144,6 +145,12 @@ const ADMIN_NAV: NavItem[] = [
     to: "/admin/partner-applications",
     label: "Đơn đăng ký đối tác",
     icon: ClipboardList,
+    adminOnly: true,
+  },
+  {
+    to: "/admin/cai-dat",
+    label: "Cài đặt nền tảng",
+    icon: Settings2,
     adminOnly: true,
   },
   {

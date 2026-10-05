@@ -12,6 +12,8 @@ import StoreHoursConfigTypes "../types/store-hours-config";
 import Lib "../lib/partner-console";
 import DeviceAuth "../lib/device-auth";
 import Types "../types/partner-console";
+import PlatformParamsLib "../lib/platform-params";
+import PlatformParamsTypes "../types/platform-params";
 import Map "mo:core/Map";
 
 // API trang quản lý của đối tác (/quan-ly). Thiết bị gửi kèm deviceId của
@@ -27,6 +29,7 @@ mixin (
   partnerSettings : Types.SettingsStore,
   soldOutItems : Types.SoldOutStore,
   orderPrep : Types.PrepStore,
+  counterPlanUntil : PlatformParamsTypes.CounterPlanUntilStore,
 ) {
   func isAdmin(caller : Principal) : Bool = AccessControl.isAdmin(accessControlState, caller);
 
@@ -41,8 +44,39 @@ mixin (
   };
 
   /// Cài đặt quán (công khai: trang đặt món cần biết quán có tạm nghỉ không).
+  /// counterPlan trả về là trạng thái ĐANG HIỆU LỰC (đã tính hạn gói).
   public query func getPartnerSettings(tenantId : Common.TenantId) : async Types.PartnerSettings {
-    Lib.getSettings(partnerSettings, tenantId);
+    let s = Lib.getSettings(partnerSettings, tenantId);
+    let until = PlatformParamsLib.counterPlanUntil(counterPlanUntil, tenantId);
+    { s with counterPlan = PlatformParamsLib.counterPlanActive(s.counterPlan, until) };
+  };
+
+  /// Gói bán quầy: đã bật chưa, hạn tới đâu (0 = không hạn), còn hiệu lực không.
+  public query func getCounterPlan(tenantId : Common.TenantId) : async {
+    enabled : Bool;
+    until : Common.Timestamp;
+    active : Bool;
+  } {
+    let enabled = Lib.getSettings(partnerSettings, tenantId).counterPlan;
+    let until = PlatformParamsLib.counterPlanUntil(counterPlanUntil, tenantId);
+    { enabled; until; active = PlatformParamsLib.counterPlanActive(enabled, until) };
+  };
+
+  /// Admin: bật/tắt gói bán quầy kèm hạn (0 = không hạn).
+  public shared ({ caller }) func setCounterPlanUntil(
+    tenantId : Common.TenantId,
+    enabled : Bool,
+    until : Common.Timestamp,
+  ) : async Result.Result<(), Text> {
+    if (not isAdmin(caller)) { return #err("Admin only") };
+    if (not TenantLib.isActiveTenant(tenants, tenantId)) {
+      return #err("Đối tác không tồn tại hoặc đã ngừng hoạt động");
+    };
+    ignore Lib.update(partnerSettings, tenantId, func(s) = { s with counterPlan = enabled });
+    if (until == 0) { counterPlanUntil.remove(tenantId) } else {
+      counterPlanUntil.add(tenantId, until);
+    };
+    #ok(());
   };
 
   /// Tạm nghỉ / nhận đơn lại. Chủ quán hoặc Nhân viên.

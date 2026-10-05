@@ -2,9 +2,10 @@
 // Hàng chờ đơn đăng ký đối tác: xem thông tin, duyệt (tạo đối tác), yêu cầu
 // bổ sung hoặc từ chối kèm ghi chú.
 
+import { DeviceRole } from "@/backend";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useCanister } from "@/lib/canister";
+import { generateActivationCode, useCanister } from "@/lib/canister";
 import {
   type ApplicationStatus,
   BUSINESS_TYPE_LABEL,
@@ -19,6 +20,66 @@ import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Loader2 } from "lucide-react";
 import { useState } from "react";
+
+/** Sau khi duyệt: tạo mã kích hoạt máy Chủ quán để gửi cho quán. */
+function OwnerCodeBox({ tenantId, slug }: { tenantId: string; slug: string }) {
+  const { actor } = useCanister();
+  const gen = useMutation({
+    mutationFn: () => {
+      if (!actor) throw new Error("Chưa kết nối");
+      return generateActivationCode(
+        actor,
+        "",
+        DeviceRole.tenantAdmin,
+        tenantId,
+      );
+    },
+  });
+  const expires = gen.data
+    ? new Date(Number(gen.data.expiresAt / 1_000_000n)).toLocaleString(
+        "vi-VN",
+        { timeZone: "Asia/Ho_Chi_Minh" },
+      )
+    : "";
+  return (
+    <div
+      className="space-y-2 rounded-lg bg-muted/50 p-3"
+      data-ocid="partner_applications.owner_code"
+    >
+      {gen.data ? (
+        <>
+          <p className="text-sm">Mã kích hoạt máy Chủ quán:</p>
+          <p className="font-mono text-2xl font-bold tracking-widest">
+            {gen.data.code}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Gửi cho quán: mở {slug}.{PARTNER_ROOT_DOMAIN}/quan-ly và nhập mã.
+            Hết hạn lúc {expires}.
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Tạo mã để chủ quán đăng nhập trang quản lý trên điện thoại của họ.
+        </p>
+      )}
+      {gen.isError && (
+        <p className="text-sm text-destructive">
+          {gen.error instanceof Error ? gen.error.message : "Lỗi tạo mã"}
+        </p>
+      )}
+      <Button
+        type="button"
+        size="sm"
+        variant={gen.data ? "outline" : "default"}
+        disabled={gen.isPending}
+        onClick={() => gen.mutate()}
+      >
+        {gen.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {gen.data ? "Tạo mã khác" : "Tạo mã kích hoạt cho chủ quán"}
+      </Button>
+    </div>
+  );
+}
 
 const FILTERS: { key: ApplicationStatus | null; label: string }[] = [
   { key: null, label: "Tất cả" },
@@ -129,6 +190,10 @@ function ApplicationCard({ app }: { app: PartnerApplication }) {
             {app.adminNote && <Row k="Ghi chú đã gửi" v={app.adminNote} />}
             {app.tenantId && <Row k="Đối tác đã tạo" v={app.tenantId} />}
           </dl>
+
+          {closed && app.tenantId && (
+            <OwnerCodeBox tenantId={app.tenantId} slug={i.desiredSlug} />
+          )}
 
           {!closed && (
             <div className="space-y-2">

@@ -29,6 +29,8 @@ import StoreHoursConfigApi "mixins/store-hours-config-api";
 import TenantApi "mixins/tenant-api";
 import PartnerApplicationApi "mixins/partner-application-api";
 import PartnerConsoleApi "mixins/partner-console-api";
+import PlatformParamsApi "mixins/platform-params-api";
+import PlatformParamsTypes "types/platform-params";
 
 import CoreLib "lib/core";
 import CoreTypes "types/core";
@@ -99,6 +101,8 @@ actor Main {
 
   // Khoá bí mật thiết bị — supplied by migrations/20261007_000000.mo.
   let deviceAuth : DeviceAuthTypes.DeviceAuthState;
+  let platformParams : PlatformParamsTypes.ParamStore;
+  let counterPlanUntil : PlatformParamsTypes.CounterPlanUntilStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -310,7 +314,8 @@ actor Main {
   include PromoMaintenanceApi(promotions, registrationPromos, salesPromos, vouchers, secretState);
   include PaymentModeConfigApi(accessControlState, paymentModeState, coreState);
   include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);
-  include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep);
+  include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil);
+  include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own

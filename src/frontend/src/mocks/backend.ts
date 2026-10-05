@@ -208,6 +208,28 @@ const partnerConsoleMock = {
   }),
   listOrderPrep: async () => [],
 };
+// Tham số nền tảng + hạn gói bán quầy (mixins/platform-params-api.mo).
+const platformParamsMock = {
+  listPlatformParams: async () => ({ __kind__: "ok" as const, ok: [] }),
+  setPlatformParam: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  cancelPlatformParamChange: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  getPartnerParams: async () => [],
+  getCounterPlan: async () => ({
+    enabled: false,
+    until: BigInt(0),
+    active: false,
+  }),
+  setCounterPlanUntil: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+};
 // Bảo mật thiết bị (lib/device-auth.mo).
 const deviceAuthMock = {
   activateDeviceSecure: async () => ({
@@ -220,6 +242,7 @@ export const mockBackend: backendInterface = {
   ...partnerApplicationMock,
   ...partnerConsoleMock,
   ...deviceAuthMock,
+  ...platformParamsMock,
   _initialize_access_control: async () => {},
   _internet_identity_sign_in_finish: async () => ({ __kind__: "ok", ok: null }),
   _internet_identity_sign_in_start: async () => new Uint8Array(),
