@@ -33,9 +33,11 @@ import Common "../types/common";
 import DevicesLib "../lib/devices";
 import HmacLib "../lib/hmac";
 
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   salesPromos : SalesPromoTypes.SalesPromoStore,
   salesBonusIssued : SalesPromoTypes.SalesBonusIssuedStore,
   vouchers : VoucherTypes.VoucherStore,
@@ -46,7 +48,7 @@ mixin (
   // SAME TENANT. Used to let the "Báo cáo bán hàng và KM" role manage/track
   // sales promos while admin retains full access.
   func canManageSalesPromos(caller : Principal, tenantId : Common.TenantId, deviceId : Text) : Bool {
-    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceId, tenantId, #salesPromoReporting);
+    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceAuth, deviceId, tenantId, #salesPromoReporting);
   };
 
   func hasIssuedSalesVoucher(tenantId : Common.TenantId, code : Text) : Bool {

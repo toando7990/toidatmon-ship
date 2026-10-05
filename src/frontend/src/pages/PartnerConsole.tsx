@@ -729,7 +729,8 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
   });
   const devicesQ = useQuery({
     queryKey: ["console", "devices", ctx.tenantId],
-    queryFn: () => listConsoleDevices(actor!, ctx.tenantId),
+    queryFn: () =>
+      listConsoleDevices(actor!, ctx.tenantId, ctx.device.deviceId),
     enabled: ready,
   });
   const restQ = useQuery({

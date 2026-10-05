@@ -5,6 +5,7 @@
 import { createActor } from "@/backend";
 import { EnterpriseRole } from "@/backend";
 import { useTenantId } from "@/hooks/useQueries";
+import { credentialFor } from "@/lib/device-credential";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useQuery } from "@tanstack/react-query";
@@ -84,7 +85,11 @@ export function useEnterpriseRole(deviceId?: string): EnterpriseRoleState {
       for (const role of ENTERPRISE_ROLES) {
         try {
           if (
-            await actor.callerHasEnterpriseRole(deviceId ?? "", tenantId, role)
+            await actor.callerHasEnterpriseRole(
+              credentialFor(deviceId),
+              tenantId,
+              role,
+            )
           )
             return role;
         } catch {

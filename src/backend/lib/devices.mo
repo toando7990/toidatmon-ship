@@ -7,6 +7,8 @@ import Nat64 "mo:core/Nat64";
 
 import Common "../types/common";
 import Devices "../types/devices";
+import DeviceAuth "device-auth";
+import DeviceAuthTypes "../types/device-auth";
 
 module {
   public type Device = Devices.Device;
@@ -238,10 +240,12 @@ module {
   // requested tenantId. A device with no matching tenant fails the check.
   public func deviceHasRole(
     store : DevicesStore,
-    deviceId : Common.DeviceId,
+    auth : DeviceAuthTypes.DeviceAuthState,
+    credential : Text,
     tenantId : Common.TenantId,
     required : EnterpriseRole,
   ) : Bool {
+    let ?deviceId = DeviceAuth.resolve(auth, credential) else return false;
     switch (store.get(deviceId)) {
       case null { false };
       case (?d) { d.active and d.tenantId == tenantId and hasEnterpriseRole(d.role, required) };
@@ -255,9 +259,11 @@ module {
   // AccessControl.isAdmin.
   public func deviceIsTenantAdmin(
     store : DevicesStore,
-    deviceId : Common.DeviceId,
+    auth : DeviceAuthTypes.DeviceAuthState,
+    credential : Text,
     tenantId : Common.TenantId,
   ) : Bool {
+    let ?deviceId = DeviceAuth.resolve(auth, credential) else return false;
     switch (store.get(deviceId)) {
       case null { false };
       case (?d) { d.active and d.tenantId == tenantId and d.role == #tenantAdmin };

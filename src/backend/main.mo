@@ -48,6 +48,8 @@ import SalesPromoTypes "types/sales-promo";
 import TenantTypes "types/tenant";
 import PartnerApplicationTypes "types/partner-application";
 import PartnerConsoleTypes "types/partner-console";
+import DeviceAuthTypes "types/device-auth";
+import DeviceAuthLib "lib/device-auth";
 // Top-level Value modules so the OQL auto-derivation resolver picks them up
 // for the variant fields on the exposed entities.
 import DeviceRoleValue "types/DeviceRoleValue";
@@ -94,6 +96,9 @@ actor Main {
   let partnerSettings : PartnerConsoleTypes.SettingsStore;
   let soldOutItems : PartnerConsoleTypes.SoldOutStore;
   let orderPrep : PartnerConsoleTypes.PrepStore;
+
+  // Khoá bí mật thiết bị — supplied by migrations/20261007_000000.mo.
+  let deviceAuth : DeviceAuthTypes.DeviceAuthState;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -235,6 +240,9 @@ actor Main {
   };
 
   system func postupgrade() {
+    // Lần nâng cấp đầu có khoá thiết bị: mở 14 ngày ân hạn cho máy cũ.
+    DeviceAuthLib.startGraceIfUnset(deviceAuth);
+
     let ref : SecretTypes.StableSecretRef = {
       var vpsSecret = vpsSecret;
       var vpsSecretPrevious = vpsSecretPrevious;
@@ -287,22 +295,22 @@ actor Main {
   include ApiDocMixin();
   include TenantApi(tenants, accessControlState);
   include PartnerApplicationApi(partnerApplications, tenants, accessControlState);
-  include CoreApi(accessControlState, coreState);
+  include CoreApi(accessControlState, coreState, deviceAuth);
   include HmacApi(orders, secretState);
-  include DevicesApi(accessControlState, tenants, devices, pendingActivations);
+  include DevicesApi(accessControlState, tenants, devices, deviceAuth, pendingActivations);
   include UpgradeApi(accessControlState, orders, devices, pendingActivations, menus, restaurants, restaurantMenuOverrides);
   include SecretApi(secretState, accessControlState);
-  include MenuApi(accessControlState, tenants, devices, menus, restaurants, restaurantMenuOverrides);
-  include MenuSeedApi(accessControlState, devices, menus);
+  include MenuApi(accessControlState, tenants, devices, deviceAuth, menus, restaurants, restaurantMenuOverrides);
+  include MenuSeedApi(accessControlState, devices, deviceAuth, menus);
   include EmailVerificationApi(otpRecords, registrationPromos, registrationBonusIssued, vouchers, secretState);
-  include PromotionApi(accessControlState, devices, kmUsage, kmDailyCount, promotions, secretState, otpRecords, promotionUsed);
+  include PromotionApi(accessControlState, devices, deviceAuth, kmUsage, kmDailyCount, promotions, secretState, otpRecords, promotionUsed);
   include VoucherApi(vouchers, secretState);
-  include RegistrationPromoApi(accessControlState, devices, registrationPromos, vouchers);
-  include SalesPromoApi(accessControlState, devices, salesPromos, salesBonusIssued, vouchers, secretState);
+  include RegistrationPromoApi(accessControlState, devices, deviceAuth, registrationPromos, vouchers);
+  include SalesPromoApi(accessControlState, devices, deviceAuth, salesPromos, salesBonusIssued, vouchers, secretState);
   include PromoMaintenanceApi(promotions, registrationPromos, salesPromos, vouchers, secretState);
   include PaymentModeConfigApi(accessControlState, paymentModeState, coreState);
   include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);
-  include PartnerConsoleApi(accessControlState, tenants, devices, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep);
+  include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own

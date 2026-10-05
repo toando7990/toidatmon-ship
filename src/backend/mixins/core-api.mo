@@ -23,9 +23,11 @@ import HmacTypes "../types/hmac";
 // NOT rejected — they still receive the orders, just without PII — so the
 // customer OrderList and driver DriverPaymentScreen flows (which call via an
 // anonymous agent) keep working while the PII leak is closed.
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   state : CoreLib.State,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
 ) {
   // --- Orders (VPS push, HMAC-verified; not public to end users) ---
   // createOrder is invoked by the VPS worker with an HMAC over
@@ -121,7 +123,7 @@ mixin (
   // PII-blanked records.
   public shared ({ caller }) func listOrders(tenantId : Text, deviceId : Text) : async [CoreTypes.Order] {
     let raw = CoreLib.listOrders(state, tenantId);
-    if (AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(state.devices, deviceId, tenantId, #accounting)) {
+    if (AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(state.devices, deviceAuth, deviceId, tenantId, #accounting)) {
       raw;
     } else {
       raw.map(func(o : CoreTypes.Order) : CoreTypes.Order = sanitizePii(o));
@@ -137,7 +139,7 @@ mixin (
     switch (CoreLib.getOrder(state, tenantId, orderId)) {
       case null { #err("Order not found") };
       case (?o) {
-        if (AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(state.devices, deviceId, tenantId, #accounting)) {
+        if (AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(state.devices, deviceAuth, deviceId, tenantId, #accounting)) {
           #ok(o);
         } else {
           #ok(sanitizePii(o));
@@ -159,7 +161,7 @@ mixin (
     let raw = CoreLib.listOrders(state, tenantId).filter(
       func(o : CoreTypes.Order) : Bool = o.receiverEmail.toLower() == normalized
     );
-    if (AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(state.devices, deviceId, tenantId, #accounting)) {
+    if (AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(state.devices, deviceAuth, deviceId, tenantId, #accounting)) {
       raw;
     } else {
       raw.map(func(o : CoreTypes.Order) : CoreTypes.Order = sanitizePii(o));
@@ -351,7 +353,7 @@ mixin (
     deviceId : Text,
     orderId : Text,
   ) : async Result.Result<CoreTypes.Order, Text> {
-    if (not AccessControl.isAdmin(accessControlState, caller) and not DevicesLib.deviceHasRole(state.devices, deviceId, tenantId, #accounting)) {
+    if (not AccessControl.isAdmin(accessControlState, caller) and not DevicesLib.deviceHasRole(state.devices, deviceAuth, deviceId, tenantId, #accounting)) {
       return #err("Accounting role required");
     };
     switch (CoreLib.getOrder(state, tenantId, orderId)) {
@@ -376,7 +378,7 @@ mixin (
     invoiceId : Text,
     pdfUrl : Text,
   ) : async Result.Result<CoreTypes.Order, Text> {
-    if (not AccessControl.isAdmin(accessControlState, caller) and not DevicesLib.deviceHasRole(state.devices, deviceId, tenantId, #accounting)) {
+    if (not AccessControl.isAdmin(accessControlState, caller) and not DevicesLib.deviceHasRole(state.devices, deviceAuth, deviceId, tenantId, #accounting)) {
       return #err("Accounting role required");
     };
     switch (CoreLib.getOrder(state, tenantId, orderId)) {

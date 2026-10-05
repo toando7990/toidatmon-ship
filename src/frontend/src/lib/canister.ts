@@ -20,6 +20,12 @@ import {
   type StoreHours,
   type Voucher,
 } from "@/backend";
+import {
+  credentialFor,
+  hashDeviceToken,
+  newDeviceToken,
+  saveDeviceToken,
+} from "@/lib/device-credential";
 import type { Tenant } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
 
@@ -169,7 +175,7 @@ export async function listOrders(
   deviceId = "",
   tenantId = "",
 ): Promise<Order[]> {
-  return actor.listOrders(tenantId, deviceId);
+  return actor.listOrders(tenantId, credentialFor(deviceId));
 }
 
 // Lịch sử đặt đơn — tra cứu theo email đã xác thực (khớp không phân biệt hoa
@@ -181,7 +187,7 @@ export async function getOrdersByEmail(
   deviceId = "",
   tenantId = "",
 ): Promise<Order[]> {
-  return actor.getOrdersByEmail(tenantId, email, deviceId);
+  return actor.getOrdersByEmail(tenantId, email, credentialFor(deviceId));
 }
 
 export async function getOrder(
@@ -190,7 +196,9 @@ export async function getOrder(
   deviceId = "",
   tenantId = "",
 ): Promise<Order> {
-  return unwrap(await actor.getOrder(tenantId, orderId, deviceId));
+  return unwrap(
+    await actor.getOrder(tenantId, orderId, credentialFor(deviceId)),
+  );
 }
 
 export async function getOrderStatus(
@@ -240,7 +248,13 @@ export async function cleanupOrderByDevice(
   orderId: string,
   tenantId = "",
 ): Promise<Order> {
-  return unwrap(await actor.cleanupOrderByDevice(tenantId, deviceId, orderId));
+  return unwrap(
+    await actor.cleanupOrderByDevice(
+      tenantId,
+      credentialFor(deviceId),
+      orderId,
+    ),
+  );
 }
 
 // Accounting role: manually issue an e-invoice for an order.
@@ -255,7 +269,7 @@ export async function issueInvoiceByDevice(
   return unwrap(
     await actor.issueInvoiceByDevice(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       orderId,
       invoiceId,
       pdfUrl,
@@ -282,7 +296,37 @@ export async function activateDevice(
   name: string,
   phone: string,
 ): Promise<Device> {
-  return unwrap(await actor.activateDevice(code, deviceId, name, phone));
+  // Kích hoạt có khoá bí mật; bindings cũ (chưa có activateDeviceSecure) thì
+  // dùng cách cũ để không chặn việc kích hoạt.
+  const secure = (
+    actor as unknown as {
+      activateDeviceSecure?: (
+        code: string,
+        deviceId: string,
+        name: string,
+        phone: string,
+        tokenHash: Uint8Array,
+      ) => Promise<
+        { __kind__: "ok"; ok: Device } | { __kind__: "err"; err: string }
+      >;
+    }
+  ).activateDeviceSecure;
+  if (typeof secure !== "function") {
+    return unwrap(await actor.activateDevice(code, deviceId, name, phone));
+  }
+  const token = newDeviceToken();
+  const device = unwrap(
+    await secure.call(
+      actor,
+      code,
+      deviceId,
+      name,
+      phone,
+      await hashDeviceToken(token),
+    ),
+  );
+  saveDeviceToken(deviceId, token);
+  return device;
 }
 
 export async function revokeDevice(
@@ -299,20 +343,33 @@ export async function cleanupExpiredActivations(
   return actor.cleanupExpiredActivations();
 }
 
+// Danh sách máy chỉ trả cho admin hoặc Chủ quán (credential của máy chủ quán).
 export async function listDevicesByRestaurant(
   actor: Backend,
   restaurantId: string,
   tenantId = "",
+  ownerDeviceId = "",
 ): Promise<Device[]> {
-  return actor.listDevicesByRestaurant(tenantId, restaurantId);
+  const fn = actor.listDevicesByRestaurant as unknown as (
+    t: string,
+    r: string,
+    c: string,
+  ) => Promise<Device[]>;
+  return fn.call(actor, tenantId, restaurantId, credentialFor(ownerDeviceId));
 }
 
 export async function listDevicesByRole(
   actor: Backend,
   role: DeviceRole,
   tenantId = "",
+  ownerDeviceId = "",
 ): Promise<Device[]> {
-  return actor.listDevicesByRole(tenantId, role);
+  const fn = actor.listDevicesByRole as unknown as (
+    t: string,
+    r: DeviceRole,
+    c: string,
+  ) => Promise<Device[]>;
+  return fn.call(actor, tenantId, role, credentialFor(ownerDeviceId));
 }
 
 // ---- VPS secret (admin only) ----
@@ -664,7 +721,7 @@ export async function listPromotions(
   deviceId = "",
   tenantId = "",
 ): Promise<Promotion[]> {
-  return unwrap(await actor.listPromotions(tenantId, deviceId));
+  return unwrap(await actor.listPromotions(tenantId, credentialFor(deviceId)));
 }
 
 export async function createPromotion(
@@ -676,7 +733,7 @@ export async function createPromotion(
   return unwrap(
     await actor.createPromotion(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       input.name,
       input.startDate,
       input.endDate,
@@ -703,7 +760,7 @@ export async function updatePromotion(
   return unwrap(
     await actor.updatePromotion(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       code,
       input.name,
       input.startDate,
@@ -727,7 +784,7 @@ export async function deletePromotion(
   code: string,
   tenantId = "",
 ): Promise<void> {
-  unwrap(await actor.deletePromotion(tenantId, deviceId, code));
+  unwrap(await actor.deletePromotion(tenantId, credentialFor(deviceId), code));
 }
 
 // Dừng chương trình (set active=false) — LUÔN dùng được, kể cả chương
@@ -739,7 +796,9 @@ export async function stopPromotion(
   code: string,
   tenantId = "",
 ): Promise<Promotion> {
-  return unwrap(await actor.stopPromotion(tenantId, deviceId, code));
+  return unwrap(
+    await actor.stopPromotion(tenantId, credentialFor(deviceId), code),
+  );
 }
 
 // Chương trình đã có khách dùng thành công chưa (Giai đoạn 4f) — quyết
@@ -750,7 +809,9 @@ export async function isPromotionUsed(
   code: string,
   tenantId = "",
 ): Promise<boolean> {
-  return unwrap(await actor.isPromotionUsed(tenantId, deviceId, code));
+  return unwrap(
+    await actor.isPromotionUsed(tenantId, credentialFor(deviceId), code),
+  );
 }
 
 // ---- Quản lý "Khuyến mại đăng ký" (admin, /admin/registration-promo) ----
@@ -769,7 +830,9 @@ export async function listRegistrationPromos(
   deviceId = "",
   tenantId = "",
 ): Promise<RegistrationPromo[]> {
-  return unwrap(await actor.listRegistrationPromos(tenantId, deviceId));
+  return unwrap(
+    await actor.listRegistrationPromos(tenantId, credentialFor(deviceId)),
+  );
 }
 
 export async function createRegistrationPromo(
@@ -781,7 +844,7 @@ export async function createRegistrationPromo(
   return unwrap(
     await actor.createRegistrationPromo(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       input.name,
       input.startDate,
       input.endDate,
@@ -803,7 +866,7 @@ export async function updateRegistrationPromo(
   return unwrap(
     await actor.updateRegistrationPromo(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       code,
       input.name,
       input.startDate,
@@ -822,7 +885,13 @@ export async function deleteRegistrationPromo(
   code: string,
   tenantId = "",
 ): Promise<void> {
-  unwrap(await actor.deleteRegistrationPromo(tenantId, deviceId, code));
+  unwrap(
+    await actor.deleteRegistrationPromo(
+      tenantId,
+      credentialFor(deviceId),
+      code,
+    ),
+  );
 }
 
 export async function stopRegistrationPromo(
@@ -831,7 +900,9 @@ export async function stopRegistrationPromo(
   code: string,
   tenantId = "",
 ): Promise<RegistrationPromo> {
-  return unwrap(await actor.stopRegistrationPromo(tenantId, deviceId, code));
+  return unwrap(
+    await actor.stopRegistrationPromo(tenantId, credentialFor(deviceId), code),
+  );
 }
 
 export async function isRegistrationPromoUsed(
@@ -840,7 +911,13 @@ export async function isRegistrationPromoUsed(
   code: string,
   tenantId = "",
 ): Promise<boolean> {
-  return unwrap(await actor.isRegistrationPromoUsed(tenantId, deviceId, code));
+  return unwrap(
+    await actor.isRegistrationPromoUsed(
+      tenantId,
+      credentialFor(deviceId),
+      code,
+    ),
+  );
 }
 
 // ---- Quản lý "Khuyến mại doanh số tuần/tháng" (admin, /admin/sales-promo) ----
@@ -860,7 +937,7 @@ export async function listSalesPromos(
   deviceId = "",
   tenantId = "",
 ): Promise<SalesPromo[]> {
-  return unwrap(await actor.listSalesPromos(tenantId, deviceId));
+  return unwrap(await actor.listSalesPromos(tenantId, credentialFor(deviceId)));
 }
 
 export async function createSalesPromo(
@@ -872,7 +949,7 @@ export async function createSalesPromo(
   return unwrap(
     await actor.createSalesPromo(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       input.name,
       input.startDate,
       input.endDate,
@@ -896,7 +973,7 @@ export async function updateSalesPromo(
   return unwrap(
     await actor.updateSalesPromo(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       code,
       input.name,
       input.startDate,
@@ -917,7 +994,7 @@ export async function deleteSalesPromo(
   code: string,
   tenantId = "",
 ): Promise<void> {
-  unwrap(await actor.deleteSalesPromo(tenantId, deviceId, code));
+  unwrap(await actor.deleteSalesPromo(tenantId, credentialFor(deviceId), code));
 }
 
 export async function stopSalesPromo(
@@ -926,7 +1003,9 @@ export async function stopSalesPromo(
   code: string,
   tenantId = "",
 ): Promise<SalesPromo> {
-  return unwrap(await actor.stopSalesPromo(tenantId, deviceId, code));
+  return unwrap(
+    await actor.stopSalesPromo(tenantId, credentialFor(deviceId), code),
+  );
 }
 
 export async function isSalesPromoUsed(
@@ -935,7 +1014,9 @@ export async function isSalesPromoUsed(
   code: string,
   tenantId = "",
 ): Promise<boolean> {
-  return unwrap(await actor.isSalesPromoUsed(tenantId, deviceId, code));
+  return unwrap(
+    await actor.isSalesPromoUsed(tenantId, credentialFor(deviceId), code),
+  );
 }
 
 // ---- Phiếu giảm giá (khách xem/áp dụng, Giai đoạn 3e) ----

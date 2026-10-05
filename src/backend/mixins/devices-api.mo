@@ -10,10 +10,13 @@ import Common "../types/common";
 import TenantTypes "../types/tenant";
 import TenantLib "../lib/tenant";
 
+import DeviceAuthTypes "../types/device-auth";
+import DeviceAuth "../lib/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   tenants : TenantTypes.TenantStore,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   pendingActivations : DevicesLib.PendingActivationsStore,
 ) {
   // True when the caller may administer devices for `tenantId`: the central
@@ -21,7 +24,7 @@ mixin (
   // the #tenantAdmin role of that SAME tenant. A tenant admin can never act on
   // another partner's devices.
   func canAdminTenantDevices(caller : Principal, tenantId : Common.TenantId, deviceId : Common.DeviceId) : Bool {
-    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceIsTenantAdmin(devices, deviceId, tenantId);
+    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceIsTenantAdmin(devices, deviceAuth, deviceId, tenantId);
   };
 
   // Issue a 6-char activation code bound to a tenant + restaurant + role.
@@ -59,7 +62,7 @@ mixin (
     phone : Text,
   ) : async Result.Result<Devices.Device, Text> {
     ignore caller;
-    DevicesLib.activateDevice(
+    let r = DevicesLib.activateDevice(
       pendingActivations,
       devices,
       code,
@@ -68,6 +71,34 @@ mixin (
       phone,
       Int.abs(Time.now()),
     );
+    // Kích hoạt kiểu cũ (không khoá): bỏ khoá cũ nếu có — máy chỉ dùng được
+    // trong thời gian ân hạn. Ứng dụng mới luôn gọi activateDeviceSecure.
+    switch (r) { case (#ok _) { DeviceAuth.forget(deviceAuth, deviceId) }; case (#err _) {} };
+    r;
+  };
+
+  // Kích hoạt có khoá bí mật: máy tự sinh khoá ngẫu nhiên, chỉ gửi bản băm
+  // SHA-256 (32 byte). Sau đó mọi lệnh của máy gửi "deviceId~khoá".
+  public shared ({ caller }) func activateDeviceSecure(
+    code : Text,
+    deviceId : Common.DeviceId,
+    name : Text,
+    phone : Text,
+    tokenHash : Blob,
+  ) : async Result.Result<Devices.Device, Text> {
+    ignore caller;
+    if (tokenHash.size() != 32) { return #err("Khoá thiết bị không hợp lệ") };
+    let r = DevicesLib.activateDevice(
+      pendingActivations,
+      devices,
+      code,
+      deviceId,
+      name,
+      phone,
+      Int.abs(Time.now()),
+    );
+    switch (r) { case (#ok _) { DeviceAuth.register(deviceAuth, deviceId, tokenHash) }; case (#err _) {} };
+    r;
   };
 
   // Revoke a device immediately. Central admin, or a #tenantAdmin device of
@@ -88,6 +119,7 @@ mixin (
         };
       };
     };
+    DeviceAuth.forget(deviceAuth, deviceId);
     DevicesLib.revokeDevice(devices, deviceId);
   };
 
@@ -100,20 +132,26 @@ mixin (
   };
 
   // List ALL devices (both active and revoked) for a restaurant of `tenantId`.
-  public query func listDevicesByRestaurant(
+  // Chỉ admin hoặc Chủ quán cùng đối tác (trước đây công khai — lộ deviceId).
+  public shared query ({ caller }) func listDevicesByRestaurant(
     tenantId : Common.TenantId,
     restaurantId : Common.RestaurantId,
+    credential : Text,
   ) : async [Devices.Device] {
+    if (not canAdminTenantDevices(caller, tenantId, credential)) { return [] };
     DevicesLib.listDevicesByRestaurant(devices, tenantId, restaurantId);
   };
 
   // List ALL devices (both active and revoked) for a role of `tenantId`. The
   // admin device management page uses this to display and filter devices by
   // enterprise role.
-  public query func listDevicesByRole(
+  // Chỉ admin hoặc Chủ quán cùng đối tác (trước đây công khai — lộ deviceId).
+  public shared query ({ caller }) func listDevicesByRole(
     tenantId : Common.TenantId,
     role : Devices.DeviceRole,
+    credential : Text,
   ) : async [Devices.Device] {
+    if (not canAdminTenantDevices(caller, tenantId, credential)) { return [] };
     DevicesLib.listDevicesByRole(devices, tenantId, role);
   };
 
@@ -138,6 +176,6 @@ mixin (
     if (AccessControl.isAdmin(accessControlState, caller)) {
       return true;
     };
-    DevicesLib.deviceHasRole(devices, deviceId, tenantId, role);
+    DevicesLib.deviceHasRole(devices, deviceAuth, deviceId, tenantId, role);
   };
 };

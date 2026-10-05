@@ -76,6 +76,7 @@ import {
   updateSalesPromo as updateSalesPromoFn,
   updateTenant as updateTenantFn,
 } from "@/lib/canister";
+import { credentialFor } from "@/lib/device-credential";
 import { listSoldOut as listSoldOutTodayFn } from "@/lib/partner-console";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -442,7 +443,7 @@ export function useCallerHasEnterpriseRole(
     queryKey: ["auth", "enterpriseRole", tenantId, role, deviceId],
     queryFn: () =>
       actor && role
-        ? actor.callerHasEnterpriseRole(deviceId ?? "", tenantId, role)
+        ? actor.callerHasEnterpriseRole(credentialFor(deviceId), tenantId, role)
         : Promise.resolve(false),
     enabled: !!actor && !isFetching && !!role && !!tenantId,
     staleTime: 60_000,

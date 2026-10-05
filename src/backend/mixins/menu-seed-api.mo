@@ -12,9 +12,11 @@ import DevicesLib "../lib/devices";
 // item with that name + category exists FOR THE GIVEN TENANT. It runs
 // automatically on init/upgrade (see main.mo postupgrade) and can also be
 // re-run manually by an admin or a #tenantAdmin device of the same tenant.
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   menus : Map.Map<Text, CoreTypes.MenuItem>,
 ) {
   // Admin/tenant-admin only. Run the idempotent menu seed for `tenantId`.
@@ -24,7 +26,7 @@ mixin (
     tenantId : Common.TenantId,
     deviceId : Common.DeviceId,
   ) : async Bool {
-    if (not AccessControl.isAdmin(accessControlState, caller) and not DevicesLib.deviceIsTenantAdmin(devices, deviceId, tenantId)) {
+    if (not AccessControl.isAdmin(accessControlState, caller) and not DevicesLib.deviceIsTenantAdmin(devices, deviceAuth, deviceId, tenantId)) {
       return false;
     };
     MenuSeedLib.seedMenuItems(menus, tenantId);

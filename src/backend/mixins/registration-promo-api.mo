@@ -22,9 +22,11 @@ import VoucherTypes "../types/voucher";
 import Common "../types/common";
 import DevicesLib "../lib/devices";
 
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   registrationPromos : RegistrationPromoTypes.RegistrationPromoStore,
   vouchers : VoucherTypes.VoucherStore,
 ) {
@@ -33,7 +35,7 @@ mixin (
   // SAME TENANT. Used to let the "Báo cáo bán hàng và KM" role manage/track
   // registration promos while admin retains full access.
   func canManageRegistrationPromos(caller : Principal, tenantId : Common.TenantId, deviceId : Text) : Bool {
-    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceId, tenantId, #salesPromoReporting);
+    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceAuth, deviceId, tenantId, #salesPromoReporting);
   };
 
   // Chương trình đã có phiếu nào phát ra với programCode này chưa — kiểm

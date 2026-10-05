@@ -7,6 +7,13 @@
 
 import type { Backend, Device, MenuItem, Order, StoreHours } from "@/backend";
 import { BookingStatus, DeviceRole, PaymentStatus } from "@/backend";
+import {
+  credentialFor,
+  forgetDeviceToken,
+  hashDeviceToken,
+  newDeviceToken,
+  saveDeviceToken,
+} from "@/lib/device-credential";
 
 export type ConsoleRole = "owner" | "staff";
 
@@ -136,6 +143,8 @@ export function saveConsoleDevice(d: ConsoleDevice) {
 
 export function clearConsoleDevice() {
   try {
+    const raw = localStorage.getItem(DEVICE_KEY);
+    if (raw) forgetDeviceToken((JSON.parse(raw) as ConsoleDevice).deviceId);
     localStorage.removeItem(DEVICE_KEY);
     localStorage.removeItem(COUNTER_KEY);
   } catch {
@@ -163,6 +172,33 @@ export async function activateConsoleDevice(
   name: string,
 ): Promise<Device> {
   const deviceId = getBrowserDeviceId();
+  const secure = (
+    actor as unknown as {
+      activateDeviceSecure?: (
+        code: string,
+        deviceId: string,
+        name: string,
+        phone: string,
+        tokenHash: Uint8Array,
+      ) => Promise<Result<Device>>;
+    }
+  ).activateDeviceSecure;
+  if (typeof secure === "function") {
+    const token = newDeviceToken();
+    const hash = await hashDeviceToken(token);
+    const device = unwrap(
+      await secure.call(
+        actor,
+        code.trim().toUpperCase(),
+        deviceId,
+        name.trim(),
+        "",
+        hash,
+      ),
+    );
+    saveDeviceToken(deviceId, token);
+    return device;
+  }
   return unwrap(
     (await actor.activateDevice(
       code.trim().toUpperCase(),
@@ -174,7 +210,7 @@ export async function activateConsoleDevice(
 }
 
 export const getPartnerDevice = (actor: Backend, deviceId: string) =>
-  api(actor).getPartnerDevice(deviceId);
+  api(actor).getPartnerDevice(credentialFor(deviceId));
 
 export const getPartnerSettings = (actor: Backend, tenantId: string) =>
   api(actor).getPartnerSettings(tenantId);
@@ -185,7 +221,13 @@ export async function setPaused(
   deviceId: string,
   paused: boolean,
 ) {
-  return unwrap(await api(actor).setPartnerPaused(tenantId, deviceId, paused));
+  return unwrap(
+    await api(actor).setPartnerPaused(
+      tenantId,
+      credentialFor(deviceId),
+      paused,
+    ),
+  );
 }
 
 export async function setJoinPromo(
@@ -195,7 +237,11 @@ export async function setJoinPromo(
   join: boolean,
 ) {
   return unwrap(
-    await api(actor).setJoinPlatformPromo(tenantId, deviceId, join),
+    await api(actor).setJoinPlatformPromo(
+      tenantId,
+      credentialFor(deviceId),
+      join,
+    ),
   );
 }
 
@@ -205,7 +251,13 @@ export async function setHours(
   deviceId: string,
   hours: StoreHours,
 ) {
-  unwrap(await api(actor).setStoreHoursByDevice(tenantId, deviceId, hours));
+  unwrap(
+    await api(actor).setStoreHoursByDevice(
+      tenantId,
+      credentialFor(deviceId),
+      hours,
+    ),
+  );
 }
 
 export async function setSoldOut(
@@ -216,7 +268,12 @@ export async function setSoldOut(
   soldOut: boolean,
 ) {
   unwrap(
-    await api(actor).setItemSoldOutToday(tenantId, deviceId, itemId, soldOut),
+    await api(actor).setItemSoldOutToday(
+      tenantId,
+      credentialFor(deviceId),
+      itemId,
+      soldOut,
+    ),
   );
 }
 
@@ -233,7 +290,12 @@ export async function markPrep(
   stage: "ready" | "handed",
 ) {
   return unwrap(
-    await api(actor).markOrderPrep(tenantId, deviceId, orderId, stage),
+    await api(actor).markOrderPrep(
+      tenantId,
+      credentialFor(deviceId),
+      orderId,
+      stage,
+    ),
   );
 }
 
@@ -244,7 +306,7 @@ export const listTenantOrders = (
   actor: Backend,
   tenantId: string,
   deviceId: string,
-): Promise<Order[]> => actor.listOrders(tenantId, deviceId);
+): Promise<Order[]> => actor.listOrders(tenantId, credentialFor(deviceId));
 
 /** Thêm món: chỉ tên, giá, ảnh (đơn vị/VAT/nhóm lấy mặc định). */
 export async function addMenuItem(
@@ -257,7 +319,7 @@ export async function addMenuItem(
   return unwrap(
     (await actor.addItem(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       itemId,
       input.name.trim(),
       BigInt(input.price),
@@ -282,7 +344,7 @@ export async function updateMenuItem(
   return unwrap(
     (await actor.updateItem(
       tenantId,
-      deviceId,
+      credentialFor(deviceId),
       item.itemId,
       patch.name.trim(),
       BigInt(patch.price),
@@ -307,7 +369,7 @@ export async function createStaffCode(
       tenantId,
       restaurantId,
       role === "owner" ? DeviceRole.tenantAdmin : DeviceRole.cashier,
-      deviceId,
+      credentialFor(deviceId),
     )) as Result<{ code: string; expiresAt: bigint }>,
   );
 }
@@ -322,7 +384,7 @@ export async function removeDevice(
     (await actor.revokeDevice(
       tenantId,
       targetDeviceId,
-      ownerDeviceId,
+      credentialFor(ownerDeviceId),
     )) as Result<Device>,
   );
 }
@@ -330,10 +392,18 @@ export async function removeDevice(
 export async function listConsoleDevices(
   actor: Backend,
   tenantId: string,
+  ownerDeviceId = "",
 ): Promise<Device[]> {
+  // Bindings mới nhận thêm thẻ xác thực của máy chủ quán (tham số thứ 3).
+  const list = actor.listDevicesByRole as unknown as (
+    t: string,
+    r: DeviceRole,
+    c: string,
+  ) => Promise<Device[]>;
+  const cred = credentialFor(ownerDeviceId);
   const [owners, staff] = await Promise.all([
-    actor.listDevicesByRole(tenantId, DeviceRole.tenantAdmin),
-    actor.listDevicesByRole(tenantId, DeviceRole.cashier),
+    list.call(actor, tenantId, DeviceRole.tenantAdmin, cred),
+    list.call(actor, tenantId, DeviceRole.cashier, cred),
   ]);
   return [...owners, ...staff].filter((d) => d.active);
 }

@@ -3,6 +3,8 @@ import Time "mo:core/Time";
 
 import Common "../types/common";
 import DevicesLib "devices";
+import DeviceAuth "device-auth";
+import DeviceAuthTypes "../types/device-auth";
 import Types "../types/partner-console";
 
 module {
@@ -17,12 +19,13 @@ module {
   };
 
   /// Chủ quán (#tenantAdmin) của đúng đối tác.
-  public func isOwner(devices : DevicesLib.DevicesStore, deviceId : Common.DeviceId, tenantId : Common.TenantId) : Bool {
-    DevicesLib.deviceIsTenantAdmin(devices, deviceId, tenantId);
+  public func isOwner(devices : DevicesLib.DevicesStore, auth : DeviceAuthTypes.DeviceAuthState, credential : Text, tenantId : Common.TenantId) : Bool {
+    DevicesLib.deviceIsTenantAdmin(devices, auth, credential, tenantId);
   };
 
   /// Chủ quán hoặc Nhân viên (#cashier) đang hoạt động của đúng đối tác.
-  public func isOwnerOrStaff(devices : DevicesLib.DevicesStore, deviceId : Common.DeviceId, tenantId : Common.TenantId) : Bool {
+  public func isOwnerOrStaff(devices : DevicesLib.DevicesStore, auth : DeviceAuthTypes.DeviceAuthState, credential : Text, tenantId : Common.TenantId) : Bool {
+    let ?deviceId = DeviceAuth.resolve(auth, credential) else return false;
     switch (devices.get(deviceId)) {
       case null { false };
       case (?d) {

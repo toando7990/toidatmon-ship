@@ -10,15 +10,18 @@ import TenantTypes "../types/tenant";
 import StoreHoursConfigLib "../lib/store-hours-config";
 import StoreHoursConfigTypes "../types/store-hours-config";
 import Lib "../lib/partner-console";
+import DeviceAuth "../lib/device-auth";
 import Types "../types/partner-console";
 import Map "mo:core/Map";
 
 // API trang quản lý của đối tác (/quan-ly). Thiết bị gửi kèm deviceId của
 // chính nó (cùng cơ chế với devices-api/menu-api). Admin trung tâm luôn qua.
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   tenants : TenantTypes.TenantStore,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   menus : Map.Map<Text, CoreTypes.MenuItem>,
   storeHoursState : StoreHoursConfigTypes.StoreHoursState,
   partnerSettings : Types.SettingsStore,
@@ -30,7 +33,8 @@ mixin (
   /// Thông tin thiết bị (vai trò, đối tác, chi nhánh) — để trang quản lý biết
   /// hiện giao diện Chủ quán hay Nhân viên. null nếu không có / đã bị gỡ.
   public query func getPartnerDevice(deviceId : Common.DeviceId) : async ?CoreTypes.Device {
-    switch (devices.get(deviceId)) {
+    let ?id = DeviceAuth.resolve(deviceAuth, deviceId) else return null;
+    switch (devices.get(id)) {
       case (?d) { if (d.active) ?d else null };
       case null { null };
     };
@@ -47,7 +51,7 @@ mixin (
     deviceId : Common.DeviceId,
     paused : Bool,
   ) : async Result.Result<Types.PartnerSettings, Text> {
-    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceId, tenantId))) {
+    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceAuth, deviceId, tenantId))) {
       return #err("Máy này không có quyền");
     };
     #ok(Lib.update(partnerSettings, tenantId, func(s) = { s with paused }));
@@ -59,7 +63,7 @@ mixin (
     deviceId : Common.DeviceId,
     join : Bool,
   ) : async Result.Result<Types.PartnerSettings, Text> {
-    if (not (isAdmin(caller) or Lib.isOwner(devices, deviceId, tenantId))) {
+    if (not (isAdmin(caller) or Lib.isOwner(devices, deviceAuth, deviceId, tenantId))) {
       return #err("Chỉ chủ quán được đổi");
     };
     #ok(Lib.update(partnerSettings, tenantId, func(s) = { s with joinPlatformPromo = join }));
@@ -83,7 +87,7 @@ mixin (
     deviceId : Common.DeviceId,
     hours : StoreHoursConfigTypes.StoreHours,
   ) : async Result.Result<(), Text> {
-    if (not (isAdmin(caller) or Lib.isOwner(devices, deviceId, tenantId))) {
+    if (not (isAdmin(caller) or Lib.isOwner(devices, deviceAuth, deviceId, tenantId))) {
       return #err("Chỉ chủ quán được đổi");
     };
     if (hours.openHour > 23 or hours.closeHour > 23 or hours.openMinute > 59 or hours.closeMinute > 59) {
@@ -100,7 +104,7 @@ mixin (
     itemId : Text,
     soldOut : Bool,
   ) : async Result.Result<(), Text> {
-    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceId, tenantId))) {
+    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceAuth, deviceId, tenantId))) {
       return #err("Máy này không có quyền");
     };
     switch (menus.get(itemId)) {
@@ -124,7 +128,7 @@ mixin (
     orderId : Text,
     stage : Types.PrepStage,
   ) : async Result.Result<Types.OrderPrep, Text> {
-    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceId, tenantId))) {
+    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceAuth, deviceId, tenantId))) {
       return #err("Máy này không có quyền");
     };
     Lib.prunePrep(orderPrep);

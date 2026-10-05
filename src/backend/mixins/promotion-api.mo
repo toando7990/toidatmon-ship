@@ -33,9 +33,11 @@ import HmacLib "../lib/hmac";
 import PromotionLib "../lib/promotion";
 import EmailVerificationLib "../lib/email-verification";
 
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   kmUsage : PromotionTypes.KmUsageStore,
   kmDailyCount : PromotionTypes.KmDailyCountStore,
   promotions : PromotionTypes.PromotionStore,
@@ -48,7 +50,7 @@ mixin (
   // SAME TENANT. Used to let the "Báo cáo bán hàng và KM" role manage/track
   // promotions while admin retains full access.
   func canManagePromotions(caller : Principal, tenantId : Common.TenantId, deviceId : Text) : Bool {
-    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceId, tenantId, #salesPromoReporting);
+    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceAuth, deviceId, tenantId, #salesPromoReporting);
   };
 
   // Khoá chống trùng theo đối tác cho promotionUsed.

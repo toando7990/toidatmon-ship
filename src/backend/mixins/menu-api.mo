@@ -17,10 +17,12 @@ import TenantLib "../lib/tenant";
 // (listMenus, getMenu, getItemImage, listRestaurants, getRestaurants,
 // getMenuForRestaurant) stay public and take an explicit tenantId so each
 // partner only ever sees its own menu/restaurants.
+import DeviceAuthTypes "../types/device-auth";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   tenants : TenantTypes.TenantStore,
   devices : DevicesLib.DevicesStore,
+  deviceAuth : DeviceAuthTypes.DeviceAuthState,
   menus : Map.Map<Text, CoreTypes.MenuItem>,
   restaurants : Map.Map<Text, CoreTypes.Restaurant>,
   overrides : Map.Map<Text, Map.Map<Text, Nat>>,
@@ -29,7 +31,7 @@ mixin (
   // central admin always may; otherwise the caller must present a deviceId
   // bound to the #tenantAdmin role of that SAME tenant.
   func canManageTenantMenu(caller : Principal, tenantId : Common.TenantId, deviceId : Common.DeviceId) : Bool {
-    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceIsTenantAdmin(devices, deviceId, tenantId);
+    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceIsTenantAdmin(devices, deviceAuth, deviceId, tenantId);
   };
 
   // Admin/tenant-admin only. Create a new MenuItem with visible=true. Returns
