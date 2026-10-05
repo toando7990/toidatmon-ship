@@ -161,7 +161,24 @@ const MENU: MenuItem[] = [
   },
 ];
 
+// Đơn đăng ký đối tác (mixins/partner-application-api.mo). Khai báo riêng rồi
+// trải vào mock: bindings (backend.ts) do Caffeine sinh lại khi build, nên mock
+// phải khớp cả bản bindings đã có các hàm này lẫn bản chưa có.
+const partnerApplicationMock = {
+  submitPartnerApplication: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  getPartnerApplicationStatus: async () => null,
+  listPartnerApplications: async () => ({ __kind__: "ok" as const, ok: [] }),
+  reviewPartnerApplication: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+};
+
 export const mockBackend: backendInterface = {
+  ...partnerApplicationMock,
   _initialize_access_control: async () => {},
   _internet_identity_sign_in_finish: async () => ({ __kind__: "ok", ok: null }),
   _internet_identity_sign_in_start: async () => new Uint8Array(),
