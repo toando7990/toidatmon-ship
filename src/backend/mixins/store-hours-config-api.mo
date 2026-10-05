@@ -4,6 +4,8 @@ import AccessControl "mo:caffeineai-authorization/access-control";
 import Common "../types/common";
 import StoreHoursConfigLib "../lib/store-hours-config";
 import StoreHoursConfigTypes "../types/store-hours-config";
+import PartnerConsoleLib "../lib/partner-console";
+import PartnerConsoleTypes "../types/partner-console";
 
 // Public API surface for the store-hours-config domain. State is injected from
 // main.mo. This mixin owns:
@@ -18,6 +20,7 @@ import StoreHoursConfigTypes "../types/store-hours-config";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   storeHoursState : StoreHoursConfigTypes.StoreHoursState,
+  partnerSettings : PartnerConsoleTypes.SettingsStore,
 ) {
   /// Query: return the storeHours config for `tenantId`. Public — no caller
   /// gating; the value is not sensitive and the frontend needs it to render the
@@ -43,7 +46,9 @@ mixin (
   /// the current time. Public — the frontend calls this on both the driver and
   /// customer flows to decide whether to block order placement and show a
   /// waiting screen instead of allowing item selection.
+  /// Quán đang "Tạm nghỉ" (trang /quan-ly) thì coi như đóng cửa.
   public query func isStoreOpen(tenantId : Common.TenantId) : async Bool {
+    if (PartnerConsoleLib.isPaused(partnerSettings, tenantId)) { return false };
     StoreHoursConfigLib.isStoreOpen(storeHoursState, tenantId, Time.now());
   };
 };

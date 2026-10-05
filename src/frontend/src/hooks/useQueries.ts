@@ -76,6 +76,7 @@ import {
   updateSalesPromo as updateSalesPromoFn,
   updateTenant as updateTenantFn,
 } from "@/lib/canister";
+import { listSoldOut as listSoldOutTodayFn } from "@/lib/partner-console";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -1106,5 +1107,19 @@ export function useSetTenantActive() {
       qc.invalidateQueries({ queryKey: ["tenant", args.tenantId] });
       qc.invalidateQueries({ queryKey: ["tenantBySlug"] });
     },
+  });
+}
+
+// Món chủ quán/nhân viên báo "Hết hôm nay" (trang /quan-ly) — ẩn khỏi trang
+// đặt món và màn bán quầy. Rỗng khi bindings chưa có hàm mới.
+export function useSoldOutToday() {
+  const { actor, isFetching } = useActorOrNull();
+  const tenantId = useTenantId();
+  return useQuery({
+    queryKey: ["soldOutToday", tenantId],
+    queryFn: () =>
+      actor ? listSoldOutTodayFn(actor, tenantId) : Promise.resolve([]),
+    enabled: !!actor && !isFetching && !!tenantId,
+    refetchInterval: 60_000,
   });
 }

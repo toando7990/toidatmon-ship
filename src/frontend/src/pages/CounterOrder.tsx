@@ -49,7 +49,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDeviceHeader } from "@/contexts/DeviceHeaderContext";
 import { usePromotionCountdown } from "@/hooks/usePromotionCountdown";
-import { useCurrentPromotion, useMenuForRestaurant } from "@/hooks/useQueries";
+import {
+  useCurrentPromotion,
+  useMenuForRestaurant,
+  useSoldOutToday,
+} from "@/hooks/useQueries";
 import { getOrder as getOrderFn, useCanister } from "@/lib/canister";
 import { reconnectPrinter } from "@/lib/printer";
 import { create as vpsCreate } from "@/lib/vps-client";
@@ -201,9 +205,16 @@ export default function CounterOrder() {
     }
     return () => setDeviceHeader(null);
   }, [deviceId, deviceName, setDeviceHeader]);
-  const { data: menu, isLoading: menuLoading } = useMenuForRestaurant(
+  const { data: menuAll, isLoading: menuLoading } = useMenuForRestaurant(
     restaurantId ?? undefined,
   );
+  // Ẩn món chủ quán/nhân viên báo "Hết hôm nay" (trang /quan-ly).
+  const { data: soldOutToday } = useSoldOutToday();
+  const menu = useMemo(() => {
+    if (!menuAll || !soldOutToday?.length) return menuAll;
+    const sold = new Set(soldOutToday);
+    return menuAll.filter((m) => !sold.has(m.itemId));
+  }, [menuAll, soldOutToday]);
   const { data: promotion } = useCurrentPromotion();
   // Chỉ áp dụng cho kênh tại quầy — cùng lý do như CounterGoldenHourBanner
   // ở trên (enabledCounter=false thì countdown luôn "hidden", nên

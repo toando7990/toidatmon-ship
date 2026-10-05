@@ -44,6 +44,7 @@ import {
   useItemImage,
   useMenus,
   useRestaurants,
+  useSoldOutToday,
   useTenantId,
 } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
@@ -188,7 +189,14 @@ export default function CreateOrder() {
   const [favoriteRestaurantId, setFavoriteRestaurantId] = useState("");
   // Menu dùng chung cho toàn bộ chuỗi nhà hàng — hiện ngay từ đầu, không phụ thuộc
   // vào việc đã chọn nhà hàng hay chưa. Chỉ chặn ở bước THÊM MÓN (xem handleQuantityChange).
-  const { data: menu, isLoading: menuLoading } = useMenus();
+  const { data: menuAll, isLoading: menuLoading } = useMenus();
+  // Ẩn món chủ quán/nhân viên báo "Hết hôm nay" (trang /quan-ly).
+  const { data: soldOutToday } = useSoldOutToday();
+  const menu = useMemo(() => {
+    if (!menuAll || !soldOutToday?.length) return menuAll;
+    const sold = new Set(soldOutToday);
+    return menuAll.filter((m) => !sold.has(m.itemId));
+  }, [menuAll, soldOutToday]);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [customer, setCustomer] = useState<CustomerFormValues>(EMPTY_CUSTOMER);
   const [submitting, setSubmitting] = useState(false);

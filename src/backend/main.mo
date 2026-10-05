@@ -28,6 +28,7 @@ import PaymentModeConfigApi "mixins/payment-mode-config-api";
 import StoreHoursConfigApi "mixins/store-hours-config-api";
 import TenantApi "mixins/tenant-api";
 import PartnerApplicationApi "mixins/partner-application-api";
+import PartnerConsoleApi "mixins/partner-console-api";
 
 import CoreLib "lib/core";
 import CoreTypes "types/core";
@@ -46,6 +47,7 @@ import RegistrationPromoTypes "types/registration-promo";
 import SalesPromoTypes "types/sales-promo";
 import TenantTypes "types/tenant";
 import PartnerApplicationTypes "types/partner-application";
+import PartnerConsoleTypes "types/partner-console";
 // Top-level Value modules so the OQL auto-derivation resolver picks them up
 // for the variant fields on the exposed entities.
 import DeviceRoleValue "types/DeviceRoleValue";
@@ -87,6 +89,11 @@ actor Main {
   // Đơn đăng ký làm đối tác (quán tự gửi, admin trung tâm duyệt). key =
   // applicationId. Supplied by migrations/20261005_000000.mo.
   let partnerApplications : PartnerApplicationTypes.ApplicationStore;
+
+  // Trang quản lý đối tác (/quan-ly) — supplied by migrations/20261006_000000.mo.
+  let partnerSettings : PartnerConsoleTypes.SettingsStore;
+  let soldOutItems : PartnerConsoleTypes.SoldOutStore;
+  let orderPrep : PartnerConsoleTypes.PrepStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -294,7 +301,8 @@ actor Main {
   include SalesPromoApi(accessControlState, devices, salesPromos, salesBonusIssued, vouchers, secretState);
   include PromoMaintenanceApi(promotions, registrationPromos, salesPromos, vouchers, secretState);
   include PaymentModeConfigApi(accessControlState, paymentModeState, coreState);
-  include StoreHoursConfigApi(accessControlState, storeHoursState);
+  include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);
+  include PartnerConsoleApi(accessControlState, tenants, devices, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own

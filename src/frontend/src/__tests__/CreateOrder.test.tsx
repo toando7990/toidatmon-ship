@@ -23,6 +23,7 @@ const mockQuote = vi.fn();
 vi.mock("@/hooks/useQueries", () => ({
   useRestaurants: () => mockUseRestaurants(),
   useMenus: () => mockUseMenus(),
+  useSoldOutToday: () => ({ data: [] }),
   useIsStoreOpen: () => mockUseIsStoreOpen(),
   useGetStoreHours: () => mockUseGetStoreHours(),
   useItemImage: () => ({ data: undefined }),

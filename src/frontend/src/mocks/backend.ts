@@ -177,8 +177,41 @@ const partnerApplicationMock = {
   }),
 };
 
+// Trang quản lý đối tác (mixins/partner-console-api.mo) — cùng lý do như trên.
+const partnerConsoleSettings = {
+  paused: false,
+  counterPlan: true,
+  joinPlatformPromo: true,
+  updatedAt: BigInt(0),
+};
+const partnerConsoleMock = {
+  getPartnerDevice: async () => null,
+  getPartnerSettings: async () => partnerConsoleSettings,
+  setPartnerPaused: async () => ({
+    __kind__: "ok" as const,
+    ok: partnerConsoleSettings,
+  }),
+  setJoinPlatformPromo: async () => ({
+    __kind__: "ok" as const,
+    ok: partnerConsoleSettings,
+  }),
+  setCounterPlan: async () => ({
+    __kind__: "ok" as const,
+    ok: partnerConsoleSettings,
+  }),
+  setStoreHoursByDevice: async () => ({ __kind__: "ok" as const, ok: null }),
+  setItemSoldOutToday: async () => ({ __kind__: "ok" as const, ok: null }),
+  listSoldOutToday: async () => [],
+  markOrderPrep: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  listOrderPrep: async () => [],
+};
+
 export const mockBackend: backendInterface = {
   ...partnerApplicationMock,
+  ...partnerConsoleMock,
   _initialize_access_control: async () => {},
   _internet_identity_sign_in_finish: async () => ({ __kind__: "ok", ok: null }),
   _internet_identity_sign_in_start: async () => new Uint8Array(),

@@ -54,6 +54,7 @@ const utensilItem = {
 
 const mockUseCurrentPromotion = vi.fn();
 vi.mock("@/hooks/useQueries", () => ({
+  useSoldOutToday: () => ({ data: [] }),
   useMenuForRestaurant: (...args: unknown[]) =>
     mockUseMenuForRestaurant(...args),
   useCurrentPromotion: () => mockUseCurrentPromotion(),

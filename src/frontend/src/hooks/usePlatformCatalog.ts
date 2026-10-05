@@ -13,6 +13,7 @@ import {
   useCanister,
 } from "@/lib/canister";
 import { haversineDistanceKm } from "@/lib/geo";
+import { listSoldOut } from "@/lib/partner-console";
 import type { FeedDish, LatLng } from "@/lib/platform-feed";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -59,6 +60,15 @@ export function usePlatformCatalog(location: LatLng | null) {
         refetchInterval: 60_000,
       },
       {
+        queryKey: ["platform", "soldOut", t.tenantId],
+        queryFn: () =>
+          actor
+            ? listSoldOut(actor, t.tenantId)
+            : Promise.resolve([] as string[]),
+        enabled: ready,
+        refetchInterval: 60_000,
+      },
+      {
         queryKey: ["platform", "promo", t.tenantId],
         queryFn: () =>
           actor
@@ -77,14 +87,17 @@ export function usePlatformCatalog(location: LatLng | null) {
   const dishes = useMemo<FeedDish[]>(() => {
     const out: FeedDish[] = [];
     tenants.forEach((t, i) => {
-      const menus = per[i * 4]?.data as
+      const menus = per[i * 5]?.data as
         | Awaited<ReturnType<typeof listMenus>>
         | undefined;
-      const rests = per[i * 4 + 1]?.data as
+      const rests = per[i * 5 + 1]?.data as
         | Awaited<ReturnType<typeof listRestaurants>>
         | undefined;
-      const open = per[i * 4 + 2]?.data as boolean | undefined;
-      const promo = per[i * 4 + 3]?.data;
+      const open = per[i * 5 + 2]?.data as boolean | undefined;
+      const promo = per[i * 5 + 4]?.data;
+      const soldOut = new Set(
+        (per[i * 5 + 3]?.data as string[] | undefined) ?? [],
+      );
       if (!menus) return;
       const visibleRests = (rests ?? []).filter(
         (r) => r.visible && !(r.lat === 0 && r.lng === 0),
@@ -100,7 +113,7 @@ export function usePlatformCatalog(location: LatLng | null) {
         );
       }
       for (const m of menus) {
-        if (!m.visible || m.price <= 0n) continue;
+        if (!m.visible || m.price <= 0n || soldOut.has(m.itemId)) continue;
         if (HIDDEN_ITEM_NAMES.has(m.name.trim().toLowerCase())) continue;
         out.push({
           key: `${t.tenantId}|${m.itemId}`,

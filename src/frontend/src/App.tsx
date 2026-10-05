@@ -27,6 +27,7 @@ import OrderTracker from "@/pages/OrderTracker";
 import OrderingPartners from "@/pages/OrderingPartners";
 import PartnerApplications from "@/pages/PartnerApplications";
 import PartnerApply from "@/pages/PartnerApply";
+import PartnerConsole from "@/pages/PartnerConsole";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
 import PlatformHome from "@/pages/PlatformHome";
@@ -297,7 +298,8 @@ function isPlatformDomain(): boolean {
 
 function RootShell() {
   const pathname = useRouterState({ select: (st) => st.location.pathname });
-  if (pathname.startsWith("/dang-ky-doi-tac")) return <Outlet />;
+  // pathname có thể còn tiền tố đối tác (/bunbohue65/quan-ly) → so theo đoạn.
+  if (/(^|\/)(dang-ky-doi-tac|quan-ly)(\/|$)/.test(pathname)) return <Outlet />;
   if (pathname === "/" && isPlatformDomain()) return <Outlet />;
   return (
     <Layout>
@@ -491,6 +493,13 @@ const partnerApplyRoute = createRoute({
   component: () => <PartnerApply />,
 });
 
+// Trang quản lý của đối tác (chủ quán / nhân viên, đăng nhập bằng mã thiết bị).
+const partnerConsoleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/quan-ly",
+  component: () => <PartnerConsole />,
+});
+
 const adminPartnerApplicationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/partner-applications",
@@ -597,6 +606,7 @@ const router = createRouter({
     adminPromoDashboardRoute,
     adminPartnersRoute,
     partnerApplyRoute,
+    partnerConsoleRoute,
     adminPartnerApplicationsRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
