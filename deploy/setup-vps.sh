@@ -43,6 +43,15 @@ warn() { echo -e "\033[1;33m[!] $*\033[0m"; }
 # ---------- 1. Hệ thống ----------
 log "1/8 Cập nhật hệ thống, múi giờ, swap"
 export DEBIAN_FRONTEND=noninteractive
+# VPS mới khởi động thường đang tự cài bản vá (unattended-upgrades) và giữ
+# khoá dpkg — chờ tối đa 20 phút thay vì dừng script.
+APT_OPTS=(-o DPkg::Lock::Timeout=1200)
+apt-get() { command apt-get "${APT_OPTS[@]}" "$@"; }
+for i in $(seq 1 120); do
+  pgrep -f unattended-upgr >/dev/null || break
+  [[ $i -eq 1 ]] && echo "Ubuntu đang tự cập nhật bản vá — chờ xong rồi tiếp tục..."
+  sleep 10
+done
 apt-get update -y
 apt-get upgrade -y
 apt-get install -y curl git ufw fail2ban unattended-upgrades sqlite3 ca-certificates gnupg build-essential
