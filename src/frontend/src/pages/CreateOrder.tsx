@@ -46,8 +46,10 @@ import {
   useRestaurants,
   useTenantId,
 } from "@/hooks/useQueries";
+import { useTenant } from "@/hooks/useTenant";
 import { findNearest } from "@/lib/geo";
 import { getOrCreateGuestEmail } from "@/lib/guest-identity";
+import { takeCartHandoff } from "@/lib/platform-feed";
 import { imageBytesToDataUrl } from "@/lib/utils";
 import { getVerifiedEmail } from "@/lib/verification-storage";
 import {
@@ -191,6 +193,27 @@ export default function CreateOrder() {
   const [customer, setCustomer] = useState<CustomerFormValues>(EMPTY_CUSTOMER);
   const [submitting, setSubmitting] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+
+  // Giỏ chuyển từ trang chủ nhiều quán (PlatformHome) sang quán này: nạp
+  // một lần khi đã có thực đơn, chỉ giữ món còn bán, rồi mở giỏ để thanh toán.
+  const tenantSlug = useTenant().tenant?.slug ?? "";
+  const handoffDone = useRef(false);
+  useEffect(() => {
+    if (handoffDone.current || !tenantSlug || !menu || menu.length === 0)
+      return;
+    handoffDone.current = true;
+    const items = takeCartHandoff(tenantSlug);
+    if (!items) return;
+    const next: Record<string, number> = {};
+    for (const [id, qty] of Object.entries(items)) {
+      if (qty > 0 && menu.some((m) => m.itemId === id && m.visible))
+        next[id] = qty;
+    }
+    if (Object.keys(next).length === 0) return;
+    setCart(next);
+    setCartOpen(true);
+    toast.success("Đã chuyển giỏ hàng — chọn địa chỉ nhận rồi đặt món.");
+  }, [tenantSlug, menu]);
 
   // Gợi ý gọi thêm — hiện 1 lần khi khách thêm món đầu tiên vào giỏ.
   const [upsellItems, setUpsellItems] = useState<MenuItem[]>([]);
