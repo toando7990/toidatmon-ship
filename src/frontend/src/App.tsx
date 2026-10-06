@@ -4,6 +4,7 @@ import { type DeviceRole, EnterpriseRole } from "@/backend";
 import { EnterpriseActivationForm } from "@/components/EnterpriseActivationForm";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Layout } from "@/components/Layout";
+import { PlatformFrame } from "@/components/PlatformFrame";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth, useEnterpriseRole } from "@/hooks/useAuth";
 import { useTenantId } from "@/hooks/useQueries";
@@ -30,8 +31,10 @@ import PartnerApply from "@/pages/PartnerApply";
 import PartnerConsole from "@/pages/PartnerConsole";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
+import PlatformHistory from "@/pages/PlatformHistory";
 import PlatformHome from "@/pages/PlatformHome";
 import PlatformSettings from "@/pages/PlatformSettings";
+import { PlatformTrackDetail, PlatformTrackList } from "@/pages/PlatformTrack";
 import Profile from "@/pages/Profile";
 import PromotionManager from "@/pages/PromotionManager";
 import RegistrationPromoManager from "@/pages/RegistrationPromoManager";
@@ -301,7 +304,13 @@ function RootShell() {
   const pathname = useRouterState({ select: (st) => st.location.pathname });
   // pathname có thể còn tiền tố đối tác (/bunbohue65/quan-ly) → so theo đoạn.
   if (/(^|\/)(dang-ky-doi-tac|quan-ly)(\/|$)/.test(pathname)) return <Outlet />;
-  if (pathname === "/" && isPlatformDomain()) return <Outlet />;
+  // Tên miền chính: các trang khách (Đặt món, Theo dõi, Lịch sử, Tôi) dùng
+  // khung riêng của Tôi Đặt Món (PlatformFrame), không phải giao diện quán.
+  if (
+    isPlatformDomain() &&
+    /^\/($|track(\/|$)|history\/?$|profile\/?$)/.test(pathname)
+  )
+    return <Outlet />;
   return (
     <Layout>
       <TenantGate>
@@ -330,7 +339,8 @@ const indexRoute = createRoute({
 const trackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/track/$orderId",
-  component: () => <OrderTracker />,
+  component: () =>
+    isPlatformDomain() ? <PlatformTrackDetail /> : <OrderTracker />,
 });
 
 const claimRoute = createRoute({
@@ -342,19 +352,27 @@ const claimRoute = createRoute({
 const trackIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/track",
-  component: () => <OrderList />,
+  component: () => (isPlatformDomain() ? <PlatformTrackList /> : <OrderList />),
 });
 
 const historyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/history",
-  component: () => <OrderHistory />,
+  component: () =>
+    isPlatformDomain() ? <PlatformHistory /> : <OrderHistory />,
 });
 
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/profile",
-  component: () => <Profile />,
+  component: () =>
+    isPlatformDomain() ? (
+      <PlatformFrame title="Tôi">
+        <Profile platform />
+      </PlatformFrame>
+    ) : (
+      <Profile />
+    ),
 });
 
 const gioiThieuRoute = createRoute({

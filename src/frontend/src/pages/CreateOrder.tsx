@@ -50,6 +50,7 @@ import {
 import { useTenant } from "@/hooks/useTenant";
 import { findNearest } from "@/lib/geo";
 import { getOrCreateGuestEmail } from "@/lib/guest-identity";
+import { recordMyOrder } from "@/lib/my-orders";
 import { takeCartHandoff } from "@/lib/platform-feed";
 import { imageBytesToDataUrl } from "@/lib/utils";
 import { getVerifiedEmail } from "@/lib/verification-storage";
@@ -204,7 +205,8 @@ export default function CreateOrder() {
 
   // Giỏ chuyển từ trang chủ nhiều quán (PlatformHome) sang quán này: nạp
   // một lần khi đã có thực đơn, chỉ giữ món còn bán, rồi mở giỏ để thanh toán.
-  const tenantSlug = useTenant().tenant?.slug ?? "";
+  const currentTenant = useTenant().tenant;
+  const tenantSlug = currentTenant?.slug ?? "";
   const handoffDone = useRef(false);
   useEffect(() => {
     if (handoffDone.current || !tenantSlug || !menu || menu.length === 0)
@@ -612,6 +614,20 @@ export default function CreateOrder() {
         localStorage.setItem("bbh_my_orders", JSON.stringify(list));
       } catch {
         // bỏ qua nếu localStorage không khả dụng
+      }
+      // Danh sách đơn dùng chung cho trang chính Tôi Đặt Món (mọi quán).
+      if (currentTenant) {
+        recordMyOrder({
+          orderId: res.orderId,
+          tenantId: currentTenant.tenantId,
+          slug: currentTenant.slug,
+          tenantName: currentTenant.name,
+          amount: payload.items.reduce(
+            (s, it) => s + it.price * it.quantity,
+            0,
+          ),
+          createdAt: Date.now(),
+        });
       }
 
       toast.success("Đặt đơn thành công!", {

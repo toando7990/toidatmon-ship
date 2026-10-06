@@ -284,7 +284,7 @@ export function Layout({ children }: { children: ReactNode }) {
 function LayoutInner({ children }: { children: ReactNode }) {
   const { deviceHeader } = useDeviceHeader();
   const { isAuthenticated, isAdmin, clear } = useAuth();
-  const { tenant } = useTenant();
+  const { tenant, source } = useTenant();
   const [mobileOpen, setMobileOpen] = useState(false);
   const showAdmin = isAuthenticated && isAdmin;
   const router = useRouterState();
@@ -337,6 +337,17 @@ function LayoutInner({ children }: { children: ReactNode }) {
       className="brand-scope flex min-h-screen flex-col bg-background"
       style={brandStyle}
     >
+      {/* Khách vào quán từ trang chính (toidatmon.vn/ten-quan): đường quay
+          lại xem món các quán khác, theo dõi/lịch sử mọi quán. */}
+      {source === "path" && !deviceHeader && (
+        <a
+          href="/"
+          className="block bg-foreground px-4 py-1.5 text-center text-xs font-semibold text-background"
+          data-ocid="nav.back_to_platform"
+        >
+          ← Tôi Đặt Món · món ngon của mọi quán
+        </a>
+      )}
       <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
           {deviceHeader ? (

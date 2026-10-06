@@ -6,6 +6,7 @@
 // → giỏ được chuyển sang /<slug>/ (lib/platform-feed.ts, CartHandoff) và
 // CreateOrder.tsx nạp lại giỏ đó. Mỗi đơn chỉ giao từ một quán.
 
+import { PlatformFrame } from "@/components/PlatformFrame";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -403,336 +404,328 @@ export default function PlatformHome() {
   const visible = results.slice(0, limit);
 
   return (
-    <div
-      className="min-h-screen bg-background pb-28"
-      data-ocid="platform_home.page"
+    <PlatformFrame
+      actions={
+        <button
+          type="button"
+          onClick={locate}
+          disabled={locating}
+          className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-2 text-sm font-semibold hover:bg-muted"
+          data-ocid="platform_home.locate_button"
+        >
+          <LocateFixed className="h-4 w-4 text-primary" aria-hidden="true" />
+          {locating
+            ? "Đang định vị…"
+            : location
+              ? "Cập nhật vị trí"
+              : "Dùng vị trí của tôi"}
+        </button>
+      }
     >
-      <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
-          <a
-            href="/"
-            className="font-display text-lg font-extrabold text-primary"
-          >
-            Tôi Đặt Món
-          </a>
-          <button
-            type="button"
-            onClick={locate}
-            disabled={locating}
-            className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-2 text-sm font-semibold hover:bg-muted"
-            data-ocid="platform_home.locate_button"
-          >
-            <LocateFixed className="h-4 w-4 text-primary" aria-hidden="true" />
-            {locating
-              ? "Đang định vị…"
-              : location
-                ? "Cập nhật vị trí"
-                : "Dùng vị trí của tôi"}
-          </button>
-        </div>
+      <div className="pb-24" data-ocid="platform_home.page">
         {locError && (
-          <p className="mx-auto max-w-6xl px-4 pb-2 text-xs text-destructive">
+          <p className="mx-auto max-w-6xl px-4 pt-2 text-xs text-destructive">
             {locError}
           </p>
         )}
-      </header>
 
-      <div className="sticky top-0 z-20 border-b bg-card/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2.5 px-4 py-2.5">
-          <label
-            className={cn(
-              "flex min-h-[48px] items-center gap-2 rounded-2xl border-2 bg-muted pl-3 pr-1.5",
-              searching ? "border-foreground" : "border-transparent",
-            )}
-          >
-            <Search
-              className="h-5 w-5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            {category && (
-              <button
-                type="button"
-                onClick={() => setCategory(null)}
-                aria-label={`Bỏ nhóm ${category}`}
-                className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground pl-2.5 pr-2 text-[13px] font-semibold text-background"
-              >
-                <span className="max-w-[9rem] truncate">{category}</span>
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setTimeout(() => setFocused(false), 150)}
-              placeholder={
-                category
-                  ? `Tìm trong ${category}…`
-                  : "Tìm món hoặc quán, vd: bún bò, bbh"
-              }
-              aria-label="Tìm món hoặc quán"
-              className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
-              data-ocid="platform_home.search_input"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  inputRef.current?.focus();
-                }}
-                aria-label="Xoá từ khoá"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-border"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </label>
-
-          <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
-            {categories
-              .filter((c) => c !== category)
-              .map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCategory(c)}
-                  className="h-9 shrink-0 rounded-full border bg-card px-3.5 text-sm font-semibold hover:bg-muted"
-                >
-                  {c}
-                </button>
-              ))}
-            {categories.length > 0 && (
-              <span
-                className="h-6 w-px shrink-0 bg-border"
+        <div className="sticky top-0 z-20 border-b bg-card/95 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2.5 px-4 py-2.5">
+            <label
+              className={cn(
+                "flex min-h-[48px] items-center gap-2 rounded-2xl border-2 bg-muted pl-3 pr-1.5",
+                searching ? "border-foreground" : "border-transparent",
+              )}
+            >
+              <Search
+                className="h-5 w-5 shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
-            )}
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                aria-pressed={filters[f.key]}
-                onClick={() =>
-                  setFilters((p) => ({ ...p, [f.key]: !p[f.key] }))
-                }
-                className={cn(
-                  "flex h-9 shrink-0 items-center gap-1 rounded-lg border px-3 text-[13px] font-semibold",
-                  filters[f.key]
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "bg-card hover:bg-muted",
-                )}
-              >
-                {filters[f.key] && <Check className="h-3.5 w-3.5" />}
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {showRecent ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                Gần đây:
-              </span>
-              {recent.map((r) => (
+              {category && (
                 <button
-                  key={r}
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setQuery(r)}
-                  className="h-8 rounded-full border bg-card px-2.5 text-[13px]"
+                  onClick={() => setCategory(null)}
+                  aria-label={`Bỏ nhóm ${category}`}
+                  className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground pl-2.5 pr-2 text-[13px] font-semibold text-background"
                 >
-                  {r}
+                  <span className="max-w-[9rem] truncate">{category}</span>
+                  <X className="h-3.5 w-3.5" />
                 </button>
-              ))}
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  clearRecentSearches();
-                  setRecent([]);
-                }}
-                className="h-8 px-1.5 text-xs text-muted-foreground underline"
-              >
-                Xoá
-              </button>
-            </div>
-          ) : (
-            !query &&
-            suggestions.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">
-                  Gợi ý {MEAL_LABEL[meal]}:
-                </span>
-                {suggestions.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setQuery(s)}
-                    className="h-8 rounded-full border border-dashed bg-card px-2.5 text-[13px]"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
-      <main className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="mb-2.5 flex items-baseline justify-between gap-2">
-          <h1 className="text-base font-extrabold md:text-xl">{title}</h1>
-          {!loading && (
-            <span className="shrink-0 text-[13px] text-muted-foreground">
-              {results.length} món
-            </span>
-          )}
-        </div>
-
-        {storeHits.map((d) => (
-          <a
-            key={d.tenantId}
-            href={`/${d.tenantSlug}/`}
-            className="mb-2.5 flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5"
-            data-ocid="platform_home.store_hit"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Store className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className="flex flex-1 flex-col">
-              <span className="text-xs text-muted-foreground">
-                Quán khớp từ khoá
-              </span>
-              <span className="text-[15px] font-bold">{d.tenantName}</span>
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </a>
-        ))}
-
-        {loading && dishes.length === 0 ? (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {Array.from({ length: 8 }, (_, i) => i).map((i) => (
-              <div
-                key={i}
-                className="h-56 animate-pulse rounded-xl border bg-card"
+              )}
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setTimeout(() => setFocused(false), 150)}
+                placeholder={
+                  category
+                    ? `Tìm trong ${category}…`
+                    : "Tìm món hoặc quán, vd: bún bò, bbh"
+                }
+                aria-label="Tìm món hoặc quán"
+                className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
+                data-ocid="platform_home.search_input"
               />
-            ))}
-          </div>
-        ) : results.length === 0 ? (
-          <div
-            className="flex flex-col items-center gap-2.5 rounded-2xl border border-dashed bg-card px-4 py-8 text-center"
-            data-ocid="platform_home.empty_state"
-          >
-            <p className="font-bold">
-              {tenantCount === 0
-                ? "Chưa có quán nào mở bán"
-                : "Chưa có món khớp"}
-            </p>
-            {tenantCount > 0 && (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Thử bỏ bớt bộ lọc hoặc gõ ngắn hơn, vd “bún”.
-                </p>
+              {query && (
                 <button
                   type="button"
                   onClick={() => {
                     setQuery("");
-                    setCategory(null);
-                    setFilters({ open: false, cheap: false, promo: false });
+                    inputRef.current?.focus();
                   }}
-                  className="h-11 rounded-xl border px-4 text-sm font-bold text-primary"
+                  aria-label="Xoá từ khoá"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-border"
                 >
-                  Xoá tìm kiếm và bộ lọc
+                  <X className="h-4 w-4" />
                 </button>
-              </>
+              )}
+            </label>
+
+            <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
+              {categories
+                .filter((c) => c !== category)
+                .map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setCategory(c)}
+                    className="h-9 shrink-0 rounded-full border bg-card px-3.5 text-sm font-semibold hover:bg-muted"
+                  >
+                    {c}
+                  </button>
+                ))}
+              {categories.length > 0 && (
+                <span
+                  className="h-6 w-px shrink-0 bg-border"
+                  aria-hidden="true"
+                />
+              )}
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={filters[f.key]}
+                  onClick={() =>
+                    setFilters((p) => ({ ...p, [f.key]: !p[f.key] }))
+                  }
+                  className={cn(
+                    "flex h-9 shrink-0 items-center gap-1 rounded-lg border px-3 text-[13px] font-semibold",
+                    filters[f.key]
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "bg-card hover:bg-muted",
+                  )}
+                >
+                  {filters[f.key] && <Check className="h-3.5 w-3.5" />}
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {showRecent ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                  Gần đây:
+                </span>
+                {recent.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setQuery(r)}
+                    className="h-8 rounded-full border bg-card px-2.5 text-[13px]"
+                  >
+                    {r}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    clearRecentSearches();
+                    setRecent([]);
+                  }}
+                  className="h-8 px-1.5 text-xs text-muted-foreground underline"
+                >
+                  Xoá
+                </button>
+              </div>
+            ) : (
+              !query &&
+              suggestions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">
+                    Gợi ý {MEAL_LABEL[meal]}:
+                  </span>
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setQuery(s)}
+                      className="h-8 rounded-full border border-dashed bg-card px-2.5 text-[13px]"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )
             )}
           </div>
-        ) : (
-          <>
+        </div>
+
+        <main className="mx-auto max-w-6xl px-4 pt-4">
+          <div className="mb-2.5 flex items-baseline justify-between gap-2">
+            <h1 className="text-base font-extrabold md:text-xl">{title}</h1>
+            {!loading && (
+              <span className="shrink-0 text-[13px] text-muted-foreground">
+                {results.length} món
+              </span>
+            )}
+          </div>
+
+          {storeHits.map((d) => (
+            <a
+              key={d.tenantId}
+              href={`/${d.tenantSlug}/`}
+              className="mb-2.5 flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5"
+              data-ocid="platform_home.store_hit"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Store className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="flex flex-1 flex-col">
+                <span className="text-xs text-muted-foreground">
+                  Quán khớp từ khoá
+                </span>
+                <span className="text-[15px] font-bold">{d.tenantName}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </a>
+          ))}
+
+          {loading && dishes.length === 0 ? (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {visible.map((d) => (
-                <DishCard
-                  key={d.key}
-                  dish={d}
-                  qty={qtyOf(d)}
-                  onAdd={addDish}
-                  onRemove={removeDish}
+              {Array.from({ length: 8 }, (_, i) => i).map((i) => (
+                <div
+                  key={i}
+                  className="h-56 animate-pulse rounded-xl border bg-card"
                 />
               ))}
             </div>
-            {results.length > limit && (
-              <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setLimit((l) => l + PAGE_SIZE)}
-                  className="h-11 rounded-xl border bg-card px-5 text-sm font-bold"
-                  data-ocid="platform_home.load_more"
-                >
-                  Xem thêm món ({results.length - limit})
-                </button>
+          ) : results.length === 0 ? (
+            <div
+              className="flex flex-col items-center gap-2.5 rounded-2xl border border-dashed bg-card px-4 py-8 text-center"
+              data-ocid="platform_home.empty_state"
+            >
+              <p className="font-bold">
+                {tenantCount === 0
+                  ? "Chưa có quán nào mở bán"
+                  : "Chưa có món khớp"}
+              </p>
+              {tenantCount > 0 && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Thử bỏ bớt bộ lọc hoặc gõ ngắn hơn, vd “bún”.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      setCategory(null);
+                      setFilters({ open: false, cheap: false, promo: false });
+                    }}
+                    className="h-11 rounded-xl border px-4 text-sm font-bold text-primary"
+                  >
+                    Xoá tìm kiếm và bộ lọc
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {visible.map((d) => (
+                  <DishCard
+                    key={d.key}
+                    dish={d}
+                    qty={qtyOf(d)}
+                    onAdd={addDish}
+                    onRemove={removeDish}
+                  />
+                ))}
               </div>
-            )}
-          </>
+              {results.length > limit && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setLimit((l) => l + PAGE_SIZE)}
+                    className="h-11 rounded-xl border bg-card px-5 text-sm font-bold"
+                    data-ocid="platform_home.load_more"
+                  >
+                    Xem thêm món ({results.length - limit})
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            Bạn có quán ăn?{" "}
+            <a href="/dang-ky-doi-tac" className="font-semibold text-primary">
+              Đăng ký làm đối tác
+            </a>
+          </p>
+        </main>
+
+        {cart && cartCount > 0 && (
+          <div className="fixed inset-x-0 bottom-16 z-30 p-3 md:bottom-0">
+            <button
+              type="button"
+              onClick={checkout}
+              className="mx-auto flex h-14 w-full max-w-xl items-center justify-between rounded-2xl bg-primary px-4 text-primary-foreground shadow-lg"
+              data-ocid="platform_home.checkout_bar"
+            >
+              <span className="flex flex-col items-start leading-tight">
+                <span className="text-[15px] font-bold">
+                  {cartCount} món · {formatVnd(cartTotal)}
+                </span>
+                <span className="max-w-[12rem] truncate text-xs opacity-90">
+                  {cart.tenantName}
+                </span>
+              </span>
+              <span className="flex items-center gap-1 text-[15px] font-bold">
+                Thanh toán
+                <ChevronRight className="h-4 w-4" />
+              </span>
+            </button>
+          </div>
         )}
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          Bạn có quán ăn?{" "}
-          <a href="/dang-ky-doi-tac" className="font-semibold text-primary">
-            Đăng ký làm đối tác
-          </a>
-        </p>
-      </main>
-
-      {cart && cartCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 p-3">
-          <button
-            type="button"
-            onClick={checkout}
-            className="mx-auto flex h-14 w-full max-w-xl items-center justify-between rounded-2xl bg-primary px-4 text-primary-foreground shadow-lg"
-            data-ocid="platform_home.checkout_bar"
-          >
-            <span className="flex flex-col items-start leading-tight">
-              <span className="text-[15px] font-bold">
-                {cartCount} món · {formatVnd(cartTotal)}
-              </span>
-              <span className="max-w-[12rem] truncate text-xs opacity-90">
-                {cart.tenantName}
-              </span>
-            </span>
-            <span className="flex items-center gap-1 text-[15px] font-bold">
-              Thanh toán
-              <ChevronRight className="h-4 w-4" />
-            </span>
-          </button>
-        </div>
-      )}
-
-      <AlertDialog
-        open={!!pending}
-        onOpenChange={(o) => {
-          if (!o) setPending(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Món này của quán khác</AlertDialogTitle>
-            <AlertDialogDescription>
-              Giỏ đang có món của <strong>{cart?.tenantName}</strong>. Mỗi đơn
-              giao từ một quán — tạo giỏ mới với{" "}
-              <strong>{pending?.tenantName}</strong> sẽ bỏ giỏ hiện tại.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Giữ giỏ hiện tại</AlertDialogCancel>
-            <AlertDialogAction onClick={startNewCart}>
-              Tạo giỏ mới
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog
+          open={!!pending}
+          onOpenChange={(o) => {
+            if (!o) setPending(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Món này của quán khác</AlertDialogTitle>
+              <AlertDialogDescription>
+                Giỏ đang có món của <strong>{cart?.tenantName}</strong>. Mỗi đơn
+                giao từ một quán — tạo giỏ mới với{" "}
+                <strong>{pending?.tenantName}</strong> sẽ bỏ giỏ hiện tại.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Giữ giỏ hiện tại</AlertDialogCancel>
+              <AlertDialogAction onClick={startNewCart}>
+                Tạo giỏ mới
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </PlatformFrame>
   );
 }

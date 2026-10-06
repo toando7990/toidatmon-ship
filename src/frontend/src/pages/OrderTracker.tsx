@@ -174,7 +174,8 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   );
 }
 
-export default function OrderTracker() {
+/** shopName: đang xem từ trang chính Tôi Đặt Món — tiêu đề là tên quán. */
+export default function OrderTracker({ shopName }: { shopName?: string } = {}) {
   const { orderId } = useParams({ strict: false }) as { orderId?: string };
   const {
     data,
@@ -260,7 +261,10 @@ export default function OrderTracker() {
 
   return (
     <section
-      className="mx-auto w-full max-w-3xl px-4 py-8 md:px-6"
+      className={cn(
+        "mx-auto w-full max-w-3xl px-4 md:px-6",
+        shopName ? "py-3" : "py-8",
+      )}
       data-ocid="order_tracker.page"
     >
       {/* Header với nút quay lại */}
@@ -271,7 +275,7 @@ export default function OrderTracker() {
           className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground transition-smooth hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Danh sách
+          {shopName ? "Theo dõi đơn" : "Danh sách"}
         </Link>
         <button
           type="button"
@@ -292,7 +296,7 @@ export default function OrderTracker() {
         className="font-display text-2xl font-semibold tracking-tight md:text-3xl"
         data-ocid="order_tracker.title"
       >
-        Theo dõi đơn
+        {shopName ?? "Theo dõi đơn"}
       </h1>
       <div className="mt-1 flex items-center gap-2">
         <p

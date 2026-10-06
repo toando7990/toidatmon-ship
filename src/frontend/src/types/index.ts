@@ -266,6 +266,8 @@ export type PaymentMode = "driver" | "customer";
 // receiverEmail — VPS không trả các field này cho endpoint lịch sử.
 export interface VpsHistoryOrder {
   orderId: string;
+  /** Quán của đơn (VPS nhiều đối tác). */
+  tenantId?: string;
   restaurantId: string;
   cusName: string;
   cusPhone: string;

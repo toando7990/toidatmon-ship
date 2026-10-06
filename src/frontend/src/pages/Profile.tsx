@@ -39,7 +39,9 @@ function normalizeEmail(v: string): string {
 
 const PHONE_RE = /^0\d{9,10}$/;
 
-export default function Profile() {
+/** platform = trang chính Tôi Đặt Món: ẩn phần riêng của từng quán (nhà hàng
+ * yêu thích, phiếu giảm giá theo quán). */
+export default function Profile({ platform = false }: { platform?: boolean }) {
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(() => {
     const v = getVerifiedEmail();
     return v ? normalizeEmail(v.email) : null;
@@ -195,7 +197,11 @@ export default function Profile() {
 
   return (
     <section
-      className="mx-auto w-full max-w-lg px-4 py-8 md:px-6"
+      className={
+        platform
+          ? "mx-auto w-full max-w-lg px-4 py-5"
+          : "mx-auto w-full max-w-lg px-4 py-8 md:px-6"
+      }
       data-ocid="profile.page"
     >
       <header className="mb-6">
@@ -284,7 +290,7 @@ export default function Profile() {
             </span>
           </span>
         </label>
-        <div className="flex flex-col gap-2">
+        <div className={platform ? "hidden" : "flex flex-col gap-2"}>
           <Label htmlFor="profile-favorite-restaurant">
             Nhà hàng yêu thích
           </Label>
@@ -332,7 +338,7 @@ export default function Profile() {
         )}
       </div>
 
-      {verifiedEmail && (
+      {verifiedEmail && !platform && (
         <div className="mt-6" data-ocid="profile.vouchers_section">
           <h2 className="mb-3 font-display text-lg font-semibold tracking-tight">
             Phiếu giảm giá của bạn

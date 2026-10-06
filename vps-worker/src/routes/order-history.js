@@ -45,12 +45,14 @@ router.get('/orders/history', (req, res) => {
     return res.status(400).json({ ok: false, error: 'Missing email' });
   }
 
-  const boundary = startOfTodayUtc7(Date.now());
+  // Trang chính Tôi Đặt Món gửi includeToday=1: xem cả đơn hôm nay (khách
+  // đổi máy vẫn thấy). Trang của quán giữ cách cũ (đơn hôm nay ở Theo dõi).
+  const boundary = req.query.includeToday === '1' ? Date.now() + 60000 : startOfTodayUtc7(Date.now());
   // Trang của 1 quán chỉ xem đơn quán đó; trang chung (không gửi) xem tất cả.
   const tenantId = String(req.query.tenantId || '').trim();
 
   const orderRows = db.prepare(
-    `SELECT order_id, restaurant_id, cus_name, cus_phone, amount, goods_amount,
+    `SELECT order_id, tenant_id, restaurant_id, cus_name, cus_phone, amount, goods_amount,
             shipping_fee, ahamove_order_id,
             booking_status, payment_status, created_at,
             km_discount_amount, voucher_discount_amount
@@ -87,6 +89,7 @@ router.get('/orders/history', (req, res) => {
 
   const orders = orderRows.map((r) => ({
     orderId: r.order_id,
+    tenantId: r.tenant_id,
     restaurantId: r.restaurant_id,
     cusName: r.cus_name,
     cusPhone: r.cus_phone,

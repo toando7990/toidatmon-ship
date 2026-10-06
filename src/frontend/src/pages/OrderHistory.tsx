@@ -42,11 +42,13 @@ export default function OrderHistory() {
   });
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const tenantId = useTenantId();
-
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["orderHistory", searchedEmail],
+    queryKey: ["orderHistory", searchedEmail, tenantId],
+    // Trang của 1 quán chỉ hiện đơn của quán đó.
     queryFn: () =>
-      searchedEmail ? getOrderHistory(searchedEmail) : Promise.resolve([]),
+      searchedEmail
+        ? getOrderHistory(searchedEmail, tenantId)
+        : Promise.resolve([]),
     enabled: !!searchedEmail,
     // Danh sách lịch sử ít khi đổi trong 1 phiên xem — không cần refetch lại
     // mỗi khi quay lại tab trình duyệt. Tắt để giảm khả năng gặp lỗi mạng

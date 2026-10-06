@@ -164,3 +164,49 @@ export function useTenant(): TenantContextValue {
 export function useTenantSlug(): string | null {
   return useTenant().slug;
 }
+
+/**
+ * Bọc 1 phần giao diện trong ngữ cảnh của MỘT quán cụ thể (theo slug) — dùng
+ * ở tên miền chính (Tôi Đặt Món) khi xem chi tiết đơn của quán nào đó: các
+ * hook theo đối tác (useTenantId…) bên trong sẽ dùng đúng quán đó.
+ */
+export function TenantScope({
+  slug,
+  children,
+}: {
+  slug: string;
+  children: ReactNode;
+}) {
+  const { actor, isFetching } = useActor(createActor);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [status, setStatus] = useState<TenantStatus>("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!actor || isFetching) return;
+    void fetchTenantBySlug(actor, slug).then((t) => {
+      if (cancelled) return;
+      setTenant(t && t.active !== false ? t : null);
+      setStatus(t && t.active !== false ? "ready" : "not-found");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [actor, isFetching, slug]);
+
+  const value = useMemo<TenantContextValue>(
+    () => ({
+      tenant,
+      slug,
+      source: "path",
+      status,
+      isLoading: status === "loading",
+      isNotFound: status === "not-found",
+      isDefault: false,
+    }),
+    [tenant, slug, status],
+  );
+  return (
+    <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
+  );
+}

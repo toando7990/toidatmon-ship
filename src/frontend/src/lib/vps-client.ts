@@ -443,10 +443,11 @@ export async function deleteCustomerAddress(
 export async function getOrderHistory(
   email: string,
   tenantId = "",
+  includeToday = false,
 ): Promise<VpsHistoryOrder[]> {
-  const tenantQuery = tenantId
-    ? `&tenantId=${encodeURIComponent(tenantId)}`
-    : "";
+  const tenantQuery =
+    (tenantId ? `&tenantId=${encodeURIComponent(tenantId)}` : "") +
+    (includeToday ? "&includeToday=1" : "");
   const res = await vpsFetch<{ ok: boolean; orders: VpsHistoryOrder[] }>({
     method: "GET",
     path: `/orders/history?email=${encodeURIComponent(email)}${tenantQuery}`,
