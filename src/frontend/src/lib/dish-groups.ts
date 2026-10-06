@@ -109,8 +109,16 @@ export async function setDishGroupAssignment(
   tenantId: string,
   itemId: string,
   groupId: string,
+  credential = "",
 ): Promise<void> {
-  unwrap(await api(actor).setDishGroupAssignment(tenantId, itemId, groupId));
+  unwrap(
+    await api(actor).setDishGroupAssignment(
+      tenantId,
+      itemId,
+      groupId,
+      credential,
+    ),
+  );
 }
 
 // ── Xếp món vào nhóm ──────────────────────────────────────────────────────
