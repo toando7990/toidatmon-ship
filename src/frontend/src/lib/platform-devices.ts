@@ -101,13 +101,17 @@ export const ROLE_INFO: Record<PlatformRole, RoleInfo> = {
   },
 };
 
-// Biến thể candid: { ops: null } ⇄ "ops".
-type RoleVariant = { [K in PlatformRole]: { [P in K]: null } }[PlatformRole];
-export function roleOf(v: RoleVariant | PlatformRole): PlatformRole {
+// Bindings Caffeine đổi biến thể không dữ liệu thành chuỗi ("ops"); bindings
+// cũ / dữ liệu thô là { ops: null } — đọc được cả 2 dạng.
+type RoleVariant =
+  | PlatformRole
+  | { [K in PlatformRole]: { [P in K]: null } }[PlatformRole];
+export function roleOf(v: RoleVariant): PlatformRole {
   return typeof v === "string" ? v : (Object.keys(v)[0] as PlatformRole);
 }
+/** Gửi lên canister: bindings Caffeine nhận chuỗi enum ("ops"). */
 function variant(r: PlatformRole): RoleVariant {
-  return { [r]: null } as RoleVariant;
+  return r;
 }
 
 export interface PlatformDeviceView {
