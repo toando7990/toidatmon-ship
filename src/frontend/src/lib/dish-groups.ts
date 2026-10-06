@@ -34,12 +34,14 @@ interface DishGroupActor {
     keywords: string[],
     sortOrder: bigint,
     active: boolean,
+    credential: string,
   ): Promise<Result<DishGroup>>;
-  deleteDishGroup(groupId: string): Promise<Result<null>>;
+  deleteDishGroup(groupId: string, credential: string): Promise<Result<null>>;
   setDishGroupAssignment(
     tenantId: string,
     itemId: string,
     groupId: string,
+    credential: string,
   ): Promise<Result<null>>;
 }
 
@@ -75,9 +77,11 @@ export async function listDishGroupAssignments(
   return new Map(await api(actor).listDishGroupAssignments());
 }
 
+/** credential: "" = admin (Internet Identity); thẻ máy sàn Kiểm duyệt nội dung. */
 export async function saveDishGroup(
   actor: Backend,
   g: Pick<DishGroup, "groupId" | "name" | "keywords" | "sortOrder" | "active">,
+  credential = "",
 ): Promise<DishGroup> {
   return unwrap(
     await api(actor).saveDishGroup(
@@ -86,6 +90,7 @@ export async function saveDishGroup(
       g.keywords,
       g.sortOrder,
       g.active,
+      credential,
     ),
   );
 }
@@ -93,8 +98,9 @@ export async function saveDishGroup(
 export async function deleteDishGroup(
   actor: Backend,
   groupId: string,
+  credential = "",
 ): Promise<void> {
-  unwrap(await api(actor).deleteDishGroup(groupId));
+  unwrap(await api(actor).deleteDishGroup(groupId, credential));
 }
 
 /** groupId "" = bỏ gán tay (về tự động), "-" = không thuộc nhóm nào. */

@@ -7,14 +7,22 @@ import AccessControl "mo:caffeineai-authorization/access-control";
 
 import Common "../types/common";
 import Types "../types/dish-groups";
+import PlatformLib "../lib/platform-devices";
+import PlatformTypes "../types/platform-devices";
 
 // Nhóm món dùng chung toàn nền tảng (mục 6). Ai cũng đọc được (trang chủ cần);
-// chỉ admin Tôi Đặt Món tạo/sửa/xoá nhóm và gán tay món → nhóm.
+// admin Tôi Đặt Món hoặc máy sàn "Kiểm duyệt nội dung" (credential) tạo/sửa/
+// xoá nhóm và gán tay món → nhóm. Admin gửi credential "".
 mixin (
   accessControlState : AccessControl.AccessControlState,
   dishGroups : Types.GroupStore,
   dishGroupAssignments : Types.AssignmentStore,
+  platformDevices : PlatformTypes.DeviceStore,
 ) {
+  func canModerate(caller : Principal, credential : Text) : Bool {
+    AccessControl.isAdmin(accessControlState, caller) or PlatformLib.hasRole(platformDevices, credential, [#moderator]);
+  };
+
   func validId(id : Text) : Bool {
     if (id.size() == 0 or id.size() > 40) return false;
     for (c in id.chars()) {
@@ -44,8 +52,9 @@ mixin (
     keywords : [Text],
     sortOrder : Nat,
     active : Bool,
+    credential : Text,
   ) : async Result.Result<Types.DishGroup, Text> {
-    if (not AccessControl.isAdmin(accessControlState, caller)) return #err("Admin only");
+    if (not canModerate(caller, credential)) return #err("Admin only");
     if (not validId(groupId)) return #err("Mã nhóm không hợp lệ");
     let n = name.trim(#char ' ');
     if (n.size() == 0 or n.size() > 40) return #err("Tên nhóm 1–40 ký tự");
@@ -72,8 +81,8 @@ mixin (
   };
 
   /// Admin: xoá nhóm (bỏ luôn các món đã gán tay vào nhóm đó).
-  public shared ({ caller }) func deleteDishGroup(groupId : Text) : async Result.Result<(), Text> {
-    if (not AccessControl.isAdmin(accessControlState, caller)) return #err("Admin only");
+  public shared ({ caller }) func deleteDishGroup(groupId : Text, credential : Text) : async Result.Result<(), Text> {
+    if (not canModerate(caller, credential)) return #err("Admin only");
     if (dishGroups.get(groupId) == null) return #err("Không tìm thấy nhóm");
     dishGroups.remove(groupId);
     let stale = dishGroupAssignments.entries().filter(func((_, g) : (Text, Text)) : Bool { g == groupId }).toArray();
@@ -87,8 +96,9 @@ mixin (
     tenantId : Common.TenantId,
     itemId : Text,
     groupId : Text,
+    credential : Text,
   ) : async Result.Result<(), Text> {
-    if (not AccessControl.isAdmin(accessControlState, caller)) return #err("Admin only");
+    if (not canModerate(caller, credential)) return #err("Admin only");
     if (tenantId.size() == 0 or tenantId.size() > 64 or itemId.size() == 0 or itemId.size() > 64) {
       return #err("Món không hợp lệ");
     };

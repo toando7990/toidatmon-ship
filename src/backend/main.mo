@@ -32,6 +32,8 @@ import PartnerConsoleApi "mixins/partner-console-api";
 import PlatformParamsApi "mixins/platform-params-api";
 import DishGroupsApi "mixins/dish-groups-api";
 import DishGroupTypes "types/dish-groups";
+import PlatformDevicesApi "mixins/platform-devices-api";
+import PlatformDeviceTypes "types/platform-devices";
 import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
@@ -111,6 +113,10 @@ actor Main {
   // Nhóm món dùng chung toàn nền tảng — supplied by migrations/20261011_000000.mo.
   let dishGroups : DishGroupTypes.GroupStore;
   let dishGroupAssignments : DishGroupTypes.AssignmentStore;
+  // Thiết bị cấp sàn + món ẩn khỏi trang chủ — supplied by migrations/20261012_000000.mo.
+  let platformDevices : PlatformDeviceTypes.DeviceStore;
+  let platformActivations : PlatformDeviceTypes.ActivationStore;
+  let homeHidden : PlatformDeviceTypes.HiddenStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -325,7 +331,8 @@ actor Main {
   include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil, kitchenNotes);
   include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams, counterPayments);
   include VpsAdminApi(accessControlState, secretState, platformParams);
-  include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments);
+  include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments, platformDevices);
+  include PlatformDevicesApi(accessControlState, platformDevices, platformActivations, homeHidden, partnerApplications, tenants, devices);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own
