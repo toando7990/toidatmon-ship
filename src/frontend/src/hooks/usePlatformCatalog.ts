@@ -21,6 +21,7 @@ import {
 } from "@/lib/dish-groups";
 import { haversineDistanceKm } from "@/lib/geo";
 import { listSoldOut } from "@/lib/partner-console";
+import { listHomeHidden } from "@/lib/platform-devices";
 import type { FeedDish, LatLng } from "@/lib/platform-feed";
 import { getBestSellers } from "@/lib/vps-client";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -29,7 +30,11 @@ import { useMemo } from "react";
 // Món hệ thống tự thêm cho mọi đối tác (lib/menu-seed.mo) — không bán lẻ.
 const HIDDEN_ITEM_NAMES = new Set(["dụng cụ đựng đồ ăn"]);
 
-export function usePlatformCatalog(location: LatLng | null) {
+/** includeHidden: trang kiểm duyệt cần thấy cả món đã bị ẩn khỏi trang chủ. */
+export function usePlatformCatalog(
+  location: LatLng | null,
+  { includeHidden = false }: { includeHidden?: boolean } = {},
+) {
   const { actor, isFetching } = useCanister();
   const ready = !!actor && !isFetching;
 
@@ -60,6 +65,13 @@ export function usePlatformCatalog(location: LatLng | null) {
         : Promise.resolve(new Map<string, string>()),
     enabled: ready,
     staleTime: 10 * 60 * 1000,
+  });
+  // Món bị ẩn khỏi trang chủ (máy sàn Kiểm duyệt nội dung / admin).
+  const hiddenQ = useQuery({
+    queryKey: ["platform", "homeHidden"],
+    queryFn: () => (actor ? listHomeHidden(actor) : Promise.resolve(new Map())),
+    enabled: ready,
+    staleTime: 5 * 60 * 1000,
   });
   const bestQ = useQuery({
     queryKey: ["platform", "bestSellers"],
@@ -157,6 +169,8 @@ export function usePlatformCatalog(location: LatLng | null) {
         if (!m.visible || m.price <= 0n || soldOut.has(m.itemId)) continue;
         if (HIDDEN_ITEM_NAMES.has(m.name.trim().toLowerCase())) continue;
         const key = `${t.tenantId}|${m.itemId}`;
+        const hidden = hiddenQ.data?.has(key) ?? false;
+        if (hidden && !includeHidden) continue;
         out.push({
           key,
           itemId: m.itemId,
@@ -178,11 +192,21 @@ export function usePlatformCatalog(location: LatLng | null) {
             assignQ.data ?? new Map(),
           ),
           sold: soldMap.get(key) ?? 0,
+          hidden,
         });
       }
     });
     return out;
-  }, [tenants, dataSig, location, matcher, assignQ.data, soldMap]);
+  }, [
+    tenants,
+    dataSig,
+    location,
+    matcher,
+    assignQ.data,
+    soldMap,
+    hiddenQ.data,
+    includeHidden,
+  ]);
 
   const loading =
     !ready || tenantsQ.isLoading || per.some((q) => q.isLoading && !q.data);

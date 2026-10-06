@@ -38,6 +38,7 @@ const RESERVED_PATH_SEGMENTS = new Set([
   "ordering-partners",
   "profile",
   "quan-ly",
+  "san",
   "track",
 ]);
 

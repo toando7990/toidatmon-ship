@@ -811,7 +811,17 @@ export interface PayoutLine {
   collectedBy: "platform" | "shop";
 }
 
-const adminHeaders = (ticket: string) => ({ "X-Admin-Ticket": ticket });
+/**
+ * Quyền gọi API quản trị/cấp sàn trên VPS. auth là:
+ *   - vé admin (lib/payouts.ts getAdminTicket) → header X-Admin-Ticket;
+ *   - "device:<deviceId~khoá>" của máy cấp sàn → header X-Platform-Device.
+ */
+export function vpsAuthHeaders(auth: string): Record<string, string> {
+  return auth.startsWith("device:")
+    ? { "X-Platform-Device": auth.slice("device:".length) }
+    : { "X-Admin-Ticket": auth };
+}
+const adminHeaders = vpsAuthHeaders;
 
 export async function adminPendingPayouts(
   ticket: string,
@@ -1027,7 +1037,7 @@ export async function getDeliveryAdmin(
   return vpsFetch<DeliveryAdminInfo>({
     method: "GET",
     path: "/admin/delivery",
-    headers: { "X-Admin-Ticket": ticket },
+    headers: vpsAuthHeaders(ticket),
   });
 }
 export async function saveDeliverySettings(
@@ -1037,7 +1047,222 @@ export async function saveDeliverySettings(
   return vpsFetch<DeliveryAdminInfo>({
     method: "POST",
     path: "/admin/delivery",
-    headers: { "X-Admin-Ticket": ticket },
+    headers: vpsAuthHeaders(ticket),
     body: { settings },
+  });
+}
+
+// ── API cấp sàn (máy nhân viên Tôi Đặt Món / admin) ────────────────────────
+// auth: xem vpsAuthHeaders().
+
+export interface OpsOrder {
+  orderId: string;
+  tenantId: string;
+  tenantName: string;
+  restaurantName: string;
+  restaurantPhone: string;
+  cusName: string;
+  cusPhone: string;
+  cusAddress: string;
+  amount: number;
+  shippingFee: number;
+  paymentStatus: string;
+  createdAt: number;
+  delivery: DeliveryInfo | null;
+  attention: string;
+}
+export interface OpsOverview {
+  now: number;
+  stats: {
+    active: number;
+    attention: number;
+    tenants: number;
+    avgAssignMinutes: number | null;
+  };
+  providers: Array<{ id: DeliveryProvider; name: string }>;
+  orders: OpsOrder[];
+}
+export async function opsOverview(auth: string): Promise<OpsOverview> {
+  return vpsFetch<OpsOverview>({
+    method: "GET",
+    path: "/platform/ops/overview",
+    headers: vpsAuthHeaders(auth),
+    timeoutMs: 30000,
+  });
+}
+export async function opsRedispatch(
+  auth: string,
+  orderId: string,
+  provider: DeliveryProvider | "",
+): Promise<{ provider: DeliveryProvider; delivery: DeliveryInfo | null }> {
+  return vpsFetch({
+    method: "POST",
+    path: `/platform/ops/orders/${encodeURIComponent(orderId)}/redispatch`,
+    headers: vpsAuthHeaders(auth),
+    body: { provider },
+    timeoutMs: 45000,
+  });
+}
+
+export interface SupportOrder {
+  orderId: string;
+  tenantId: string;
+  tenantName: string;
+  cusName: string;
+  cusPhone: string;
+  cusAddress: string;
+  receiverEmail: string;
+  amount: number;
+  shippingFee: number;
+  bookingStatus: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  isCounter: boolean;
+  voucherCode: string;
+  voucherDiscount: number;
+  voucherRelease: string;
+  noShow: boolean;
+  createdAt: number;
+  items: Array<{ name: string; price: number; quantity: number }>;
+  complaints: number;
+}
+export type ComplaintCategory =
+  | "food"
+  | "delivery"
+  | "payment"
+  | "voucher"
+  | "other";
+export interface Complaint {
+  id: number;
+  orderId: string;
+  tenantId: string;
+  cusPhone: string;
+  category: ComplaintCategory;
+  channel: string;
+  content: string;
+  status: "open" | "resolved";
+  resolution: string;
+  createdBy: string;
+  createdAt: number;
+  resolvedAt: number | null;
+}
+export async function supportSearch(
+  auth: string,
+  q: string,
+): Promise<{ orders: SupportOrder[]; noShows: Record<string, number> }> {
+  return vpsFetch({
+    method: "GET",
+    path: `/platform/support/search?q=${encodeURIComponent(q)}`,
+    headers: vpsAuthHeaders(auth),
+  });
+}
+export async function supportOrder(
+  auth: string,
+  orderId: string,
+): Promise<{
+  order: SupportOrder;
+  delivery: DeliveryInfo | null;
+  complaints: Complaint[];
+}> {
+  return vpsFetch({
+    method: "GET",
+    path: `/platform/support/orders/${encodeURIComponent(orderId)}`,
+    headers: vpsAuthHeaders(auth),
+  });
+}
+export async function supportAddComplaint(
+  auth: string,
+  input: {
+    orderId: string;
+    category: ComplaintCategory;
+    channel: string;
+    content: string;
+  },
+): Promise<Complaint> {
+  const r = await vpsFetch<{ ok: boolean; complaint: Complaint }>({
+    method: "POST",
+    path: "/platform/support/complaints",
+    headers: vpsAuthHeaders(auth),
+    body: input,
+  });
+  return r.complaint;
+}
+export async function supportComplaints(
+  auth: string,
+  status: "open" | "resolved",
+): Promise<Complaint[]> {
+  const r = await vpsFetch<{ ok: boolean; complaints: Complaint[] }>({
+    method: "GET",
+    path: `/platform/support/complaints?status=${status}`,
+    headers: vpsAuthHeaders(auth),
+  });
+  return r.complaints;
+}
+export async function supportResolveComplaint(
+  auth: string,
+  id: number,
+  resolution: string,
+): Promise<void> {
+  await vpsFetch({
+    method: "POST",
+    path: `/platform/support/complaints/${id}/resolve`,
+    headers: vpsAuthHeaders(auth),
+    body: { resolution },
+  });
+}
+export async function supportReleaseVoucher(
+  auth: string,
+  orderId: string,
+): Promise<{ endDate?: string; already?: boolean }> {
+  return vpsFetch({
+    method: "POST",
+    path: `/platform/support/orders/${encodeURIComponent(orderId)}/release-voucher`,
+    headers: vpsAuthHeaders(auth),
+  });
+}
+export async function supportNoShow(
+  auth: string,
+  orderId: string,
+  on: boolean,
+): Promise<void> {
+  await vpsFetch({
+    method: "POST",
+    path: `/platform/support/orders/${encodeURIComponent(orderId)}/no-show`,
+    headers: vpsAuthHeaders(auth),
+    body: { on },
+  });
+}
+
+export interface PlatformReport {
+  days: number;
+  since: number;
+  totals: {
+    revenue: number;
+    orders: number;
+    paidOrders: number;
+    cancelled: number;
+    onlineShare: number;
+    activeTenants: number;
+    avgOrder: number;
+  };
+  series: Array<{ day: string; revenue: number; orders: number }>;
+  topTenants: Array<{
+    tenantId: string;
+    name: string;
+    revenue: number;
+    orders: number;
+  }>;
+  bestSellers: Array<BestSeller & { tenantName: string }>;
+  delivery: DeliveryAdminInfo["stats"];
+}
+export async function platformReport(
+  auth: string,
+  days: 7 | 30,
+): Promise<PlatformReport> {
+  return vpsFetch<PlatformReport>({
+    method: "GET",
+    path: `/platform/report/summary?days=${days}`,
+    headers: vpsAuthHeaders(auth),
+    timeoutMs: 30000,
   });
 }

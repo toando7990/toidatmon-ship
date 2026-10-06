@@ -214,6 +214,29 @@ const partnerConsoleMock = {
   listKitchenNotes: async () => [],
 };
 // Tham số nền tảng + hạn gói bán quầy (mixins/platform-params-api.mo).
+const platformDevicesMock = {
+  createPlatformActivation: async () => ({
+    __kind__: "err" as const,
+    err: "mock",
+  }),
+  listPlatformActivations: async () => ({ __kind__: "ok" as const, ok: [] }),
+  cancelPlatformActivation: async () => ({ __kind__: "ok" as const, ok: null }),
+  listPlatformDevices: async () => ({ __kind__: "ok" as const, ok: [] }),
+  revokePlatformDevice: async () => ({ __kind__: "ok" as const, ok: null }),
+  activatePlatformDevice: async () => ({
+    __kind__: "err" as const,
+    err: "mock",
+  }),
+  getPlatformDevice: async () => [] as [],
+  touchPlatformDevice: async () => [] as [],
+  listHomeHidden: async () => [] as Array<[string, unknown]>,
+  setHomeHidden: async () => ({ __kind__: "ok" as const, ok: null }),
+  listPartnerApplicationsAs: async () => ({ __kind__: "ok" as const, ok: [] }),
+  requestApplicationInfo: async () => ({ __kind__: "err" as const, err: "mock" }),
+  listTenantDevicesAs: async () => ({ __kind__: "ok" as const, ok: [] }),
+  releaseVoucher: async () => ({ __kind__: "err" as const, err: "mock" }),
+};
+
 const dishGroupsMock = {
   listDishGroups: async () => [],
   listDishGroupAssignments: async () => [] as Array<[string, string]>,
@@ -270,6 +293,7 @@ export const mockBackend: backendInterface = {
   ...deviceAuthMock,
   ...platformParamsMock,
   ...dishGroupsMock,
+  ...platformDevicesMock,
   _initialize_access_control: async () => {},
   _internet_identity_sign_in_finish: async () => ({ __kind__: "ok", ok: null }),
   _internet_identity_sign_in_start: async () => new Uint8Array(),

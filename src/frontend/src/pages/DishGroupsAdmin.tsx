@@ -24,12 +24,15 @@ import {
   suggestGroups,
 } from "@/lib/dish-groups";
 import { matchScore } from "@/lib/dish-search";
+import { setHomeHidden } from "@/lib/platform-devices";
 import type { FeedDish } from "@/lib/platform-feed";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
+  Eye,
+  EyeOff,
   Layers,
   Loader2,
   Pencil,
@@ -153,24 +156,57 @@ function DishRow({
   groups,
   manual,
   onAssign,
+  onToggleHidden,
   busy,
 }: {
   dish: FeedDish;
   groups: DishGroup[];
   manual: string | undefined;
   onAssign: (d: FeedDish, groupId: string) => void;
+  onToggleHidden: (d: FeedDish) => void;
   busy: boolean;
 }) {
   return (
-    <li className="flex items-center gap-2 py-2">
+    <li
+      className={cn(
+        "flex items-center gap-2 py-2",
+        dish.hidden && "opacity-60",
+      )}
+    >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{dish.name}</p>
+        <p className="truncate text-sm font-semibold">
+          {dish.name}
+          {dish.hidden && (
+            <span className="ml-1.5 rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-bold text-destructive">
+              Đang ẩn
+            </span>
+          )}
+        </p>
         <p className="truncate text-xs text-muted-foreground">
           {dish.tenantName}
           {dish.category && ` · ${dish.category}`}
           {manual && " · gán tay"}
         </p>
       </div>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onToggleHidden(dish)}
+        aria-label={
+          dish.hidden
+            ? `Hiện lại ${dish.name} trên trang chủ`
+            : `Ẩn ${dish.name} khỏi trang chủ`
+        }
+        title={dish.hidden ? "Hiện lại trên trang chủ" : "Ẩn khỏi trang chủ"}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border hover:bg-muted disabled:opacity-50"
+        data-ocid="dish_groups.hide_toggle"
+      >
+        {dish.hidden ? (
+          <Eye className="h-4 w-4" />
+        ) : (
+          <EyeOff className="h-4 w-4" />
+        )}
+      </button>
       <AssignSelect
         dish={dish}
         groups={groups}
@@ -182,7 +218,13 @@ function DishRow({
   );
 }
 
-export default function DishGroupsAdmin() {
+/**
+ * credential: dùng trên máy sàn "Kiểm duyệt nội dung" (/san) — canister nhận
+ * thẻ máy thay cho đăng nhập admin. Không truyền = admin.
+ */
+export default function DishGroupsAdmin({
+  credential = "",
+}: { credential?: string } = {}) {
   const { actor, isFetching } = useCanister();
   const qc = useQueryClient();
   const ready = !!actor && !isFetching;
@@ -201,7 +243,9 @@ export default function DishGroupsAdmin() {
         : Promise.resolve(new Map<string, string>()),
     enabled: ready,
   });
-  const { dishes, loading } = usePlatformCatalog(null);
+  const { dishes, loading } = usePlatformCatalog(null, {
+    includeHidden: true,
+  });
 
   const groups = useMemo(
     () =>
@@ -243,7 +287,7 @@ export default function DishGroupsAdmin() {
   const save = useMutation({
     mutationFn: (g: Parameters<typeof saveDishGroup>[1]) => {
       if (!actor) throw new Error("Chưa kết nối");
-      return saveDishGroup(actor, g);
+      return saveDishGroup(actor, g, credential);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: GROUPS_KEY });
@@ -255,7 +299,7 @@ export default function DishGroupsAdmin() {
   const remove = useMutation({
     mutationFn: (groupId: string) => {
       if (!actor) throw new Error("Chưa kết nối");
-      return deleteDishGroup(actor, groupId);
+      return deleteDishGroup(actor, groupId, credential);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: GROUPS_KEY });
@@ -268,10 +312,49 @@ export default function DishGroupsAdmin() {
     mutationFn: async ({ d, groupId }: { d: FeedDish; groupId: string }) => {
       if (!actor) throw new Error("Chưa kết nối");
       setBusyKey(d.key);
-      await setDishGroupAssignment(actor, d.tenantId, d.itemId, groupId);
+      await setDishGroupAssignment(
+        actor,
+        d.tenantId,
+        d.itemId,
+        groupId,
+        credential,
+      );
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ASSIGN_KEY }),
     onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setBusyKey(null),
+  });
+
+  const hide = useMutation({
+    mutationFn: async (d: FeedDish) => {
+      if (!actor) throw new Error("Chưa kết nối");
+      let reason = "";
+      if (!d.hidden) {
+        reason =
+          window.prompt(
+            `Lý do ẩn “${d.name}” khỏi trang chủ (khách vẫn đặt được trong trang của quán):`,
+            "Ảnh / tên món không phù hợp",
+          ) ?? "";
+        if (!reason.trim()) throw new Error("Đã huỷ");
+      }
+      setBusyKey(d.key);
+      await setHomeHidden(
+        actor,
+        d.tenantId,
+        d.itemId,
+        !d.hidden,
+        reason.trim(),
+        credential,
+      );
+      return !d.hidden;
+    },
+    onSuccess: (nowHidden) => {
+      qc.invalidateQueries({ queryKey: ["platform", "homeHidden"] });
+      toast.success(nowHidden ? "Đã ẩn khỏi trang chủ" : "Đã hiện lại");
+    },
+    onError: (e: Error) => {
+      if (e.message !== "Đã huỷ") toast.error(e.message);
+    },
     onSettled: () => setBusyKey(null),
   });
 
@@ -528,6 +611,7 @@ export default function DishGroupsAdmin() {
                 groups={groups}
                 manual={assignments.get(d.key)}
                 onAssign={onAssign}
+                onToggleHidden={(d) => hide.mutate(d)}
                 busy={busyKey === d.key || !apiReady}
               />
             ))}
@@ -546,6 +630,7 @@ export default function DishGroupsAdmin() {
                     groups={groups}
                     manual={assignments.get(d.key)}
                     onAssign={onAssign}
+                    onToggleHidden={(d) => hide.mutate(d)}
                     busy={busyKey === d.key || !apiReady}
                   />
                 ))}

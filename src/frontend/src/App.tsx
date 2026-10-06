@@ -32,9 +32,11 @@ import PartnerConsole from "@/pages/PartnerConsole";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
 import PayoutsAdmin from "@/pages/PayoutsAdmin";
+import PlatformDevicesAdmin from "@/pages/PlatformDevicesAdmin";
 import PlatformHistory from "@/pages/PlatformHistory";
 import PlatformHome from "@/pages/PlatformHome";
 import PlatformSettings from "@/pages/PlatformSettings";
+import PlatformStaff from "@/pages/PlatformStaff";
 import { PlatformTrackDetail, PlatformTrackList } from "@/pages/PlatformTrack";
 import Profile from "@/pages/Profile";
 import { PromoManagerPage } from "@/pages/PromoManagerPage";
@@ -303,6 +305,8 @@ function RootShell() {
   const pathname = useRouterState({ select: (st) => st.location.pathname });
   // pathname có thể còn tiền tố đối tác (/bunbohue65/quan-ly) → so theo đoạn.
   if (/(^|\/)(dang-ky-doi-tac|quan-ly)(\/|$)/.test(pathname)) return <Outlet />;
+  // Máy nhân viên sàn — khung riêng (pages/PlatformStaff.tsx).
+  if (/^\/san(\/|$)/.test(pathname)) return <Outlet />;
   // Tên miền chính: các trang khách (Đặt món, Theo dõi, Lịch sử, Tôi) dùng
   // khung riêng của Tôi Đặt Món (PlatformFrame), không phải giao diện quán.
   if (
@@ -556,6 +560,22 @@ const adminPromoManagerRoute = createRoute({
   ),
 });
 
+// Thiết bị cấp sàn: admin tạo mã / thu hồi; nhân viên dùng /san.
+const adminPlatformDevicesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/thiet-bi-san",
+  component: () => (
+    <AdminGate>
+      <PlatformDevicesAdmin />
+    </AdminGate>
+  ),
+});
+const platformStaffRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/san",
+  component: () => <PlatformStaff />,
+});
+
 // Giao hàng 2 hãng (Lalamove + Ahamove) — cài đặt chung của sàn.
 const adminDeliveryRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -679,6 +699,8 @@ const router = createRouter({
     adminPayoutsRoute,
     adminDishGroupsRoute,
     adminDeliveryRoute,
+    adminPlatformDevicesRoute,
+    platformStaffRoute,
     adminPromoManagerRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,

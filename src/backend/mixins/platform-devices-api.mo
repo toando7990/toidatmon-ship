@@ -195,7 +195,10 @@ mixin (
     credential : Text,
     statusFilter : ?AppTypes.ApplicationStatus,
   ) : async Result.Result<[AppTypes.Application], Text> {
-    if (not canPartnerDev(caller, credential)) return #err("Không có quyền");
+    // Kế toán sàn cũng cần đọc (tài khoản ngân hàng của quán để chuyển tiền).
+    if (not (canPartnerDev(caller, credential) or Lib.hasRole(platformDevices, credential, [#accounting]))) {
+      return #err("Không có quyền");
+    };
     #ok(AppLib.list(applications, statusFilter));
   };
 

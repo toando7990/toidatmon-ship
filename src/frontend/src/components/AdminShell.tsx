@@ -33,6 +33,7 @@ import {
   LogOut,
   type LucideIcon,
   Menu,
+  MonitorCog,
   MonitorSmartphone,
   Percent,
   Search,
@@ -74,6 +75,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       { to: "/admin/doi-soat", label: "Đối soát & trả tiền", icon: Wallet },
       { to: "/admin/nhom-mon", label: "Nhóm món chung", icon: Layers },
       { to: "/admin/giao-hang", label: "Giao hàng", icon: Truck },
+      { to: "/admin/thiet-bi-san", label: "Thiết bị sàn", icon: MonitorCog },
       { to: "/admin/cai-dat", label: "Cài đặt nền tảng", icon: Settings2 },
       { to: "/admin", label: "Hệ thống & mã kích hoạt", icon: ServerCog },
     ],
@@ -84,7 +86,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     items: [
       { to: "/admin/menu", label: "Thực đơn", icon: BookOpen },
       { to: "/admin/restaurants", label: "Chi nhánh", icon: Store },
-      { to: "/admin/devices", label: "Thiết bị", icon: Smartphone },
+      { to: "/admin/devices", label: "Thiết bị quán", icon: Smartphone },
       {
         to: "/enterprise/management",
         label: "Thiết bị doanh nghiệp",

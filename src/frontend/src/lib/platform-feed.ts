@@ -18,6 +18,8 @@ export interface FeedDish {
   groupId: string | null;
   /** Số phần đã bán 7 ngày qua (đơn đã thanh toán); 0 = chưa có số liệu. */
   sold: number;
+  /** Bị ẩn khỏi trang chủ (Kiểm duyệt nội dung) — chỉ trang kiểm duyệt thấy. */
+  hidden?: boolean;
 }
 
 /**

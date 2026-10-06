@@ -11,7 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTenants } from "@/hooks/useQueries";
 import { useCanister } from "@/lib/canister";
-import { listPartnerApplications } from "@/lib/partner-applications";
+import {
+  listPartnerApplications,
+  listPartnerApplicationsAs,
+} from "@/lib/partner-applications";
 import {
   bankByTenant,
   cutoffFromInput,
@@ -54,15 +57,17 @@ function Money({ n, strong }: { n: number; strong?: boolean }) {
   );
 }
 
-function OrdersOf({ id }: { id: number }) {
+function OrdersOf({
+  id,
+  auth,
+}: {
+  id: number;
+  auth: () => Promise<string>;
+}) {
   const { actor } = useCanister();
   const q = useQuery({
     queryKey: [...QK, "detail", id],
-    queryFn: async () =>
-      adminPayoutDetail(
-        await getAdminTicket(actor as NonNullable<typeof actor>),
-        id,
-      ),
+    queryFn: async () => adminPayoutDetail(await auth(), id),
     enabled: !!actor,
   });
   if (q.isLoading) return <p className="text-xs text-muted-foreground">…</p>;
@@ -93,7 +98,13 @@ function OrdersOf({ id }: { id: number }) {
   );
 }
 
-export default function PayoutsAdmin() {
+/**
+ * deviceCredential: dùng trên máy sàn "Kế toán sàn" (/san) — gọi VPS bằng
+ * thẻ máy thay cho vé admin. Không truyền = admin (Internet Identity).
+ */
+export default function PayoutsAdmin({
+  deviceCredential,
+}: { deviceCredential?: string } = {}) {
   const { actor, isFetching } = useCanister();
   const qc = useQueryClient();
   const ready = !!actor && !isFetching;
@@ -112,12 +123,24 @@ export default function PayoutsAdmin() {
   const appsQ = useQuery({
     queryKey: ["partner-applications", "approved"],
     queryFn: () =>
-      listPartnerApplications(actor as NonNullable<typeof actor>, "approved"),
+      deviceCredential
+        ? listPartnerApplicationsAs(
+            actor as NonNullable<typeof actor>,
+            deviceCredential,
+            "approved",
+          )
+        : listPartnerApplications(
+            actor as NonNullable<typeof actor>,
+            "approved",
+          ),
     enabled: ready,
   });
   const bank = useMemo(() => bankByTenant(appsQ.data ?? []), [appsQ.data]);
 
-  const ticket = () => getAdminTicket(actor as NonNullable<typeof actor>);
+  const ticket = async () =>
+    deviceCredential
+      ? `device:${deviceCredential}`
+      : getAdminTicket(actor as NonNullable<typeof actor>);
   const pendingQ = useQuery({
     queryKey: [...QK, "pending", cutoff],
     queryFn: async () => adminPendingPayouts(await ticket(), cutoff),
@@ -342,7 +365,7 @@ export default function PayoutsAdmin() {
                     >
                       {open === p.id ? "Ẩn đơn" : "Xem từng đơn"}
                     </button>
-                    {open === p.id && <OrdersOf id={p.id} />}
+                    {open === p.id && <OrdersOf id={p.id} auth={ticket} />}
                   </div>
                   <div className="flex items-center gap-2">
                     <Input

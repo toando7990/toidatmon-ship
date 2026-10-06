@@ -75,6 +75,15 @@ interface PartnerApplicationActor {
     decision: ReviewDecision,
     note: string,
   ): Promise<Result<PartnerApplication>>;
+  listPartnerApplicationsAs?(
+    credential: string,
+    statusFilter: ApplicationStatus | null,
+  ): Promise<Result<PartnerApplication[]>>;
+  requestApplicationInfo?(
+    credential: string,
+    applicationId: string,
+    note: string,
+  ): Promise<Result<PartnerApplication>>;
 }
 
 function api(actor: Backend): PartnerApplicationActor {
@@ -115,6 +124,29 @@ export async function listPartnerApplications(
   statusFilter: ApplicationStatus | null = null,
 ): Promise<PartnerApplication[]> {
   return unwrap(await api(actor).listPartnerApplications(statusFilter));
+}
+
+/** Máy sàn Phát triển đối tác / Kế toán sàn (thẻ máy). */
+export async function listPartnerApplicationsAs(
+  actor: Backend,
+  credential: string,
+  statusFilter: ApplicationStatus | null = null,
+): Promise<PartnerApplication[]> {
+  const fn = api(actor).listPartnerApplicationsAs;
+  if (!fn) throw new Error("Hệ thống đang cập nhật, vui lòng thử lại sau");
+  return unwrap(await fn.call(actor, credential, statusFilter));
+}
+
+/** Máy sàn Phát triển đối tác: sơ duyệt — yêu cầu quán bổ sung hồ sơ. */
+export async function requestApplicationInfo(
+  actor: Backend,
+  credential: string,
+  applicationId: string,
+  note: string,
+): Promise<PartnerApplication> {
+  const fn = api(actor).requestApplicationInfo;
+  if (!fn) throw new Error("Hệ thống đang cập nhật, vui lòng thử lại sau");
+  return unwrap(await fn.call(actor, credential, applicationId, note));
 }
 
 export async function reviewPartnerApplication(
