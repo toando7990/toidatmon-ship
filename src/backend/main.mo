@@ -36,6 +36,8 @@ import PlatformDevicesApi "mixins/platform-devices-api";
 import PlatformDeviceTypes "types/platform-devices";
 import PartnerFinanceApi "mixins/partner-finance-api";
 import PartnerFinanceTypes "types/partner-finance";
+import PartnerProfileApi "mixins/partner-profile-api";
+import PartnerProfileTypes "types/partner-profile";
 import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
@@ -122,6 +124,7 @@ actor Main {
   // Tài khoản ngân hàng của ĐỐI TÁC + KM chung do sàn tài trợ — migrations/20261013_000000.mo.
   let partnerBanks : PartnerFinanceTypes.BankStore;
   let fundedPromos : PartnerFinanceTypes.FundedStore;
+  let partnerProfiles : PartnerProfileTypes.ProfileStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -317,7 +320,7 @@ actor Main {
   include MixinAuthorization(accessControlState, null);
   include ApiDocMixin();
   include TenantApi(tenants, accessControlState);
-  include PartnerApplicationApi(partnerApplications, tenants, accessControlState, partnerBanks);
+  include PartnerApplicationApi(partnerApplications, tenants, accessControlState, partnerBanks, partnerProfiles);
   include CoreApi(accessControlState, coreState, deviceAuth);
   include HmacApi(orders, secretState);
   include DevicesApi(accessControlState, tenants, devices, deviceAuth, pendingActivations);
@@ -337,6 +340,7 @@ actor Main {
   include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams, counterPayments);
   include VpsAdminApi(accessControlState, secretState, platformParams);
   include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments, platformDevices);
+  include PartnerProfileApi(accessControlState, partnerProfiles, restaurants, platformDevices);
   include PartnerFinanceApi(accessControlState, partnerBanks, fundedPromos, platformDevices, devices, deviceAuth, vouchers);
   include PlatformDevicesApi(accessControlState, platformDevices, platformActivations, homeHidden, partnerApplications, tenants, devices);
 

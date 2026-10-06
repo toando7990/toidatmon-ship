@@ -37,7 +37,12 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
-const STEPS = ["Thông tin quán", "Pháp lý & thuế", "Nhận tiền", "Điều khoản"];
+const STEPS = [
+  "Thương hiệu & nhà hàng",
+  "Thông tin đối tác",
+  "Nhận tiền",
+  "Điều khoản",
+];
 
 function Field({
   label,
@@ -268,7 +273,7 @@ export default function PartnerApply() {
               Đăng ký đối tác
             </h1>
             <p className="mt-1 mb-6 text-sm text-muted-foreground">
-              Mất khoảng 5 phút. Quán được cấp trang đặt món riêng tại{" "}
+              Mất khoảng 5 phút. Thương hiệu của bạn được cấp trang đặt món riêng tại{" "}
               <span className="font-medium text-foreground">
                 {d.desiredSlug || "ten-quan"}.{PARTNER_ROOT_DOMAIN}
               </span>
@@ -287,10 +292,12 @@ export default function PartnerApply() {
             >
               {step === 0 && (
                 <>
-                  <Field
-                    label="Tên quán / thương hiệu"
-                    error={errors.brandName}
-                  >
+                  <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                    Thương hiệu là tên khách thấy khi đặt món (VD: Bún Bò Huế
+                    65). Mỗi đối tác có 1 thương hiệu, gồm 1 hoặc nhiều nhà
+                    hàng.
+                  </p>
+                  <Field label="Tên thương hiệu" error={errors.brandName}>
                     <Input
                       value={d.brandName}
                       className={inputCls("brandName")}
@@ -303,7 +310,7 @@ export default function PartnerApply() {
                     />
                   </Field>
                   <Field
-                    label="Tên miền con của quán"
+                    label="Tên miền con của thương hiệu"
                     hint="Chữ thường không dấu, số, dấu gạch ngang. Khách vào trang đặt món bằng địa chỉ này."
                     error={errors.desiredSlug}
                   >
@@ -328,7 +335,7 @@ export default function PartnerApply() {
                         onChange={(e) => set("cuisine", e.target.value)}
                       />
                     </Field>
-                    <Field label="Số cơ sở" error={errors.branchCount}>
+                    <Field label="Số nhà hàng" error={errors.branchCount}>
                       <Input
                         inputMode="numeric"
                         value={d.branchCount}
@@ -340,7 +347,8 @@ export default function PartnerApply() {
                     </Field>
                   </div>
                   <Field
-                    label="Địa chỉ cơ sở chính"
+                    label="Địa chỉ nhà hàng chính"
+                    hint="Để Tôi Đặt Món thẩm định. Các nhà hàng khai đầy đủ sau khi được duyệt (trang Chi nhánh)."
                     error={errors.storeAddress}
                   >
                     <Input
@@ -349,40 +357,17 @@ export default function PartnerApply() {
                       onChange={(e) => set("storeAddress", e.target.value)}
                     />
                   </Field>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Người liên hệ" error={errors.contactName}>
-                      <Input
-                        value={d.contactName}
-                        className={inputCls("contactName")}
-                        onChange={(e) => set("contactName", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Số điện thoại" error={errors.contactPhone}>
-                      <Input
-                        inputMode="tel"
-                        value={d.contactPhone}
-                        className={inputCls("contactPhone")}
-                        onChange={(e) => set("contactPhone", e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                  <Field
-                    label="Email"
-                    hint="Dùng để nhận kết quả duyệt và tra cứu đơn."
-                    error={errors.contactEmail}
-                  >
-                    <Input
-                      type="email"
-                      value={d.contactEmail}
-                      className={inputCls("contactEmail")}
-                      onChange={(e) => set("contactEmail", e.target.value)}
-                    />
-                  </Field>
                 </>
               )}
 
               {step === 1 && (
                 <>
+                  <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                    Đối tác là cá nhân / hộ kinh doanh / doanh nghiệp sở hữu
+                    thương hiệu (VD: Công ty Gia Khánh Foods). Tôi Đặt Món ký
+                    hợp đồng, đối soát, chuyển tiền và liên hệ theo thông tin
+                    này.
+                  </p>
                   <Field label="Loại hình kinh doanh">
                     <div className="grid gap-2 sm:grid-cols-3">
                       {(Object.keys(BUSINESS_TYPE_LABEL) as BusinessType[]).map(
@@ -447,6 +432,46 @@ export default function PartnerApply() {
                       }
                     />
                   </Field>
+                  <Field
+                    label="Địa chỉ trụ sở"
+                    hint="Theo giấy đăng ký kinh doanh / đăng ký thuế — không phải địa chỉ nhà hàng."
+                    error={errors.headOfficeAddress}
+                  >
+                    <Input
+                      value={d.headOfficeAddress}
+                      className={inputCls("headOfficeAddress")}
+                      onChange={(e) => set("headOfficeAddress", e.target.value)}
+                    />
+                  </Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Người liên hệ" error={errors.contactName}>
+                      <Input
+                        value={d.contactName}
+                        className={inputCls("contactName")}
+                        onChange={(e) => set("contactName", e.target.value)}
+                      />
+                    </Field>
+                    <Field label="SĐT liên hệ" error={errors.contactPhone}>
+                      <Input
+                        inputMode="tel"
+                        value={d.contactPhone}
+                        className={inputCls("contactPhone")}
+                        onChange={(e) => set("contactPhone", e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <Field
+                    label="Email liên hệ"
+                    hint="Dùng để nhận kết quả duyệt và tra cứu đơn."
+                    error={errors.contactEmail}
+                  >
+                    <Input
+                      type="email"
+                      value={d.contactEmail}
+                      className={inputCls("contactEmail")}
+                      onChange={(e) => set("contactEmail", e.target.value)}
+                    />
+                  </Field>
                   <div className="flex items-start gap-2 text-sm">
                     <Checkbox
                       id="usesEInvoice"
@@ -455,7 +480,7 @@ export default function PartnerApply() {
                       className="mt-0.5"
                     />
                     <Label htmlFor="usesEInvoice" className="font-normal">
-                      Quán đang xuất hoá đơn điện tử
+                      Đối tác đang xuất hoá đơn điện tử
                     </Label>
                   </div>
                 </>

@@ -11,12 +11,19 @@ import { PartnerBankPanel } from "@/components/PartnerBank";
 import { TenantForm, type TenantFormValues } from "@/components/TenantForm";
 import { TenantTable } from "@/components/TenantTable";
 import {
+  PARTNER_PROFILE_QK,
+  usePartnerDirectory,
+} from "@/hooks/usePartnerDirectory";
+import {
   useCreateTenant,
   useSetTenantActive,
   useTenants,
   useUpdateTenant,
 } from "@/hooks/useQueries";
+import { useCanister } from "@/lib/canister";
+import { hasProfileApi, setPartnerProfile } from "@/lib/partner-profile";
 import type { Tenant } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { Building2, Loader2, Plus, X } from "lucide-react";
 import { useState } from "react";
 
@@ -30,6 +37,22 @@ export default function PartnerManager() {
   const createMutation = useCreateTenant();
   const updateMutation = useUpdateTenant();
   const setActiveMutation = useSetTenantActive();
+  const directory = usePartnerDirectory();
+  const { actor } = useCanister();
+  const qc = useQueryClient();
+
+  /** Lưu hồ sơ đối tác (pháp nhân) sau khi tạo / sửa tenant. */
+  async function saveProfile(tenantId: string, v: TenantFormValues) {
+    if (!actor || !hasProfileApi(actor)) return;
+    await setPartnerProfile(actor, tenantId, {
+      businessType: v.businessType,
+      registrationNumber: v.registrationNumber,
+      representativeName: v.representativeName,
+      contactName: v.contactName,
+      contactEmail: v.contactEmail,
+    });
+    qc.invalidateQueries({ queryKey: PARTNER_PROFILE_QK });
+  }
 
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [toast, setToast] = useState<{
@@ -44,8 +67,16 @@ export default function PartnerManager() {
 
   function handleAddSubmit(values: TenantFormValues) {
     createMutation.mutate(values, {
-      onSuccess: () => {
-        notify("ok", "Đã thêm đối tác");
+      onSuccess: async (t) => {
+        try {
+          await saveProfile(t.tenantId, values);
+          notify("ok", "Đã thêm đối tác");
+        } catch (e) {
+          notify(
+            "err",
+            `Đã tạo đối tác nhưng chưa lưu được hồ sơ: ${e instanceof Error ? e.message : ""}`,
+          );
+        }
         setMode({ kind: "list" });
       },
       onError: (e) =>
@@ -58,8 +89,16 @@ export default function PartnerManager() {
     updateMutation.mutate(
       { tenantId: mode.tenant.tenantId, ...values },
       {
-        onSuccess: () => {
-          notify("ok", "Đã lưu thay đổi");
+        onSuccess: async (t) => {
+          try {
+            await saveProfile(t.tenantId, values);
+            notify("ok", "Đã lưu thay đổi");
+          } catch (e) {
+            notify(
+              "err",
+              `Chưa lưu được hồ sơ đối tác: ${e instanceof Error ? e.message : ""}`,
+            );
+          }
           setMode({ kind: "list" });
         },
         onError: (e) =>
@@ -98,8 +137,9 @@ export default function PartnerManager() {
             Quản lý đối tác
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tạo và quản lý đối tác: thương hiệu, subdomain, thông tin liên hệ và
-            trạng thái hoạt động.
+            Đối tác là pháp nhân (VD: Công ty Gia Khánh Foods) sở hữu 1 thương
+            hiệu (VD: Bún Bò Huế 65) với 1 hoặc nhiều nhà hàng. Tôi Đặt Món làm
+            việc với đối tác theo thông tin pháp nhân.
           </p>
         </div>
         {mode.kind === "list" && (
@@ -186,6 +226,10 @@ export default function PartnerManager() {
           </div>
           <TenantForm
             initial={mode.tenant}
+            initialProfile={directory.byId.get(mode.tenant.tenantId)?.profile}
+            restaurantCount={
+              directory.byId.get(mode.tenant.tenantId)?.restaurants
+            }
             submitting={updateMutation.isPending}
             submitError={
               updateMutation.isError
@@ -227,6 +271,7 @@ export default function PartnerManager() {
           {!tenantsQuery.isLoading && !tenantsQuery.isError && (
             <TenantTable
               tenants={tenants}
+              directory={directory.byId}
               loading={false}
               onEdit={(t) => setMode({ kind: "edit", tenant: t })}
               onToggleActive={handleToggleActive}

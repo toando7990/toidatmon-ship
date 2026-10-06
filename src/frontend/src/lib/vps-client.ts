@@ -1061,7 +1061,10 @@ export async function saveDeliverySettings(
 export interface OpsOrder {
   orderId: string;
   tenantId: string;
+  /** Tên pháp lý của đối tác. */
   tenantName: string;
+  /** Thương hiệu khách thấy. */
+  brandName?: string;
   restaurantName: string;
   restaurantPhone: string;
   cusName: string;
@@ -1110,7 +1113,10 @@ export async function opsRedispatch(
 export interface SupportOrder {
   orderId: string;
   tenantId: string;
+  /** Tên pháp lý của đối tác. */
   tenantName: string;
+  /** Thương hiệu khách thấy. */
+  brandName?: string;
   cusName: string;
   cusPhone: string;
   cusAddress: string;
@@ -1252,6 +1258,7 @@ export interface PlatformReport {
   topTenants: Array<{
     tenantId: string;
     name: string;
+    brandName?: string;
     revenue: number;
     orders: number;
   }>;

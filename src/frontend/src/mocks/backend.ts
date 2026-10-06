@@ -298,6 +298,13 @@ const partnerFinanceMock = {
   setPromoPlatformFunded: async () => ({ __kind__: "ok" as const, ok: null }),
   listPlatformFundedPromos: async () => [],
   getVoucherProgram: async () => "",
+  // Hồ sơ đối tác (mixins/partner-profile-api.mo).
+  setPartnerProfile: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  listPartnerProfiles: async () => ({ __kind__: "ok" as const, ok: [] }),
+  countRestaurantsByTenant: async () => [],
 };
 
 export const mockBackend: backendInterface = {

@@ -81,6 +81,12 @@ function OrderRow({
       <div className="flex items-center gap-2">
         <b className="min-w-0 flex-1 truncate text-[14.5px]">
           #{o.orderId.slice(-6)} · {o.tenantName}
+          {o.brandName && o.brandName !== o.tenantName && (
+            <span className="font-normal text-muted-foreground">
+              {" "}
+              ({o.brandName})
+            </span>
+          )}
         </b>
         <StatusPill o={o} />
       </div>

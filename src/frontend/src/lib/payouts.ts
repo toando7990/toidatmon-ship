@@ -107,16 +107,25 @@ export function bankByTenant(
   return m;
 }
 
-/** CSV danh sách cần chuyển khoản (mở được bằng Excel). */
+/** Đối tác nhận tiền: tên pháp lý + MST + thương hiệu (để đối chiếu). */
+export interface PayeeInfo {
+  name: string;
+  taxCode: string;
+  brand: string;
+}
+
+/** CSV danh sách cần chuyển khoản (mở được bằng Excel) — theo ĐỐI TÁC. */
 export function payoutsCsv(
   rows: Payout[],
-  nameOf: (tenantId: string) => string,
+  payeeOf: (tenantId: string) => PayeeInfo,
   bank: Map<string, BankInfo>,
 ): string {
   const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
   const head = [
     "Mã phiếu",
     "Đối tác",
+    "Mã số thuế",
+    "Thương hiệu",
     "Từ ngày",
     "Đến ngày",
     "Số đơn",
@@ -131,9 +140,12 @@ export function payoutsCsv(
   ];
   const lines = rows.map((p) => {
     const b = bank.get(p.tenantId);
+    const who = payeeOf(p.tenantId);
     return [
       p.id,
-      nameOf(p.tenantId),
+      who.name,
+      who.taxCode,
+      who.brand,
       fmtDate(p.periodFrom),
       fmtDate(p.periodTo),
       p.orderCount,

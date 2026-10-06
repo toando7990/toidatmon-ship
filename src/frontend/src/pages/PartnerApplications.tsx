@@ -165,28 +165,35 @@ function ApplicationCard({ app }: { app: PartnerApplication }) {
         <div className="space-y-4 border-t p-4">
           <dl className="space-y-1.5">
             <Row k="Mã đơn" v={app.applicationId} />
+            <div className="pt-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Đối tác
+            </div>
             <Row k="Loại hình" v={BUSINESS_TYPE_LABEL[i.businessType]} />
             <Row k="Tên pháp lý" v={i.legalName} />
             <Row k="Mã số thuế" v={i.taxCode} />
             <Row k="Số ĐKKD" v={i.registrationNumber} />
             <Row k="Người đại diện" v={i.representativeName} />
-            <Row
-              k="Hoá đơn điện tử"
-              v={i.usesEInvoice ? "Đang dùng" : "Chưa"}
-            />
-            <Row k="Địa chỉ" v={i.storeAddress} />
-            <Row
-              k="Số cơ sở / loại món"
-              v={`${i.branchCount} · ${i.cuisine}`}
-            />
+            <Row k="Địa chỉ trụ sở" v={i.headOfficeAddress || "— (đơn cũ)"} />
             <Row
               k="Liên hệ"
               v={`${i.contactName} · ${i.contactPhone} · ${i.contactEmail}`}
             />
             <Row
+              k="Hoá đơn điện tử"
+              v={i.usesEInvoice ? "Đang dùng" : "Chưa"}
+            />
+            <Row
               k="Tài khoản nhận tiền"
               v={`${i.bankName} · ${i.bankAccountNumber} · ${i.bankAccountHolder}`}
             />
+            <div className="pt-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Thương hiệu & nhà hàng
+            </div>
+            <Row
+              k="Số nhà hàng / loại món"
+              v={`${i.branchCount} · ${i.cuisine}`}
+            />
+            <Row k="Nhà hàng chính" v={i.storeAddress} />
             {app.adminNote && <Row k="Ghi chú đã gửi" v={app.adminNote} />}
             {app.tenantId && <Row k="Đối tác đã tạo" v={app.tenantId} />}
           </dl>

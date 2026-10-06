@@ -29,6 +29,8 @@ export interface ApplicationInput {
   taxCode: string;
   registrationNumber: string;
   representativeName: string;
+  /** Địa chỉ trụ sở của ĐỐI TÁC (khác địa chỉ nhà hàng). */
+  headOfficeAddress: string;
   usesEInvoice: boolean;
   bankName: string;
   bankAccountNumber: string;
@@ -193,6 +195,7 @@ export const EMPTY_DRAFT: ApplicationDraft = {
   taxCode: "",
   registrationNumber: "",
   representativeName: "",
+  headOfficeAddress: "",
   usesEInvoice: false,
   bankName: "",
   bankAccountNumber: "",
@@ -223,7 +226,7 @@ export function validateStep(
   const e: Record<string, string> = {};
   const blank = (s: string) => s.trim() === "";
   if (step === 0) {
-    if (blank(d.brandName)) e.brandName = "Nhập tên quán";
+    if (blank(d.brandName)) e.brandName = "Nhập tên thương hiệu";
     if (blank(d.desiredSlug)) e.desiredSlug = "Nhập tên miền con";
     else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(d.desiredSlug))
       e.desiredSlug = "Chỉ dùng chữ thường không dấu, số và dấu gạch ngang";
@@ -232,15 +235,17 @@ export function validateStep(
     const n = Number(d.branchCount);
     if (!Number.isInteger(n) || n < 1 || n > 1000)
       e.branchCount = "Số cơ sở từ 1 đến 1000";
-    if (blank(d.storeAddress)) e.storeAddress = "Nhập địa chỉ quán";
+    if (blank(d.storeAddress)) e.storeAddress = "Nhập địa chỉ nhà hàng chính";
+  }
+  if (step === 1) {
+    if (blank(d.headOfficeAddress))
+      e.headOfficeAddress = "Nhập địa chỉ trụ sở theo đăng ký kinh doanh";
     if (blank(d.contactName)) e.contactName = "Nhập tên người liên hệ";
     const phone = d.contactPhone.replace(/^\+/, "");
     if (!digits(phone) || phone.length < 9 || phone.length > 11)
       e.contactPhone = "Số điện thoại 9–11 chữ số";
     if (!/^\S+@\S+\.\S+$/.test(d.contactEmail.trim()))
       e.contactEmail = "Email không hợp lệ";
-  }
-  if (step === 1) {
     if (blank(d.legalName)) e.legalName = "Nhập tên pháp lý";
     if (!digits(d.taxCode) || ![10, 13].includes(d.taxCode.length))
       e.taxCode = "Mã số thuế gồm 10 hoặc 13 chữ số";
@@ -287,6 +292,7 @@ export function draftToInput(d: ApplicationDraft): ApplicationInput {
     taxCode: d.taxCode.trim(),
     registrationNumber: d.registrationNumber.trim(),
     representativeName: d.representativeName.trim(),
+    headOfficeAddress: d.headOfficeAddress.trim(),
     bankName: d.bankName.trim(),
     bankAccountNumber: d.bankAccountNumber.trim(),
     bankAccountHolder: d.bankAccountHolder.trim(),

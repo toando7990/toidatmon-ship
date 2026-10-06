@@ -16,7 +16,7 @@ import {
 } from "@/components/PartnerBank";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useTenants } from "@/hooks/useQueries";
+import { usePartnerDirectory } from "@/hooks/usePartnerDirectory";
 import { useCanister } from "@/lib/canister";
 import {
   listPartnerApplications,
@@ -124,11 +124,19 @@ export default function PayoutsAdmin({
   const [refs, setRefs] = useState<Record<number, string>>({});
   const [open, setOpen] = useState<number | null>(null);
 
-  const tenantsQ = useTenants(false);
-  const nameOf = useMemo(() => {
-    const m = new Map((tenantsQ.data ?? []).map((t) => [t.tenantId, t.name]));
-    return (id: string) => m.get(id) ?? id;
-  }, [tenantsQ.data]);
+  // Sàn trả tiền cho ĐỐI TÁC (pháp nhân) — thương hiệu chỉ để đối chiếu.
+  const dir = usePartnerDirectory(deviceCredential ?? "");
+  const nameOf = dir.partnerOf;
+  const payeeOf = (id: string) => ({
+    name: dir.partnerOf(id),
+    taxCode: dir.byId.get(id)?.tenant.taxCode ?? "",
+    brand: dir.brandOf(id),
+  });
+  const brandLine = (id: string) => {
+    const e = dir.byId.get(id);
+    if (!e) return "";
+    return `${e.brand} · ${e.restaurants} nhà hàng`;
+  };
   const appsQ = useQuery({
     queryKey: ["partner-applications", "approved"],
     queryFn: () =>
@@ -200,7 +208,7 @@ export default function PayoutsAdmin({
   });
 
   function downloadCsv() {
-    const csv = payoutsCsv(waiting, nameOf, bank);
+    const csv = payoutsCsv(waiting, payeeOf, bank);
     const url = URL.createObjectURL(
       new Blob([csv], { type: "text/csv;charset=utf-8" }),
     );
@@ -287,6 +295,9 @@ export default function PayoutsAdmin({
                     <td className="py-2.5">
                       <p className="font-medium">{nameOf(s.tenantId)}</p>
                       <p className="text-xs text-muted-foreground">
+                        {brandLine(s.tenantId)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         {s.error
                           ? s.error
                           : `${fmtDate(s.periodFrom)} – ${fmtDate(s.periodTo)}`}
@@ -362,6 +373,9 @@ export default function PayoutsAdmin({
                       <Money n={p.net} strong />
                     </p>
                     <p className="text-xs text-muted-foreground">
+                      Thương hiệu {brandLine(p.tenantId)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {fmtDate(p.periodFrom)} – {fmtDate(p.periodTo)} ·{" "}
                       {p.orderCount} đơn · thu hộ {vnd(p.collected)} · phí{" "}
                       {vnd(p.feeTotal)}
@@ -369,7 +383,13 @@ export default function PayoutsAdmin({
                         ` · sàn hỗ trợ KM ${vnd(p.promoSubsidy ?? 0)}`}
                     </p>
                     <p className="mt-1 flex flex-wrap items-center gap-2">
-                      <BankLine b={b} />
+                      <BankLine
+                        b={b}
+                        legalName={dir.byId.get(p.tenantId)?.tenant.companyName}
+                        representativeName={
+                          dir.byId.get(p.tenantId)?.profile?.representativeName
+                        }
+                      />
                       {!deviceCredential && (
                         <button
                           type="button"

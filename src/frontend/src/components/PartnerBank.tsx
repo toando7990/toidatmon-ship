@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { usePartnerDirectory } from "@/hooks/usePartnerDirectory";
 import { useCanister } from "@/lib/canister";
 import { listPartnerApplications } from "@/lib/partner-applications";
 import {
@@ -24,10 +25,11 @@ import {
   listPartnerBanks,
   setPartnerBank,
 } from "@/lib/partner-finance";
+import { holderMatchesPartner } from "@/lib/partner-profile";
 import { type BankInfo, bankByTenant } from "@/lib/payouts";
 import type { Tenant } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Landmark, Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, Landmark, Loader2, Pencil } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -127,8 +129,9 @@ export function PartnerBankDialog({
         <DialogHeader>
           <DialogTitle>Tài khoản nhận tiền — {partnerName}</DialogTitle>
           <DialogDescription>
-            Tài khoản của ĐỐI TÁC, dùng chung cho mọi quán / chi nhánh của đối
-            tác. Tôi Đặt Món chuyển tiền đối soát vào tài khoản này.
+            Tài khoản đứng tên ĐỐI TÁC (pháp nhân, hoặc chủ hộ với hộ kinh
+            doanh), dùng chung cho mọi nhà hàng của đối tác. Tôi Đặt Món chuyển
+            tiền đối soát vào tài khoản này.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
@@ -182,10 +185,17 @@ export function PartnerBankDialog({
 export function BankLine({
   b,
   missingText = "Chưa có tài khoản nhận tiền của đối tác",
+  legalName = "",
+  representativeName = "",
 }: {
   b: BankInfo | undefined;
   missingText?: string;
+  /** Tên pháp lý của đối tác — cảnh báo khi chủ tài khoản không khớp. */
+  legalName?: string;
+  representativeName?: string;
 }) {
+  const mismatch =
+    !!b && !holderMatchesPartner(b.holder, legalName, representativeName);
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5 text-sm">
       <Landmark
@@ -202,6 +212,16 @@ export function BankLine({
               lấy từ đơn đăng ký
             </span>
           )}
+          {mismatch && (
+            <span
+              className="inline-flex items-center gap-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[11px] font-semibold text-destructive"
+              title={`Chủ tài khoản phải là đối tác: ${legalName}`}
+              data-ocid="partner_bank.holder_mismatch"
+            >
+              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+              Chủ TK không phải đối tác
+            </span>
+          )}
         </>
       ) : (
         <span className="text-destructive">{missingText}</span>
@@ -213,6 +233,7 @@ export function BankLine({
 export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
   const { actor, isFetching } = useCanister();
   const { banks, loading } = usePartnerBanks();
+  const dir = usePartnerDirectory();
   const [editing, setEditing] = useState<Tenant | null>(null);
   const apiReady = !!actor && !isFetching && hasFinanceApi(actor);
   const missing = tenants.filter((t) => !banks.has(t.tenantId)).length;
@@ -226,8 +247,9 @@ export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
         Tài khoản nhận tiền của đối tác
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Mỗi đối tác 1 tài khoản, dùng chung cho mọi quán / chi nhánh của đối
-        tác. Đối soát chuyển tiền vào tài khoản này.
+        Mỗi đối tác 1 tài khoản đứng tên đối tác (pháp nhân, hoặc chủ hộ với hộ
+        kinh doanh), dùng chung cho mọi nhà hàng của đối tác. Đối soát chuyển
+        tiền vào tài khoản này.
         {missing > 0 && (
           <b className="text-destructive"> {missing} đối tác chưa có.</b>
         )}
@@ -246,9 +268,23 @@ export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
               key={t.tenantId}
               className="flex flex-wrap items-center gap-3 py-2.5"
             >
-              <span className="w-44 shrink-0 font-semibold">{t.name}</span>
+              <span className="w-56 shrink-0">
+                <span className="block truncate font-semibold">
+                  {t.companyName || t.name}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {t.name}
+                </span>
+              </span>
               <span className="min-w-0 flex-1">
-                <BankLine b={banks.get(t.tenantId)} missingText="Chưa có" />
+                <BankLine
+                  b={banks.get(t.tenantId)}
+                  missingText="Chưa có"
+                  legalName={t.companyName}
+                  representativeName={
+                    dir.byId.get(t.tenantId)?.profile?.representativeName
+                  }
+                />
               </span>
               <Button
                 size="sm"
@@ -266,7 +302,7 @@ export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
       )}
       <PartnerBankDialog
         tenantId={editing?.tenantId ?? ""}
-        partnerName={editing?.name ?? ""}
+        partnerName={editing ? editing.companyName || editing.name : ""}
         current={editing ? banks.get(editing.tenantId) : undefined}
         open={!!editing}
         onOpenChange={(o) => {

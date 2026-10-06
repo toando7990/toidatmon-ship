@@ -1,16 +1,21 @@
 // Bảng đối tác (tenant) — admin trung tâm.
-// Cột: thương hiệu (logo + tên), slug/subdomain, liên hệ, trạng thái, ngày tạo,
-// thao tác (Sửa, Ẩn/Hiện). Responsive: card list trên mobile, table trên md+.
+// Cột: ĐỐI TÁC (pháp nhân: tên pháp lý, loại hình, MST) · thương hiệu (logo,
+// tên, tên miền) · số nhà hàng · liên hệ của đối tác · trạng thái · thao tác.
+// Responsive: card list trên mobile, table trên md+.
 // UI tiếng Việt.
 
+import type { PartnerEntry } from "@/hooks/usePartnerDirectory";
+import { BUSINESS_TYPE_LABEL } from "@/lib/partner-applications";
 import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
 import { tenantMonogram } from "@/lib/tenant-branding";
 import { cn } from "@/lib/utils";
 import type { Tenant } from "@/types";
-import { Building2, Eye, EyeOff, Pencil } from "lucide-react";
+import { Building2, Eye, EyeOff, Pencil, Store } from "lucide-react";
 
 interface TenantTableProps {
   tenants: Tenant[];
+  /** Hồ sơ đối tác + số nhà hàng theo tenantId. */
+  directory?: Map<string, PartnerEntry>;
   loading?: boolean;
   /** Đang đổi trạng thái cho tenantId nào (optional UX). */
   togglingId?: string | null;
@@ -50,13 +55,54 @@ function BrandCell({ tenant }: { tenant: Tenant }) {
       </div>
       <div className="min-w-0">
         <p className="truncate font-medium text-foreground">{tenant.name}</p>
-        {tenant.companyName && (
-          <p className="truncate text-xs text-muted-foreground">
-            {tenant.companyName}
-          </p>
-        )}
+        <p className="truncate font-mono text-xs text-muted-foreground">
+          {tenant.slug}.{PARTNER_ROOT_DOMAIN}
+        </p>
       </div>
     </div>
+  );
+}
+
+function PartnerCell({ tenant, e }: { tenant: Tenant; e?: PartnerEntry }) {
+  const type = e?.profile ? BUSINESS_TYPE_LABEL[e.profile.businessType] : "";
+  return (
+    <div className="min-w-0">
+      {tenant.companyName ? (
+        <p className="truncate font-semibold text-foreground">
+          {tenant.companyName}
+        </p>
+      ) : (
+        <p className="text-sm font-medium text-destructive">
+          Chưa có tên pháp lý
+        </p>
+      )}
+      <p className="truncate text-xs text-muted-foreground">
+        {[type, tenant.taxCode && `MST ${tenant.taxCode}`]
+          .filter(Boolean)
+          .join(" · ") || "Chưa có MST"}
+      </p>
+    </div>
+  );
+}
+
+function ContactCell({ tenant, e }: { tenant: Tenant; e?: PartnerEntry }) {
+  const name = e?.profile?.contactName || e?.profile?.representativeName;
+  return (
+    <div className="min-w-0 text-xs">
+      <p className="truncate text-foreground">{name || "—"}</p>
+      <p className="truncate font-mono text-muted-foreground">
+        {tenant.phone || "—"}
+      </p>
+    </div>
+  );
+}
+
+function RestaurantCount({ n }: { n: number | undefined }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-sm text-foreground">
+      <Store className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+      {n ?? "—"}
+    </span>
   );
 }
 
@@ -77,6 +123,7 @@ function StatusBadge({ active }: { active: boolean }) {
 
 export function TenantTable({
   tenants,
+  directory,
   loading = false,
   togglingId = null,
   onEdit,
@@ -131,14 +178,15 @@ export function TenantTable({
               data-ocid={`tenant.table.row.${i + 1}`}
             >
               <div className="flex items-start justify-between gap-2">
-                <BrandCell tenant={t} />
+                <PartnerCell tenant={t} e={directory?.get(t.tenantId)} />
                 <StatusBadge active={t.active} />
               </div>
-              <p className="mt-2 truncate font-mono text-xs text-muted-foreground">
-                {t.slug}.{PARTNER_ROOT_DOMAIN}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t.phone || "—"} · {formatCreatedAt(t.createdAt)}
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <BrandCell tenant={t} />
+                <RestaurantCount n={directory?.get(t.tenantId)?.restaurants} />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t.phone || "—"} · tạo {formatCreatedAt(t.createdAt)}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
@@ -182,19 +230,19 @@ export function TenantTable({
             <thead className="sticky top-0 bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th scope="col" className="px-4 py-3 font-semibold">
+                  Đối tác
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
                   Thương hiệu
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
-                  Subdomain
+                  Nhà hàng
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
                   Liên hệ
                 </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
                   Trạng thái
-                </th>
-                <th scope="col" className="px-4 py-3 font-semibold">
-                  Ngày tạo
                 </th>
                 <th scope="col" className="px-4 py-3 text-right font-semibold">
                   Thao tác
@@ -210,29 +258,22 @@ export function TenantTable({
                     className="transition-smooth hover:bg-secondary/40"
                     data-ocid={`tenant.table.row.${i + 1}`}
                   >
+                    <td className="max-w-[260px] px-4 py-3">
+                      <PartnerCell tenant={t} e={directory?.get(t.tenantId)} />
+                    </td>
                     <td className="px-4 py-3">
                       <BrandCell tenant={t} />
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {t.slug}.{PARTNER_ROOT_DOMAIN}
-                      </span>
+                      <RestaurantCount
+                        n={directory?.get(t.tenantId)?.restaurants}
+                      />
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-mono text-xs text-muted-foreground">
-                        {t.phone || "—"}
-                      </p>
-                      {t.taxCode && (
-                        <p className="font-mono text-xs text-muted-foreground">
-                          MST: {t.taxCode}
-                        </p>
-                      )}
+                      <ContactCell tenant={t} e={directory?.get(t.tenantId)} />
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge active={t.active} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {formatCreatedAt(t.createdAt)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
