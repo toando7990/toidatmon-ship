@@ -17,6 +17,7 @@ import {
 import { TdmIcon, TdmLogo, useTdmTheme } from "@/components/TdmLogo";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
+import { usePageTitle } from "@/lib/page-title";
 import {
   type ConsoleDevice,
   type ConsoleRole,
@@ -1297,6 +1298,11 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
 export default function PartnerConsole() {
   useTdmTheme();
   const { tenant, isLoading: tenantLoading } = useTenant();
+  usePageTitle(
+    tenant
+      ? `Quản lý ${tenant.name} · Tôi Đặt Món`
+      : "Quản lý quán · Tôi Đặt Món",
+  );
   const { actor, isFetching } = useCanister();
   const qc = useQueryClient();
   const tenantId = tenant?.tenantId ?? "";

@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useGetStoreHours, useIsStoreOpen } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
+import { usePageTitle } from "@/lib/page-title";
 import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
 import { tenantBrandStyle, tenantMonogram } from "@/lib/tenant-branding";
 import { cn } from "@/lib/utils";
@@ -76,7 +77,6 @@ const PRIMARY_NAV: NavItem[] = [
     icon: User,
     hideOnPrefixes: ["/driver"],
   },
-  { to: "/ordering-partners", label: "Đối tác đặt món", icon: Store },
   { to: "/gioi-thieu", label: "Giới thiệu", icon: Info },
 ];
 
@@ -285,6 +285,7 @@ function LayoutInner({ children }: { children: ReactNode }) {
   const { deviceHeader } = useDeviceHeader();
   const { isAuthenticated, isAdmin, clear } = useAuth();
   const { tenant, source } = useTenant();
+  usePageTitle(tenant ? `${tenant.name} – Đặt món online | Tôi Đặt Món` : null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const showAdmin = isAuthenticated && isAdmin;
   const router = useRouterState();

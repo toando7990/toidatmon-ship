@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCanister } from "@/lib/canister";
+import { usePageTitle } from "@/lib/page-title";
 import {
   type ApplicationDraft,
   type ApplicationStatusView,
@@ -187,6 +188,7 @@ function StatusLookup() {
 
 export default function PartnerApply() {
   useTdmTheme();
+  usePageTitle("Đăng ký làm đối tác · Tôi Đặt Món");
   const { actor } = useCanister();
   const [step, setStep] = useState(0);
   const [d, setD] = useState<ApplicationDraft>(EMPTY_DRAFT);

@@ -25,7 +25,6 @@ import { MenuManager } from "@/pages/MenuManager";
 import OrderHistory from "@/pages/OrderHistory";
 import OrderList from "@/pages/OrderList";
 import OrderTracker from "@/pages/OrderTracker";
-import OrderingPartners from "@/pages/OrderingPartners";
 import PartnerApplications from "@/pages/PartnerApplications";
 import PartnerApply from "@/pages/PartnerApply";
 import PartnerConsole from "@/pages/PartnerConsole";
@@ -381,12 +380,6 @@ const gioiThieuRoute = createRoute({
   component: () => <GioiThieu />,
 });
 
-const orderingPartnersRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/ordering-partners",
-  component: () => <OrderingPartners />,
-});
-
 const driverRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/driver",
@@ -622,7 +615,6 @@ const router = createRouter({
     historyRoute,
     profileRoute,
     gioiThieuRoute,
-    orderingPartnersRoute,
     driverRoute,
     counterRoute,
     adminRoute,

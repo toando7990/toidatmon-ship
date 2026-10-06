@@ -5,6 +5,7 @@
 
 import { TdmLogo, useTdmTheme } from "@/components/TdmLogo";
 import { recentMyOrders } from "@/lib/my-orders";
+import { TDM_DEFAULT_TITLE, usePageTitle } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
@@ -57,6 +58,7 @@ export function PlatformFrame({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activeOrders = useActiveOrderCount();
   useTdmTheme();
+  usePageTitle(title ? `${title} · Tôi Đặt Món` : TDM_DEFAULT_TITLE);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
