@@ -279,7 +279,7 @@ module {
     // RỘNG sang kiểu khác trong codebase này, tránh đoán sai API như từng
     // gặp với '.remove()' ở Giai đoạn 2).
     let newOrders : Map.Map<Text, Order> = Map.empty();
-    for ((id, o) in old.orders.toArray().vals()) {
+    for ((id, o) in old.orders.toArray().values()) {
       let newOrder : Order = {
         orderId = o.orderId;
         restaurantId = o.restaurantId;

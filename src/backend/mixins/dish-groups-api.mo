@@ -19,11 +19,11 @@ mixin (
   dishGroupAssignments : Types.AssignmentStore,
   platformDevices : PlatformTypes.DeviceStore,
 ) {
-  func canModerate(caller : Principal, credential : Text) : Bool {
+  func dishGroupCanModerate(caller : Principal, credential : Text) : Bool {
     AccessControl.isAdmin(accessControlState, caller) or PlatformLib.hasRole(platformDevices, credential, [#moderator]);
   };
 
-  func validId(id : Text) : Bool {
+  func dishGroupValidId(id : Text) : Bool {
     if (id.size() == 0 or id.size() > 40) return false;
     for (c in id.chars()) {
       let ok = (c >= 'a' and c <= 'z') or (c >= '0' and c <= '9') or c == '-';
@@ -54,8 +54,8 @@ mixin (
     active : Bool,
     credential : Text,
   ) : async Result.Result<Types.DishGroup, Text> {
-    if (not canModerate(caller, credential)) return #err("Admin only");
-    if (not validId(groupId)) return #err("Mã nhóm không hợp lệ");
+    if (not dishGroupCanModerate(caller, credential)) return #err("Admin only");
+    if (not dishGroupValidId(groupId)) return #err("Mã nhóm không hợp lệ");
     let n = name.trim(#char ' ');
     if (n.size() == 0 or n.size() > 40) return #err("Tên nhóm 1–40 ký tự");
     if (keywords.size() > Types.MAX_KEYWORDS) return #err("Tối đa 40 từ khoá");
@@ -82,7 +82,7 @@ mixin (
 
   /// Admin: xoá nhóm (bỏ luôn các món đã gán tay vào nhóm đó).
   public shared ({ caller }) func deleteDishGroup(groupId : Text, credential : Text) : async Result.Result<(), Text> {
-    if (not canModerate(caller, credential)) return #err("Admin only");
+    if (not dishGroupCanModerate(caller, credential)) return #err("Admin only");
     if (dishGroups.get(groupId) == null) return #err("Không tìm thấy nhóm");
     dishGroups.remove(groupId);
     let stale = dishGroupAssignments.entries().filter(func((_, g) : (Text, Text)) : Bool { g == groupId }).toArray();
@@ -98,7 +98,7 @@ mixin (
     groupId : Text,
     credential : Text,
   ) : async Result.Result<(), Text> {
-    if (not canModerate(caller, credential)) return #err("Admin only");
+    if (not dishGroupCanModerate(caller, credential)) return #err("Admin only");
     if (tenantId.size() == 0 or tenantId.size() > 64 or itemId.size() == 0 or itemId.size() > 64) {
       return #err("Món không hợp lệ");
     };

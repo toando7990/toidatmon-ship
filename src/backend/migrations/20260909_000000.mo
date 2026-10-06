@@ -170,7 +170,7 @@ module {
 
   public func migration(old : OldActor) : NewActor {
     let devices : Map.Map<Text, NewDevice> = Map.empty();
-    for ((id, d) in old.devices.toArray().vals()) {
+    for ((id, d) in old.devices.toArray().values()) {
       let newDevice : NewDevice = {
         deviceId = d.deviceId;
         restaurantId = d.restaurantId;
@@ -184,7 +184,7 @@ module {
     };
 
     let pendingActivations : Map.Map<Text, NewPendingActivation> = Map.empty();
-    for ((code, p) in old.pendingActivations.toArray().vals()) {
+    for ((code, p) in old.pendingActivations.toArray().values()) {
       let newPending : NewPendingActivation = {
         code = p.code;
         restaurantId = p.restaurantId;
@@ -200,7 +200,7 @@ module {
     // vai trò Kế toán). Các đơn ĐANG TỒN TẠI lúc migration chạy được gán
     // paymentVerificationImage = "" (chưa có ảnh) — VPS sẽ đẩy URL về sau.
     let orders : Map.Map<Text, NewOrder> = Map.empty();
-    for ((id, o) in old.orders.toArray().vals()) {
+    for ((id, o) in old.orders.toArray().values()) {
       let newOrder : NewOrder = {
         orderId = o.orderId;
         restaurantId = o.restaurantId;

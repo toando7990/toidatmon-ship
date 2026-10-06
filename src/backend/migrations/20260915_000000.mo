@@ -94,7 +94,7 @@ module {
 
   public func migration(old : OldActor) : NewActor {
     let promotions : Map.Map<Text, NewPromotion> = Map.empty();
-    for ((code, p) in old.promotions.toArray().vals()) {
+    for ((code, p) in old.promotions.toArray().values()) {
       let newPromo : NewPromotion = {
         code = p.code;
         name = p.name;
@@ -114,7 +114,7 @@ module {
     };
 
     let salesPromos : Map.Map<Text, NewSalesPromo> = Map.empty();
-    for ((code, s) in old.salesPromos.toArray().vals()) {
+    for ((code, s) in old.salesPromos.toArray().values()) {
       let newSalesPromo : NewSalesPromo = {
         code = s.code;
         name = s.name;

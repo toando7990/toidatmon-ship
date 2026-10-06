@@ -287,7 +287,7 @@ module {
     // field (không dùng `with` để thêm field mới — cùng nguyên tắc đã áp
     // dụng ở migration trước, tránh đoán sai API).
     let newPromotions : Map.Map<Text, Promotion> = Map.empty();
-    for ((code, p) in old.promotions.toArray().vals()) {
+    for ((code, p) in old.promotions.toArray().values()) {
       let newPromo : Promotion = {
         code = p.code;
         name = p.name;
@@ -305,7 +305,7 @@ module {
     };
 
     let newRegistrationPromos : Map.Map<Text, RegistrationPromo> = Map.empty();
-    for ((code, p) in old.registrationPromos.toArray().vals()) {
+    for ((code, p) in old.registrationPromos.toArray().values()) {
       let newPromo : RegistrationPromo = {
         code = p.code;
         name = p.name;
@@ -320,7 +320,7 @@ module {
     };
 
     let newSalesPromos : Map.Map<Text, SalesPromo> = Map.empty();
-    for ((code, p) in old.salesPromos.toArray().vals()) {
+    for ((code, p) in old.salesPromos.toArray().values()) {
       let newPromo : SalesPromo = {
         code = p.code;
         name = p.name;

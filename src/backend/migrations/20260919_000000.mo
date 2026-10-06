@@ -36,7 +36,7 @@ module {
 
   public func migration(old : OldActor) : NewActor {
     let restaurants : Map.Map<Text, NewRestaurant> = Map.empty();
-    for ((id, r) in old.restaurants.toArray().vals()) {
+    for ((id, r) in old.restaurants.toArray().values()) {
       let newRestaurant : NewRestaurant = {
         restaurantId = r.restaurantId;
         name = r.name;

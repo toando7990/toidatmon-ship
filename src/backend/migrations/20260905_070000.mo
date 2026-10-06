@@ -266,7 +266,7 @@ module {
     // gửi tiếp theo sau nâng cấp luôn bắt đầu cửa sổ MỚI, không bị tính
     // hụt mất lượt từ trước khi tính năng rate-limit ra đời.
     let newOtpRecords : Map.Map<Text, NewOtpRecord> = Map.empty();
-    for ((email, r) in old.otpRecords.toArray().vals()) {
+    for ((email, r) in old.otpRecords.toArray().values()) {
       let newRecord : NewOtpRecord = {
         email = r.email;
         codeHash = r.codeHash;

@@ -30,7 +30,7 @@ mixin (
   tenants : TenantTypes.TenantStore,
   devices : DevicesLib.DevicesStore,
 ) {
-  func isAdmin(caller : Principal) : Bool {
+  func platformAdminOk(caller : Principal) : Bool {
     AccessControl.isAdmin(accessControlState, caller);
   };
 
@@ -40,7 +40,7 @@ mixin (
     role : Types.PlatformRole,
     note : Text,
   ) : async Result.Result<Types.PlatformActivation, Text> {
-    if (not isAdmin(caller)) return #err("Admin only");
+    if (not platformAdminOk(caller)) return #err("Admin only");
     if (note.size() > 80) return #err("Ghi chú tối đa 80 ký tự");
     if (platformDevices.size() >= Types.MAX_DEVICES) return #err("Đã đạt số máy tối đa");
     let now = Time.now();
@@ -64,25 +64,25 @@ mixin (
   };
 
   public query ({ caller }) func listPlatformActivations() : async Result.Result<[Types.PlatformActivation], Text> {
-    if (not isAdmin(caller)) return #err("Admin only");
+    if (not platformAdminOk(caller)) return #err("Admin only");
     let now = Time.now();
     #ok(platformActivations.values().filter(func(a : Types.PlatformActivation) : Bool { a.expiresAt > now }).toArray());
   };
 
   public shared ({ caller }) func cancelPlatformActivation(code : Text) : async Result.Result<(), Text> {
-    if (not isAdmin(caller)) return #err("Admin only");
+    if (not platformAdminOk(caller)) return #err("Admin only");
     platformActivations.remove(Lib.normalizeCode(code));
     #ok(());
   };
 
   public query ({ caller }) func listPlatformDevices() : async Result.Result<[Types.PlatformDeviceView], Text> {
-    if (not isAdmin(caller)) return #err("Admin only");
+    if (not platformAdminOk(caller)) return #err("Admin only");
     #ok(Lib.listViews(platformDevices));
   };
 
   /// Thu hồi: máy mất quyền ngay ở canister; VPS nhớ tối đa 5 phút.
   public shared ({ caller }) func revokePlatformDevice(deviceId : Text) : async Result.Result<(), Text> {
-    if (not isAdmin(caller)) return #err("Admin only");
+    if (not platformAdminOk(caller)) return #err("Admin only");
     switch (platformDevices.get(deviceId)) {
       case (?d) {
         platformDevices.add(deviceId, { d with active = false });
@@ -167,7 +167,7 @@ mixin (
     reason : Text,
     credential : Text,
   ) : async Result.Result<(), Text> {
-    let by = if (isAdmin(caller)) "admin" else switch (Lib.resolve(platformDevices, credential)) {
+    let by = if (platformAdminOk(caller)) "admin" else switch (Lib.resolve(platformDevices, credential)) {
       case (?d) { if (d.role == #moderator) d.deviceId else return #err("Không có quyền") };
       case null { return #err("Không có quyền") };
     };
@@ -187,8 +187,8 @@ mixin (
 
   // ---------- Phát triển đối tác ----------
 
-  func canPartnerDev(caller : Principal, credential : Text) : Bool {
-    isAdmin(caller) or Lib.hasRole(platformDevices, credential, [#partnerDev]);
+  func platformCanPartnerDev(caller : Principal, credential : Text) : Bool {
+    platformAdminOk(caller) or Lib.hasRole(platformDevices, credential, [#partnerDev]);
   };
 
   public query ({ caller }) func listPartnerApplicationsAs(
@@ -196,7 +196,7 @@ mixin (
     statusFilter : ?AppTypes.ApplicationStatus,
   ) : async Result.Result<[AppTypes.Application], Text> {
     // Kế toán sàn cũng cần đọc (tài khoản ngân hàng của quán để chuyển tiền).
-    if (not (canPartnerDev(caller, credential) or Lib.hasRole(platformDevices, credential, [#accounting]))) {
+    if (not (platformCanPartnerDev(caller, credential) or Lib.hasRole(platformDevices, credential, [#accounting]))) {
       return #err("Không có quyền");
     };
     #ok(AppLib.list(applications, statusFilter));
@@ -208,7 +208,7 @@ mixin (
     applicationId : Text,
     note : Text,
   ) : async Result.Result<AppTypes.Application, Text> {
-    if (not canPartnerDev(caller, credential)) return #err("Không có quyền");
+    if (not platformCanPartnerDev(caller, credential)) return #err("Không có quyền");
     if (note.trim(#char ' ').size() == 0) return #err("Ghi rõ cần bổ sung gì");
     AppLib.review(applications, tenants, applicationId, #requestInfo, note);
   };
@@ -218,7 +218,7 @@ mixin (
     credential : Text,
     tenantId : Common.TenantId,
   ) : async Result.Result<[CoreTypes.Device], Text> {
-    if (not canPartnerDev(caller, credential)) return #err("Không có quyền");
+    if (not platformCanPartnerDev(caller, credential)) return #err("Không có quyền");
     #ok(devices.values().filter(func(d : CoreTypes.Device) : Bool { d.tenantId == tenantId }).toArray());
   };
 };
