@@ -13,6 +13,7 @@ import { CounterSell } from "@/components/CounterSell";
 import {
   AnasystemCard,
   CounterAccountCard,
+  PayoutsCard,
 } from "@/components/PartnerConnections";
 import { TdmIcon, TdmLogo, useTdmTheme } from "@/components/TdmLogo";
 import { useTenant } from "@/hooks/useTenant";
@@ -1136,6 +1137,7 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
         tenantId={ctx.tenantId}
         deviceId={ctx.device.deviceId}
       />
+      <PayoutsCard deviceId={ctx.device.deviceId} />
       <AnasystemCard deviceId={ctx.device.deviceId} />
 
       <Card>

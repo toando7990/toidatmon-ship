@@ -368,6 +368,38 @@ function initSchema(db) {
     db.exec("UPDATE orders SET is_counter = 1 WHERE cus_name = 'Khách tại quầy'");
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_orders_tenant_created ON orders (tenant_id, created_at)');
+  // Đối soát / trả tiền cho quán (routes/payouts.js). payout_id: đơn đã nằm
+  // trong 1 phiếu trả — không bị tính lại lần nữa.
+  if (!colNames.has('payout_id')) {
+    db.exec('ALTER TABLE orders ADD COLUMN payout_id INTEGER');
+  }
+  db.exec(`CREATE TABLE IF NOT EXISTS payouts (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id       TEXT NOT NULL,
+    period_from     INTEGER NOT NULL,
+    period_to       INTEGER NOT NULL,
+    order_count     INTEGER NOT NULL,
+    collected       INTEGER NOT NULL,  -- tiền Tôi Đặt Món đã thu hộ (chuyển khoản)
+    shop_cash       INTEGER NOT NULL,  -- tiền đơn online quán tự thu (tiền mặt)
+    fee_total       INTEGER NOT NULL,  -- phí đơn online
+    net             INTEGER NOT NULL,  -- collected - fee_total (âm = quán cần nộp)
+    status          TEXT NOT NULL DEFAULT 'pending', -- pending | paid | cancelled
+    paid_at         INTEGER,
+    paid_ref        TEXT NOT NULL DEFAULT '',
+    note            TEXT NOT NULL DEFAULT '',
+    created_by      TEXT NOT NULL DEFAULT '',
+    created_at      INTEGER NOT NULL
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS payout_orders (
+    payout_id    INTEGER NOT NULL,
+    order_id     TEXT NOT NULL,
+    created_at   INTEGER NOT NULL,
+    amount       INTEGER NOT NULL,
+    fee          INTEGER NOT NULL,
+    collected_by TEXT NOT NULL,       -- platform | shop
+    PRIMARY KEY (payout_id, order_id)
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_payouts_tenant ON payouts (tenant_id, created_at)');
   // Tiền QR về đâu: 'platform' (tài khoản Tôi Đặt Món, mặc định) hoặc
   // 'partner' (đơn tại quầy — tiền về thẳng tài khoản của quán).
   if (!colNames.has('tingee_merchant_id')) {

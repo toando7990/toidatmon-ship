@@ -196,6 +196,14 @@ const IDL_FACTORY = ({ IDL }) => {
     // Tra thiết bị theo thẻ xác thực "deviceId~khoá" (giai đoạn 1 bảo mật thiết bị).
     getPartnerDevice: IDL.Func([IDL.Text], [IDL.Opt(Device)], ['query']),
     listTenants: IDL.Func([IDL.Bool], [IDL.Vec(TenantSummary)], ['query']),
+    // Tham số phí đơn online của quán (đối soát) — VPS ký HMAC "fee-params|tenantId".
+    getFeeParamsForVps: IDL.Func([IDL.Text, IDL.Text], [IDL.Variant({
+      ok: IDL.Vec(IDL.Record({
+        scope: IDL.Text, key: IDL.Text,
+        versions: IDL.Vec(IDL.Record({ value: IDL.Text, effectiveFrom: IDL.Nat, note: IDL.Text, setAt: IDL.Nat })),
+      })),
+      err: IDL.Text,
+    })], ['query']),
     // Tài khoản nhận tiền QR của đơn tại quầy (tiền về thẳng quán).
     getCounterPaymentAccount: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({
       bankBin: IDL.Text, bankName: IDL.Text, vaAccountNumber: IDL.Text,
@@ -389,6 +397,19 @@ async function getCounterPaymentAccount(tenantId) {
   const actor = getActor();
   const r = await actor.getCounterPaymentAccount(tenantOr(tenantId));
   return (Array.isArray(r) ? r[0] : r) || null;
+}
+
+// Tham số phí của quán: [{ scope, key, versions:[{ value, effectiveFrom(ns) }] }].
+async function getFeeParams(tenantId) {
+  const actor = getActor();
+  const t = tenantOr(tenantId);
+  const r = await actor.getFeeParamsForVps(t, hmac.sign(VPS_SECRET, `fee-params|${t}`));
+  if (r.err !== undefined) throw new Error(`getFeeParamsForVps: ${r.err}`);
+  return r.ok.map((e) => ({
+    scope: e.scope,
+    key: e.key,
+    versions: e.versions.map((v) => ({ value: v.value, effectiveFrom: Number(v.effectiveFrom / 1000000n) })),
+  }));
 }
 
 // Quán đang có gói bán tại quầy (đã tính hạn).
@@ -606,6 +627,7 @@ module.exports = {
   getDeviceByCredential,
   getCounterPlanActive,
   getCounterPaymentAccount,
+  getFeeParams,
   listActiveTenants,
   listActiveTenantIds,
   tenantOr,

@@ -775,3 +775,124 @@ export async function getCounterPaymentMode(
   });
   return r.mode;
 }
+
+// ---- Đối soát & trả tiền cho quán (routes/payouts.js) ----
+// Admin: header X-Admin-Ticket = vé do canister ký (lib/payouts.ts).
+
+export interface PayoutSummary {
+  tenantId: string;
+  orderCount: number;
+  collected: number;
+  shopCash: number;
+  feeTotal: number;
+  net: number;
+  periodFrom: number;
+  periodTo: number;
+  error?: string;
+}
+
+export interface Payout extends PayoutSummary {
+  id: number;
+  status: "pending" | "paid" | "cancelled";
+  paidAt: number;
+  paidRef: string;
+  note: string;
+  createdAt: number;
+}
+
+export interface PayoutLine {
+  orderId: string;
+  createdAt: number;
+  amount: number;
+  fee: number;
+  collectedBy: "platform" | "shop";
+}
+
+const adminHeaders = (ticket: string) => ({ "X-Admin-Ticket": ticket });
+
+export async function adminPendingPayouts(
+  ticket: string,
+  cutoff: number,
+): Promise<PayoutSummary[]> {
+  const r = await vpsFetch<{ ok: boolean; shops: PayoutSummary[] }>({
+    method: "GET",
+    path: `/admin/payouts/pending?cutoff=${cutoff}`,
+    headers: adminHeaders(ticket),
+    timeoutMs: 30000,
+  });
+  return r.shops;
+}
+
+export async function adminCreatePayout(
+  ticket: string,
+  tenantId: string,
+  cutoff: number,
+  note: string,
+): Promise<Payout> {
+  const r = await vpsFetch<{ ok: boolean; payout: Payout }>({
+    method: "POST",
+    path: "/admin/payouts",
+    body: { tenantId, cutoff, note },
+    headers: adminHeaders(ticket),
+  });
+  return r.payout;
+}
+
+export async function adminListPayouts(
+  ticket: string,
+  status: "" | Payout["status"],
+): Promise<Payout[]> {
+  const r = await vpsFetch<{ ok: boolean; payouts: Payout[] }>({
+    method: "GET",
+    path: `/admin/payouts${status ? `?status=${status}` : ""}`,
+    headers: adminHeaders(ticket),
+  });
+  return r.payouts;
+}
+
+export async function adminPayoutDetail(
+  ticket: string,
+  id: number,
+): Promise<{ payout: Payout; orders: PayoutLine[] }> {
+  return vpsFetch({
+    method: "GET",
+    path: `/admin/payouts/${id}`,
+    headers: adminHeaders(ticket),
+  });
+}
+
+export async function adminMarkPayoutPaid(
+  ticket: string,
+  id: number,
+  reference: string,
+): Promise<Payout> {
+  const r = await vpsFetch<{ ok: boolean; payout: Payout }>({
+    method: "POST",
+    path: `/admin/payouts/${id}/paid`,
+    body: { reference },
+    headers: adminHeaders(ticket),
+  });
+  return r.payout;
+}
+
+export async function adminCancelPayout(
+  ticket: string,
+  id: number,
+): Promise<void> {
+  await vpsFetch({
+    method: "POST",
+    path: `/admin/payouts/${id}/cancel`,
+    headers: adminHeaders(ticket),
+  });
+}
+
+/** Chủ quán: phiếu trả của quán + số đang chờ đối soát. */
+export async function partnerPayouts(
+  deviceId: string,
+): Promise<{ payouts: Payout[]; pending: PayoutSummary | null }> {
+  return vpsFetch({
+    method: "GET",
+    path: `/partner/payouts?deviceId=${encodeURIComponent(credentialFor(deviceId))}`,
+    timeoutMs: 30000,
+  });
+}

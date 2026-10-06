@@ -39,6 +39,7 @@ import {
   Truck,
   User,
   UtensilsCrossed,
+  Wallet,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
@@ -146,6 +147,12 @@ const ADMIN_NAV: NavItem[] = [
     to: "/admin/partner-applications",
     label: "Đơn đăng ký đối tác",
     icon: ClipboardList,
+    adminOnly: true,
+  },
+  {
+    to: "/admin/doi-soat",
+    label: "Đối soát & trả tiền",
+    icon: Wallet,
     adminOnly: true,
   },
   {

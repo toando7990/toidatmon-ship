@@ -30,6 +30,7 @@ import PartnerApply from "@/pages/PartnerApply";
 import PartnerConsole from "@/pages/PartnerConsole";
 import PartnerManager from "@/pages/PartnerManager";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
+import PayoutsAdmin from "@/pages/PayoutsAdmin";
 import PlatformHistory from "@/pages/PlatformHistory";
 import PlatformHome from "@/pages/PlatformHome";
 import PlatformSettings from "@/pages/PlatformSettings";
@@ -533,6 +534,17 @@ const adminPlatformSettingsRoute = createRoute({
   ),
 });
 
+// Đối soát & trả tiền cho quán (đơn online Tôi Đặt Món thu hộ).
+const adminPayoutsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/doi-soat",
+  component: () => (
+    <AdminGate>
+      <PayoutsAdmin />
+    </AdminGate>
+  ),
+});
+
 // Partner-unavailable notice as a standalone route — an unknown or hidden
 // slug renders this instead of a blank screen.
 const partnerUnavailableRoute = createRoute({
@@ -631,6 +643,7 @@ const router = createRouter({
     partnerConsoleRoute,
     adminPartnerApplicationsRoute,
     adminPlatformSettingsRoute,
+    adminPayoutsRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
   ]),

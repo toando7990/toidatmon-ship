@@ -231,6 +231,11 @@ const platformParamsMock = {
     active: false,
   }),
   getCounterPaymentAccount: async () => null,
+  issueVpsAdminTicket: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  getFeeParamsForVps: async () => ({ __kind__: "ok" as const, ok: [] }),
   setCounterPaymentAccount: async () => ({
     __kind__: "err" as const,
     err: "Mock: không hỗ trợ",

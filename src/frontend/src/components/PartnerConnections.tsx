@@ -17,6 +17,7 @@ import {
   currentVpsUrl,
   getAnasystemStatus,
   getPartnerTingee,
+  partnerPayouts,
   removePartnerTingee,
   revokeAnasystemKey,
   savePartnerTingee,
@@ -373,6 +374,79 @@ export function AnasystemCard({ deviceId }: { deviceId: string }) {
             </button>
           )}
         </div>
+      )}
+    </Card>
+  );
+}
+
+/** Tiền Tôi Đặt Món thu hộ đơn online và đã trả cho quán. */
+export function PayoutsCard({ deviceId }: { deviceId: string }) {
+  const q = useQuery({
+    queryKey: ["partner-payouts", deviceId],
+    queryFn: () => partnerPayouts(deviceId),
+    retry: false,
+  });
+  const fmt = (n: number) => `${Math.round(n).toLocaleString("vi-VN")}đ`;
+  const day = (ms: number) =>
+    new Date(ms).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+  const p = q.data?.pending;
+  const list = q.data?.payouts ?? [];
+  return (
+    <Card>
+      <h2 className="text-base font-extrabold">Tiền đơn online</h2>
+      <p className="text-[13px] text-muted-foreground">
+        Đơn khách đặt online do Tôi Đặt Món thu hộ, trừ phí rồi chuyển về tài
+        khoản của quán theo lịch.
+      </p>
+      {q.isLoading && (
+        <p className="text-sm text-muted-foreground">Đang tải…</p>
+      )}
+      {q.isError && (
+        <p className="text-sm text-muted-foreground">Chưa xem được lúc này.</p>
+      )}
+      {p && p.orderCount > 0 && (
+        <div className="flex flex-col gap-1 rounded-xl bg-[var(--tdm-lime-soft,#eef2dc)] p-3 text-[15px]">
+          <span className="font-bold">
+            Đang chờ đối soát · {p.orderCount} đơn
+          </span>
+          <span>
+            Thu hộ {fmt(p.collected)} − phí {fmt(p.feeTotal)} ={" "}
+            <b>{fmt(p.net)}</b>
+          </span>
+        </div>
+      )}
+      {list.map((x) => (
+        <div
+          key={x.id}
+          className="flex items-center justify-between gap-2 border-t pt-2 text-[15px]"
+        >
+          <span className="flex flex-col">
+            <span className="font-bold">
+              {day(x.periodFrom)} – {day(x.periodTo)}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {x.orderCount} đơn · phí {fmt(x.feeTotal)}
+              {x.paidRef ? ` · CK ${x.paidRef}` : ""}
+            </span>
+          </span>
+          <span className="flex flex-col items-end">
+            <b>{fmt(x.net)}</b>
+            <span
+              className={
+                x.status === "paid"
+                  ? "text-xs font-bold text-green-700"
+                  : "text-xs font-bold text-amber-700"
+              }
+            >
+              {x.status === "paid"
+                ? `Đã chuyển ${day(x.paidAt)}`
+                : "Đang chuyển"}
+            </span>
+          </span>
+        </div>
+      ))}
+      {q.isSuccess && list.length === 0 && (!p || p.orderCount === 0) && (
+        <p className="text-sm text-muted-foreground">Chưa có đơn online nào.</p>
       )}
     </Card>
   );

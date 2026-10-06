@@ -30,6 +30,7 @@ import TenantApi "mixins/tenant-api";
 import PartnerApplicationApi "mixins/partner-application-api";
 import PartnerConsoleApi "mixins/partner-console-api";
 import PlatformParamsApi "mixins/platform-params-api";
+import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
 import CoreLib "lib/core";
@@ -318,6 +319,7 @@ actor Main {
   include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);
   include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil, kitchenNotes);
   include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams, counterPayments);
+  include VpsAdminApi(accessControlState, secretState, platformParams);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own
