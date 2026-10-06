@@ -289,7 +289,10 @@ const deviceAuthMock = {
 
 // Tài khoản nhận tiền của đối tác + KM chung (mixins/partner-finance-api.mo).
 const partnerFinanceMock = {
-  setPartnerBank: async () => ({ __kind__: "ok" as const, ok: null }),
+  setPartnerBank: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
   listPartnerBanks: async () => ({ __kind__: "ok" as const, ok: [] }),
   getPartnerBank: async () => null,
   setPromoPlatformFunded: async () => ({ __kind__: "ok" as const, ok: null }),
