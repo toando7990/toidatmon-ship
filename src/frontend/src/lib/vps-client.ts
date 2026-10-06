@@ -481,18 +481,21 @@ export async function getPeriodSummary(
 
 // Lịch sử đơn hàng theo nhà hàng — dùng cho tab "Lịch sử đơn hàng" trên
 // /driver. period: 'today' | 'week' (tuần này, Thứ 2 - hiện tại) | 'month'
-// (tháng này, ngày 1 - hiện tại).
+// (tháng này, ngày 1 - hiện tại). Bắt buộc thẻ máy (deviceId~khoá): VPS chỉ
+// trả đơn của đúng đối tác + nhà hàng mà máy được phép xem.
 export async function getRestaurantHistory(
+  deviceId: string,
   restaurantId: string,
   period: RestaurantHistoryPeriod,
-  tenantId = "",
 ): Promise<VpsRestaurantHistory> {
-  const tenantQuery = tenantId
-    ? `&tenantId=${encodeURIComponent(tenantId)}`
-    : "";
+  const params = new URLSearchParams({
+    restaurantId,
+    period,
+    deviceId: credentialFor(deviceId),
+  });
   return vpsFetch<VpsRestaurantHistory>({
     method: "GET",
-    path: `/orders/restaurant-history?restaurantId=${encodeURIComponent(restaurantId)}&period=${period}${tenantQuery}`,
+    path: `/orders/restaurant-history?${params.toString()}`,
   });
 }
 

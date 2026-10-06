@@ -10,13 +10,12 @@
 // (pruneOldOrders, xem lib/core.mo) — "tuần này"/"tháng này" cần dữ liệu
 // nhiều ngày trước, chỉ VPS SQLite mới có đủ lịch sử.
 //
-// Không yêu cầu X-API-Key (khác /analytics — xem middleware/auth.js, biến
-// đó không dùng được trong môi trường Caffeine build) — route riêng, không
-// mount qua router analytics.js. Biết đúng restaurantId là điều kiện truy
-// cập duy nhất — nhân viên chỉ biết restaurantId của nhà hàng mình sau khi
-// kích hoạt thiết bị thành công qua canister, cùng mức tin cậy với
-// listPendingPaymentOrders đã dùng cho "Hàng đợi thanh toán".
-//
+// BẢO MẬT (mục 7): trước đây chỉ cần biết restaurantId là đọc được toàn bộ
+// đơn (tên, SĐT khách) — nay BẮT BUỘC thẻ máy "deviceId~khoá" (query
+// deviceId, lib/device-credential.ts). VPS hỏi canister máy thuộc đối tác
+// nào, nhà hàng nào: máy trực quán (driver/cashier/paymentQueue/admin) chỉ
+// xem ĐÚNG nhà hàng của máy; Chủ quán/Kế toán/Báo cáo xem được mọi nhà
+// hàng TRONG đối tác của mình. Dữ liệu luôn lọc thêm theo tenant_id.
 // totalOrders/orders: TẤT CẢ đơn trong khoảng (mọi trạng thái) — nhân viên
 // cần thấy toàn cảnh, kể cả đơn chưa thanh toán/đã huỷ. totalPaidAmount:
 // CHỈ cộng đơn payment_status='paid' — đúng nghĩa "đã thanh toán" theo yêu
@@ -24,12 +23,17 @@
 // ============================================================
 
 const express = require('express');
+const { authorizeDevice } = require('../lib/device-guard');
 
 const router = express.Router();
 
 const UTC7_OFFSET_MS = 7 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_ORDERS = 300;
+
+// Máy trực quán: chỉ nhà hàng của máy. Vai trò quản lý: cả đối tác.
+const STAFF_ROLES = ['driver', 'cashier', 'paymentQueue', 'admin'];
+const TENANT_WIDE_ROLES = ['tenantAdmin', 'accounting', 'salesPromoReporting'];
 
 // Mốc "đầu ngày hôm nay" theo giờ Việt Nam (UTC+7) — cùng công thức với
 // routes/order-history.js / utc7DayStart() bên canister.
@@ -68,95 +72,111 @@ function boundaryForPeriod(period, nowMs) {
   return startOfTodayUtc7(nowMs); // 'today' mặc định
 }
 
-router.get('/orders/restaurant-history', (req, res) => {
-  const db = req.app.locals.db;
-  const restaurantId = String(req.query.restaurantId || '').trim();
-  const period = String(req.query.period || 'today');
-  if (!restaurantId) {
-    return res.status(400).json({ ok: false, error: 'Missing restaurantId' });
-  }
-  if (!['today', 'week', 'month'].includes(period)) {
-    return res.status(400).json({ ok: false, error: 'Invalid period' });
-  }
+router.get('/orders/restaurant-history', async (req, res, next) => {
+  try {
+    const db = req.app.locals.db;
+    const restaurantId = String(req.query.restaurantId || '').trim();
+    const period = String(req.query.period || 'today');
+    const credential = String(req.query.deviceId || '').trim();
+    if (!restaurantId) {
+      return res.status(400).json({ ok: false, error: 'Missing restaurantId' });
+    }
+    if (!['today', 'week', 'month'].includes(period)) {
+      return res.status(400).json({ ok: false, error: 'Invalid period' });
+    }
+    if (!credential) {
+      return res.status(401).json({ ok: false, error: 'Thiếu thẻ thiết bị — kích hoạt lại máy.' });
+    }
+    const device = await authorizeDevice(credential, [...STAFF_ROLES, ...TENANT_WIDE_ROLES]);
+    const allowed = device && (
+      TENANT_WIDE_ROLES.includes(device.role) || device.restaurantId === restaurantId
+    );
+    if (!allowed) {
+      return res.status(403).json({ ok: false, error: 'Thiết bị không có quyền xem lịch sử nhà hàng này.' });
+    }
+    const tenantId = device.tenantId;
 
-  const now = Date.now();
-  const fromMs = boundaryForPeriod(period, now);
+    const now = Date.now();
+    const fromMs = boundaryForPeriod(period, now);
 
-  const orderRows = db.prepare(
-    `SELECT order_id, restaurant_id, cus_name, cus_phone, amount, goods_amount,
-            shipping_fee, ahamove_order_id,
-            booking_status, payment_status, payment_method, invoice_status, created_at,
-            km_discount_amount, voucher_discount_amount
-     FROM orders
-     WHERE restaurant_id = ? AND created_at >= ?
-     ORDER BY created_at DESC
-     LIMIT ?`,
-  ).all(restaurantId, fromMs, MAX_ORDERS);
+    const orderRows = db.prepare(
+      `SELECT order_id, restaurant_id, cus_name, cus_phone, amount, goods_amount,
+              shipping_fee, ahamove_order_id,
+              booking_status, payment_status, payment_method, invoice_status, created_at,
+              km_discount_amount, voucher_discount_amount
+       FROM orders
+       WHERE tenant_id = ? AND restaurant_id = ? AND created_at >= ?
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    ).all(tenantId, restaurantId, fromMs, MAX_ORDERS);
 
-  const summary = db.prepare(
-    `SELECT COUNT(*) AS totalOrders,
-            COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN amount ELSE 0 END), 0) AS totalPaidAmount
-     FROM orders
-     WHERE restaurant_id = ? AND created_at >= ?`,
-  ).get(restaurantId, fromMs);
+    const summary = db.prepare(
+      `SELECT COUNT(*) AS totalOrders,
+              COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN amount ELSE 0 END), 0) AS totalPaidAmount
+       FROM orders
+       WHERE tenant_id = ? AND restaurant_id = ? AND created_at >= ?`,
+    ).get(tenantId, restaurantId, fromMs);
 
-  if (orderRows.length === 0) {
-    return res.json({
+    if (orderRows.length === 0) {
+      return res.json({
+        ok: true,
+        totalOrders: summary.totalOrders,
+        totalPaidAmount: summary.totalPaidAmount,
+        orders: [],
+      });
+    }
+
+    const orderIds = orderRows.map((r) => r.order_id);
+    const placeholders = orderIds.map(() => '?').join(',');
+    const itemRows = db.prepare(
+      `SELECT order_id, item_id, name, price, quantity, unit_name
+       FROM order_items WHERE order_id IN (${placeholders})`,
+    ).all(...orderIds);
+
+    const itemsByOrder = new Map();
+    for (const it of itemRows) {
+      const list = itemsByOrder.get(it.order_id) || [];
+      list.push({
+        itemId: it.item_id,
+        name: it.name,
+        price: it.price,
+        quantity: it.quantity,
+        unitName: it.unit_name || '',
+      });
+      itemsByOrder.set(it.order_id, list);
+    }
+
+    const orders = orderRows.map((r) => ({
+      orderId: r.order_id,
+      restaurantId: r.restaurant_id,
+      cusName: r.cus_name,
+      cusPhone: r.cus_phone,
+      amount: r.amount,
+      // BUG THẬT đã sửa: thiếu shipping_fee/goods_amount/ahamove_order_id →
+      // OrderCard (staffView) luôn hiện đơn KHÔNG có phí ship dù đã lưu đúng
+      // lúc tạo đơn — xem cùng lỗi + giải thích đầy đủ ở routes/order-history.js.
+      goodsAmount: r.goods_amount,
+      shippingFee: r.shipping_fee,
+      ahamoveOrderId: r.ahamove_order_id || '',
+      bookingStatus: r.booking_status,
+      paymentStatus: r.payment_status,
+      paymentMethod: r.payment_method || '',
+      invoiceStatus: r.invoice_status || 'none',
+      createdAt: r.created_at,
+      kmDiscountAmount: r.km_discount_amount,
+      voucherDiscountAmount: r.voucher_discount_amount,
+      items: itemsByOrder.get(r.order_id) || [],
+    }));
+
+    res.json({
       ok: true,
       totalOrders: summary.totalOrders,
       totalPaidAmount: summary.totalPaidAmount,
-      orders: [],
+      orders,
     });
+  } catch (e) {
+    next(e);
   }
-
-  const orderIds = orderRows.map((r) => r.order_id);
-  const placeholders = orderIds.map(() => '?').join(',');
-  const itemRows = db.prepare(
-    `SELECT order_id, item_id, name, price, quantity, unit_name
-     FROM order_items WHERE order_id IN (${placeholders})`,
-  ).all(...orderIds);
-
-  const itemsByOrder = new Map();
-  for (const it of itemRows) {
-    const list = itemsByOrder.get(it.order_id) || [];
-    list.push({
-      itemId: it.item_id,
-      name: it.name,
-      price: it.price,
-      quantity: it.quantity,
-      unitName: it.unit_name || '',
-    });
-    itemsByOrder.set(it.order_id, list);
-  }
-
-  const orders = orderRows.map((r) => ({
-    orderId: r.order_id,
-    restaurantId: r.restaurant_id,
-    cusName: r.cus_name,
-    cusPhone: r.cus_phone,
-    amount: r.amount,
-    // BUG THẬT đã sửa: thiếu shipping_fee/goods_amount/ahamove_order_id →
-    // OrderCard (staffView) luôn hiện đơn KHÔNG có phí ship dù đã lưu đúng
-    // lúc tạo đơn — xem cùng lỗi + giải thích đầy đủ ở routes/order-history.js.
-    goodsAmount: r.goods_amount,
-    shippingFee: r.shipping_fee,
-    ahamoveOrderId: r.ahamove_order_id || '',
-    bookingStatus: r.booking_status,
-    paymentStatus: r.payment_status,
-    paymentMethod: r.payment_method || '',
-    invoiceStatus: r.invoice_status || 'none',
-    createdAt: r.created_at,
-    kmDiscountAmount: r.km_discount_amount,
-    voucherDiscountAmount: r.voucher_discount_amount,
-    items: itemsByOrder.get(r.order_id) || [],
-  }));
-
-  res.json({
-    ok: true,
-    totalOrders: summary.totalOrders,
-    totalPaidAmount: summary.totalPaidAmount,
-    orders,
-  });
 });
 
 module.exports = router;

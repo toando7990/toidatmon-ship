@@ -50,9 +50,11 @@ function formatVnd(n: number): string {
 }
 
 export function DriverOrderHistory({
+  deviceId,
   restaurantId,
   period,
 }: {
+  deviceId: string;
   restaurantId: string;
   period: RestaurantHistoryPeriod;
 }) {
@@ -64,8 +66,8 @@ export function DriverOrderHistory({
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["restaurantHistory", restaurantId, period],
-    queryFn: () => getRestaurantHistory(restaurantId, period),
-    enabled: !!restaurantId,
+    queryFn: () => getRestaurantHistory(deviceId, restaurantId, period),
+    enabled: !!restaurantId && !!deviceId,
     refetchOnWindowFocus: false,
   });
 

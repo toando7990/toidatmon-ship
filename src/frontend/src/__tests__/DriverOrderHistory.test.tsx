@@ -62,7 +62,7 @@ describe("DriverOrderHistory — lọc theo hình thức thanh toán", () => {
     });
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <DriverOrderHistory restaurantId="R1" period="today" />
+        <DriverOrderHistory deviceId="D1" restaurantId="R1" period="today" />
       </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.getByText("O-CASH")).toBeInTheDocument());
@@ -104,7 +104,7 @@ describe("DriverOrderHistory — lọc theo hình thức thanh toán", () => {
     });
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <DriverOrderHistory restaurantId="R1" period="today" />
+        <DriverOrderHistory deviceId="D1" restaurantId="R1" period="today" />
       </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.getByText("O-INV")).toBeInTheDocument());
