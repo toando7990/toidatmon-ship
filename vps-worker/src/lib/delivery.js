@@ -287,10 +287,12 @@ async function dispatch(db, orderId, opts = {}) {
   try {
     const prior = attemptsOf(db, orderId);
     if (prior.some((d) => !d.ended && d.id !== opts.replacing)) return { ok: false, error: 'Đơn đang có tài xế' };
-    if (prior.some((d) => d.end_reason && d.end_reason.startsWith(UNCERTAIN_PREFIX))) {
+    // opts.manual: điều phối viên sàn đã kiểm tra và bấm đặt lại → bỏ qua
+    // giới hạn số lượt + chặn "không rõ kết quả".
+    if (!opts.manual && prior.some((d) => d.end_reason && d.end_reason.startsWith(UNCERTAIN_PREFIX))) {
       return { ok: false, error: 'Lượt trước không rõ kết quả — cần kiểm tra thủ công' };
     }
-    if (prior.filter((d) => d.unified !== 'place_failed').length >= rules.MAX_ATTEMPTS) {
+    if (!opts.manual && prior.filter((d) => d.unified !== 'place_failed').length >= rules.MAX_ATTEMPTS) {
       return { ok: false, error: 'Đã chuyển hãng 1 lần' };
     }
     const settings = getSettings(db);
@@ -351,6 +353,31 @@ async function dispatch(db, orderId, opts = {}) {
   } finally {
     inflight.delete(orderId);
   }
+}
+
+// Điều phối viên sàn đặt lại tài xế (trang /san). provider: 'lalamove' |
+// 'ahamove' | '' (tự chọn). Lượt đang "tìm tài xế" sẽ bị huỷ SAU KHI hãng
+// mới báo giá được; lượt đã có tài xế thì không cho đặt lại.
+async function manualRedispatch(db, orderId, provider, by) {
+  const active = db.prepare('SELECT * FROM deliveries WHERE order_id = ? AND ended = 0 ORDER BY id DESC').get(orderId);
+  if (active && active.unified !== 'finding') {
+    return { ok: false, error: 'Đơn đã có tài xế — không đặt lại được' };
+  }
+  const exclude = provider ? rules.PROVIDERS.filter((p) => p !== provider) : [];
+  const opts = {
+    manual: true,
+    exclude,
+    reason: `Điều phối viên đặt lại tài xế${by ? ` (${by})` : ''}`,
+  };
+  if (active) {
+    opts.replacing = active.id;
+    opts.beforePlace = async () => {
+      await client(active.provider).cancelOrder(active.external_id, 'Điều phối đặt lại tài xế');
+      db.prepare(`UPDATE deliveries SET ended = 1, unified = 'cancelled', end_reason = ?, updated_at = ? WHERE id = ?`)
+        .run('Điều phối viên huỷ để đặt lại', deps.now(), active.id);
+    };
+  }
+  return dispatch(db, orderId, opts);
 }
 
 // ---------- Cập nhật trạng thái ----------
@@ -733,6 +760,7 @@ module.exports = {
   quoteAll,
   quoteForCustomer,
   dispatch,
+  manualRedispatch,
   refreshRow,
   tick,
   onAhamoveWebhook,

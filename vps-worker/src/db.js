@@ -485,6 +485,42 @@ function initSchema(db) {
   db.prepare(`UPDATE deliveries SET ended = 1, end_reason = 'Đơn cũ trước khi nâng cấp'
     WHERE ended = 0 AND created_at < ?`).run(Date.now() - 24 * 60 * 60 * 1000);
 
+  // Thiết bị cấp sàn (lib/platform-guard.js): nhật ký thao tác + CSKH.
+  db.exec(`CREATE TABLE IF NOT EXISTS platform_audit (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    at          INTEGER NOT NULL,
+    actor_kind  TEXT NOT NULL,     -- admin | device
+    actor_id    TEXT NOT NULL,
+    actor_name  TEXT NOT NULL DEFAULT '',
+    role        TEXT NOT NULL DEFAULT '',
+    action      TEXT NOT NULL,
+    target      TEXT NOT NULL DEFAULT '',
+    detail      TEXT NOT NULL DEFAULT ''
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_platform_audit_at ON platform_audit (at)');
+  // Khiếu nại do CSKH sàn ghi nhận (routes/platform-support.js).
+  db.exec(`CREATE TABLE IF NOT EXISTS complaints (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id     TEXT NOT NULL DEFAULT '',
+    tenant_id    TEXT NOT NULL DEFAULT '',
+    cus_phone    TEXT NOT NULL DEFAULT '',
+    category     TEXT NOT NULL,     -- food | delivery | payment | voucher | other
+    channel      TEXT NOT NULL DEFAULT 'hotline', -- hotline | zalo | email | other
+    content      TEXT NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'open',    -- open | resolved
+    resolution   TEXT NOT NULL DEFAULT '',
+    created_by   TEXT NOT NULL DEFAULT '',
+    created_at   INTEGER NOT NULL,
+    resolved_at  INTEGER
+  )`);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_complaints_order ON complaints (order_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints (status, created_at)');
+  // Khách bỏ đơn (CSKH/điều phối đánh dấu) + hoàn phiếu giảm giá.
+  if (!colNames.has('no_show_at')) db.exec('ALTER TABLE orders ADD COLUMN no_show_at INTEGER');
+  if (!colNames.has('no_show_by')) db.exec("ALTER TABLE orders ADD COLUMN no_show_by TEXT NOT NULL DEFAULT ''");
+  if (!colNames.has('voucher_release')) db.exec("ALTER TABLE orders ADD COLUMN voucher_release TEXT NOT NULL DEFAULT ''");
+  db.exec('CREATE INDEX IF NOT EXISTS idx_orders_cus_phone ON orders (cus_phone)');
+
   // customers: thêm km_notify_opt_in (Giai đoạn 4b) nếu DB cũ chưa có.
   const customerCols = db.prepare('PRAGMA table_info(customers)').all();
   const customerColNames = new Set(customerCols.map((c) => c.name));

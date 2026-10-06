@@ -15,7 +15,11 @@
 const express = require('express');
 const canister = require('../lib/canister');
 const payouts = require('../lib/payouts');
-const { requireAdmin } = require('../lib/admin-ticket');
+const { requirePlatform, audit } = require('../lib/platform-guard');
+
+// Admin hoặc máy sàn "Kế toán sàn" (được tự ghi "Đã chuyển khoản").
+const requireAccounting = requirePlatform(['accounting']);
+const who = (req) => (req.actor.kind === 'admin' ? req.actor.id : `${req.actor.name} (${req.actor.id})`);
 const { authorizeDevice } = require('../lib/device-guard');
 const { rateLimit } = require('../middleware/rate-limit');
 
@@ -32,7 +36,7 @@ async function summaryFor(db, tenantId, cutoff) {
   return payouts.summarize(payouts.eligibleOrders(db, tenantId, cutoff), entries, tenantId);
 }
 
-router.get('/admin/payouts/pending', requireAdmin, async (req, res, next) => {
+router.get('/admin/payouts/pending', requireAccounting, async (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const cutoff = cutoffOf(req.query.cutoff);
@@ -52,7 +56,7 @@ router.get('/admin/payouts/pending', requireAdmin, async (req, res, next) => {
   }
 });
 
-router.post('/admin/payouts', requireAdmin, async (req, res, next) => {
+router.post('/admin/payouts', requireAccounting, async (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const tenantId = String((req.body || {}).tenantId || '').trim();
@@ -62,7 +66,8 @@ router.post('/admin/payouts', requireAdmin, async (req, res, next) => {
     if (s.orderCount === 0) return res.status(400).json({ ok: false, error: 'Không có đơn nào cần đối soát.' });
     let id;
     try {
-      id = payouts.createPayout(db, s, req.admin.principal, String((req.body || {}).note || '').slice(0, 300));
+      id = payouts.createPayout(db, s, who(req), String((req.body || {}).note || '').slice(0, 300));
+      if (req.actor.kind === 'device') audit(db, req.actor, 'payout.create', id, { tenantId: s.tenantId });
     } catch (e) {
       return res.status(409).json({ ok: false, error: e.message });
     }
@@ -73,7 +78,7 @@ router.post('/admin/payouts', requireAdmin, async (req, res, next) => {
   }
 });
 
-router.get('/admin/payouts', requireAdmin, (req, res) => {
+router.get('/admin/payouts', requireAccounting, (req, res) => {
   const db = req.app.locals.db;
   const status = String(req.query.status || '');
   const rows = status
@@ -82,7 +87,7 @@ router.get('/admin/payouts', requireAdmin, (req, res) => {
   res.json({ ok: true, payouts: rows.map(payouts.toApi) });
 });
 
-router.get('/admin/payouts/:id', requireAdmin, (req, res) => {
+router.get('/admin/payouts/:id', requireAccounting, (req, res) => {
   const db = req.app.locals.db;
   const p = db.prepare('SELECT * FROM payouts WHERE id = ?').get(Number(req.params.id));
   if (!p) return res.status(404).json({ ok: false, error: 'Không tìm thấy phiếu.' });
@@ -94,7 +99,7 @@ router.get('/admin/payouts/:id', requireAdmin, (req, res) => {
   });
 });
 
-router.post('/admin/payouts/:id/paid', requireAdmin, (req, res) => {
+router.post('/admin/payouts/:id/paid', requireAccounting, (req, res) => {
   const db = req.app.locals.db;
   const id = Number(req.params.id);
   const reference = String((req.body || {}).reference || '').trim().slice(0, 100);
@@ -103,13 +108,15 @@ router.post('/admin/payouts/:id/paid', requireAdmin, (req, res) => {
     "UPDATE payouts SET status = 'paid', paid_at = ?, paid_ref = ?, note = CASE WHEN ? = '' THEN note ELSE ? END WHERE id = ? AND status = 'pending'",
   ).run(Date.now(), reference, note, note, id);
   if (r.changes !== 1) return res.status(409).json({ ok: false, error: 'Phiếu không ở trạng thái chờ chuyển.' });
-  console.log('[payouts] đã chuyển', id, reference, 'bởi', req.admin.principal);
+  console.log('[payouts] đã chuyển', id, reference, 'bởi', who(req));
+  if (req.actor.kind === 'device') audit(db, req.actor, 'payout.paid', id, { reference });
   res.json({ ok: true, payout: payouts.toApi(db.prepare('SELECT * FROM payouts WHERE id = ?').get(id)) });
 });
 
-router.post('/admin/payouts/:id/cancel', requireAdmin, (req, res) => {
+router.post('/admin/payouts/:id/cancel', requireAccounting, (req, res) => {
   try {
     payouts.cancelPayout(req.app.locals.db, Number(req.params.id));
+    if (req.actor.kind === 'device') audit(req.app.locals.db, req.actor, 'payout.cancel', req.params.id, {});
     res.json({ ok: true });
   } catch (e) {
     res.status(409).json({ ok: false, error: e.message });

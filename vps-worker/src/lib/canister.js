@@ -94,6 +94,21 @@ const IDL_FACTORY = ({ IDL }) => {
     deviceId: IDL.Text,
     phone: IDL.Text,
   });
+  // Thiết bị cấp sàn (canister mixins/platform-devices-api.mo).
+  const PlatformRole = IDL.Variant({
+    ops: IDL.Null, support: IDL.Null, accounting: IDL.Null,
+    partnerDev: IDL.Null, moderator: IDL.Null, viewer: IDL.Null,
+  });
+  const PlatformDeviceView = IDL.Record({
+    deviceId: IDL.Text,
+    role: PlatformRole,
+    name: IDL.Text,
+    phone: IDL.Text,
+    note: IDL.Text,
+    activatedAt: IDL.Int,
+    lastSeenAt: IDL.Int,
+    active: IDL.Bool,
+  });
   // Restaurant — dùng cho listRestaurants (route mới POST /quote gọi
   // Lalamove "Get Quotation": cần toạ độ nhà hàng làm điểm lấy hàng, xem
   // lib/lalamove.js). lat/lng thêm ở Phần 1/6 tái cấu trúc đặt món từ xa.
@@ -195,6 +210,14 @@ const IDL_FACTORY = ({ IDL }) => {
     isStoreOpen: IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     // Tra thiết bị theo thẻ xác thực "deviceId~khoá" (giai đoạn 1 bảo mật thiết bị).
     getPartnerDevice: IDL.Func([IDL.Text], [IDL.Opt(Device)], ['query']),
+    // Máy cấp sàn (nhân viên Tôi Đặt Món) — lib/platform-guard.js.
+    getPlatformDevice: IDL.Func([IDL.Text], [IDL.Opt(PlatformDeviceView)], ['query']),
+    // CSKH sàn hoàn phiếu giảm giá cho đơn đã huỷ (HMAC "release|tenantId|email|code").
+    releaseVoucher: IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ ok: IDL.Text, err: IDL.Text })],
+      [],
+    ),
     listTenants: IDL.Func([IDL.Bool], [IDL.Vec(TenantSummary)], ['query']),
     // Tham số phí đơn online của quán (đối soát) — VPS ký HMAC "fee-params|tenantId".
     getFeeParamsForVps: IDL.Func([IDL.Text, IDL.Text], [IDL.Variant({
@@ -615,7 +638,27 @@ async function applyVoucher(tenantId, email, code, orderAmount) {
   return await actor.applyVoucher(tenantOr(tenantId), email, code, BigInt(orderAmountInt), hmacSig);
 }
 
+// getPlatformDeviceByCredential — máy cấp sàn theo thẻ "deviceId~khoá";
+// null nếu sai khoá / đã thu hồi. role trả dạng chuỗi ('ops', 'support'…).
+async function getPlatformDeviceByCredential(credential) {
+  const actor = getActor();
+  const r = await actor.getPlatformDevice(String(credential || ''));
+  const d = Array.isArray(r) ? r[0] : r;
+  if (!d || !d.active) return null;
+  return { deviceId: d.deviceId, name: d.name, phone: d.phone, note: d.note, role: Object.keys(d.role)[0] };
+}
+
+// releaseVoucher — hoàn phiếu (đánh dấu CHƯA DÙNG). Trả { ok: "YYYYMMDD" } | { err }.
+async function releaseVoucher(tenantId, email, code) {
+  const actor = getActor();
+  const t = tenantOr(tenantId);
+  const sig = hmac.signReleaseVoucher(VPS_SECRET, t, email, code);
+  return await actor.releaseVoucher(t, email, code, sig);
+}
+
 module.exports = {
+  getPlatformDeviceByCredential,
+  releaseVoucher,
   getActor, createOrder, updateStatus, updatePaymentStatus,
   updateInvoiceStatus, updateOrderQr, markPaymentExpired, getOrderStatus, listPendingPaymentOrders, cancelOrder,
   getMenuForRestaurant, getPaymentMode, applyPromotion, issueSalesBonus, applyVoucher, changeOrderRestaurant,

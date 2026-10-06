@@ -470,3 +470,25 @@ test('Tôi Đặt Món: đọc chi nhánh/trạng thái theo đúng đối tác 
   assert.equal(r.ok, false);
   assert.match(r.error, /tại quầy/);
 });
+
+test('điều phối sàn đặt lại tài xế: huỷ lượt đang tìm, đặt hãng được chọn, bỏ qua giới hạn lượt', async () => {
+  const db = freshDb();
+  const { lalamove, calls } = makeFakes();
+  lalamove.fee = 10000; // Lalamove rẻ hơn → lượt 1 Lalamove
+  insertOrder(db);
+  assert.equal((await delivery.dispatch(db, 'ORD-1')).provider, 'lalamove');
+  const r = await delivery.manualRedispatch(db, 'ORD-1', 'ahamove', 'Hậu');
+  assert.equal(r.ok, true);
+  assert.equal(r.provider, 'ahamove');
+  assert.ok(calls.some((c) => c[0] === 'lalamove.cancel'));
+  // Lượt thứ 3 vẫn đặt được (vượt MAX_ATTEMPTS) khi điều phối bấm.
+  const rows = db.prepare('SELECT * FROM deliveries').all();
+  db.prepare("UPDATE deliveries SET ended = 1, unified = 'cancelled' WHERE id = ?").run(rows[rows.length - 1].id);
+  assert.equal((await delivery.manualRedispatch(db, 'ORD-1', 'lalamove', 'Hậu')).ok, true);
+  // Đã có tài xế → không cho đặt lại.
+  lalamove.status = 'ON_GOING';
+  const act = db.prepare('SELECT * FROM deliveries WHERE ended = 0').get();
+  await delivery.refreshRow(db, act);
+  const r2 = await delivery.manualRedispatch(db, 'ORD-1', '', 'Hậu');
+  assert.equal(r2.ok, false);
+});

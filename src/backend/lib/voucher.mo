@@ -163,4 +163,24 @@ module {
       };
     };
   };
+
+  /// Hoàn phiếu (đánh dấu CHƯA DÙNG) — CSKH sàn hoàn cho khách khi đơn đã
+  /// dùng phiếu bị huỷ. Phiếu phải đúng đối tác + đúng email. Trả ngày hết hạn
+  /// phiếu "YYYYMMDD". Gọi lại nhiều lần vẫn an toàn.
+  public func releaseVoucher(
+    store : VoucherTypes.VoucherStore,
+    tenantId : Text,
+    email : Text,
+    code : Text,
+  ) : Result.Result<Text, Text> {
+    switch (store.get(code)) {
+      case null { #err("Không tìm thấy phiếu giảm giá") };
+      case (?v) {
+        if (v.tenantId != tenantId) return #err("Phiếu không thuộc quán này");
+        if (v.email != email.toLower()) return #err("Phiếu không thuộc về email này");
+        if (v.used) store.add(code, { v with used = false });
+        #ok(v.endDate);
+      };
+    };
+  };
 };
