@@ -16,6 +16,7 @@ import { AnalyticsDashboard } from "@/pages/AnalyticsDashboard";
 import { ClaimOrder } from "@/pages/ClaimOrder";
 import CounterOrder from "@/pages/CounterOrder";
 import CreateOrder from "@/pages/CreateOrder";
+import DeliveryAdmin from "@/pages/DeliveryAdmin";
 import { DeviceManager } from "@/pages/DeviceManager";
 import DishGroupsAdmin from "@/pages/DishGroupsAdmin";
 import { DriverPaymentScreen } from "@/pages/DriverPaymentScreen";
@@ -555,6 +556,17 @@ const adminPromoManagerRoute = createRoute({
   ),
 });
 
+// Giao hàng 2 hãng (Lalamove + Ahamove) — cài đặt chung của sàn.
+const adminDeliveryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/giao-hang",
+  component: () => (
+    <AdminGate>
+      <DeliveryAdmin />
+    </AdminGate>
+  ),
+});
+
 // Nhóm món dùng chung cho trang chủ Tôi Đặt Món.
 const adminDishGroupsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -666,6 +678,7 @@ const router = createRouter({
     adminPlatformSettingsRoute,
     adminPayoutsRoute,
     adminDishGroupsRoute,
+    adminDeliveryRoute,
     adminPromoManagerRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,

@@ -414,9 +414,7 @@ export function OrderCard({
               className="flex items-center justify-between"
               data-ocid={`order.card.${index}.shipping_fee_line`}
             >
-              <span className="text-muted-foreground">
-                🛵 Phí ship (Lalamove)
-              </span>
+              <span className="text-muted-foreground">🛵 Phí ship</span>
               {order.shippingFee > 0n ? (
                 <span className="font-mono">
                   {formatVnd(order.shippingFee)}

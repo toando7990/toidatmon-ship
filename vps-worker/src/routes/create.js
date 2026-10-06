@@ -16,7 +16,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const canister = require('../lib/canister');
-const lalamove = require('../lib/lalamove');
+const delivery = require('../lib/delivery');
 const { generatePickupCode } = require('../lib/pickup-code');
 const { rateLimit } = require('../middleware/rate-limit');
 
@@ -73,9 +73,13 @@ router.post('/order/create', async (req, res, next) => {
     const {
       restaurantId, pickupAddress, cusName, cusPhone, cusAddress, cusTaxCode, receiverEmail,
       items, shippingFee: frontendShippingFee, ahamoveOrderId: frontendAhamoveOrderId,
-      lalamovePickupStopId, lalamoveDropStopId,
+      dropLat, dropLng,
       voucherCode, isCounterOrder,
     } = body;
+    // Toạ độ khách — lưu lại để đặt tài xế (và đặt lại khi chuyển hãng).
+    const coord = (v) => (v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
+    const cusLat = isCounterOrder ? null : coord(dropLat);
+    const cusLng = isCounterOrder ? null : coord(dropLng);
     // Đối tác của đơn (frontend gửi kèm tenantId). Thiếu → đối tác mặc định.
     const tenantId = canister.tenantOr(body.tenantId);
     const orderId = `ORD-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
@@ -223,20 +227,20 @@ router.post('/order/create', async (req, res, next) => {
         ahamove_order_id, tingee_qr_id, tingee_qr_account, tingee_bill_id, tingee_qr_code, shared_link,
         pickup_code, km_program_code, km_program_name, km_discount_amount, voucher_code, voucher_discount_amount,
         booking_status, payment_status, invoice_status, canister_synced, created_at, updated_at,
-        tenant_id, is_counter)
+        tenant_id, is_counter, cus_lat, cus_lng)
       VALUES (@orderId, @restaurantId, @cusName, @cusPhone, @cusAddress, @cusTaxCode,
         @receiverEmail, @amount, @goodsAmount, @shippingFee, @taxTotal,
         @ahamoveOrderId, @tingeeQrId, @tingeeQrAccount, @tingeeBillId, @tingeeQrCode, @sharedLink,
         @pickupCode, @kmProgramCode, @kmProgramName, @kmDiscountAmount, @voucherCodeApplied, @voucherDiscountAmount,
         @bookingStatus, 'unpaid', 'none', 0, @now, @now,
-        @tenantId, @isCounter)
+        @tenantId, @isCounter, @cusLat, @cusLng)
     `);
     insertOrder.run({
       orderId, restaurantId, cusName, cusPhone, cusAddress, cusTaxCode: cusTaxCode || '',
       receiverEmail: receiverEmail || '', amount, goodsAmount, shippingFee, taxTotal,
       ahamoveOrderId, tingeeQrId, tingeeQrAccount, tingeeBillId, tingeeQrCode, sharedLink,
       pickupCode, kmProgramCode, kmProgramName, kmDiscountAmount, voucherCodeApplied, voucherDiscountAmount, bookingStatus, now,
-      tenantId, isCounter: isCounterOrder ? 1 : 0,
+      tenantId, isCounter: isCounterOrder ? 1 : 0, cusLat, cusLng,
     });
     const insertItem = db.prepare(`
       INSERT INTO order_items (order_id, item_id, name, price, quantity, unit_name, vat_rate)
@@ -291,54 +295,17 @@ router.post('/order/create', async (req, res, next) => {
       console.error('[create] canister createOrder error:', e.message, '— retry queue sẽ xử lý');
     }
 
-    // 5. Tự động đặt tài xế Lalamove THẬT (Phần 6/6) — CHỈ khi bật cờ an
-    // toàn LALAMOVE_AUTO_DISPATCH=true (mặc định TẮT — chủ quán cần chủ
-    // động bật sau khi đã test kỹ với sandbox thật). Gọi placeOrder() phát
-    // sinh phí thật ngay lập tức từ tài khoản Lalamove của nhà hàng —
-    // KHÔNG PHẢI thao tác "thử rồi huỷ" miễn phí. KHÔNG BAO GIỜ chặn tạo
-    // đơn nếu bước này lỗi (quotation hết hạn — thường sau ~5 phút kể từ
-    // lúc /quote — là tình huống bình thường, không phải lỗi hệ thống) —
-    // nhà hàng vẫn tự đặt tài xế thủ công qua app ngoài (phương án dự
-    // phòng đã thống nhất từ đầu khi tái cấu trúc luồng này).
-    if (
-      process.env.LALAMOVE_AUTO_DISPATCH === 'true' &&
-      frontendAhamoveOrderId &&
-      lalamovePickupStopId &&
-      lalamoveDropStopId
-    ) {
-      try {
-        const restaurants = await canister.listRestaurants(tenantId);
-        const restaurant = restaurants.find((r) => r.restaurantId === restaurantId);
-        // Link ảnh QR "nhận hàng" — chỉ nhúng nếu VPS_PUBLIC_URL đã cấu
-        // hình (không bắt buộc). Vẫn giữ mã chữ trong mọi trường hợp làm
-        // dự phòng (nếu tài xế không mở được link, hoặc VPS_PUBLIC_URL
-        // chưa cấu hình) — cùng cơ chế đọc mã bằng miệng đã có từ trước.
-        const qrLine = process.env.VPS_PUBLIC_URL
-          ? // Link NGẮN, ĐỨNG RIÊNG 1 DÒNG (không dính chữ phía trước/sau) —
-            // tăng khả năng app tài xế Lalamove nhận diện thành link bấm được.
-            `\nQR nhận hàng (bấm link):\n${process.env.VPS_PUBLIC_URL.replace(/\/+$/, '')}/q/${orderId}\n`
-          : '';
-        const placed = await lalamove.placeOrder({
-          quotationId: frontendAhamoveOrderId,
-          pickupStopId: lalamovePickupStopId,
-          dropStopId: lalamoveDropStopId,
-          senderName: restaurant?.name || 'Nhà hàng',
-          senderPhone: restaurant?.phone || '',
-          recipientName: cusName,
-          recipientPhone: cusPhone,
-          recipientRemarks: `Đơn ${orderId} — mã nhận hàng ${pickupCode}${qrLine}`,
-        });
-        db.prepare(
-          `UPDATE orders SET lalamove_order_id = ?, lalamove_driver_id = ?,
-           lalamove_share_link = ?, lalamove_status = ?, updated_at = ? WHERE order_id = ?`,
-        ).run(placed.lalamoveOrderId, placed.driverId, placed.shareLink, placed.status, Date.now(), orderId);
-        console.log('[create] Lalamove placeOrder thành công:', orderId, '→', placed.lalamoveOrderId);
-      } catch (e) {
-        // KHÔNG throw — đơn đã tạo xong trong hệ thống, chỉ là chưa tự
-        // động gọi được tài xế. Log đủ chi tiết để nhà hàng/admin biết mà
-        // tự đặt tài xế thủ công thay thế.
-        console.error('[create] Lalamove placeOrder lỗi (đơn vẫn tạo bình thường):', orderId, e.message);
-      }
+    // 5. Đặt tài xế (đơn giao tận nơi có toạ độ khách): báo giá lại
+    // Lalamove + Ahamove, chọn hãng theo cài đặt chung của sàn, hãng đầu lỗi
+    // → đặt hãng kia (lib/delivery.js). Chỉ hãng bật cờ an toàn
+    // LALAMOVE_AUTO_DISPATCH / AHAMOVE_AUTO_DISPATCH mới đặt tài xế thật.
+    // Chạy nền, KHÔNG chặn trả kết quả tạo đơn; lỗi → tick 30s thử lại.
+    if (cusLat !== null && cusLng !== null) {
+      setImmediate(() => {
+        delivery.dispatch(db, orderId).then((r) => {
+          if (!r.ok) console.warn('[create] chưa đặt được tài xế:', orderId, r.error);
+        }).catch((e) => console.error('[create] dispatch lỗi:', orderId, e.message));
+      });
     }
 
     // Frontend contract: { orderId, ok, error? }

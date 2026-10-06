@@ -6,6 +6,10 @@ import { BookingStatus, type Order, PaymentStatus } from "@/backend";
 import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
 import { HighlightMatch, matchesQuery } from "@/components/HighlightMatch";
 import { ManualPaymentPhotoDialog } from "@/components/ManualPaymentPhotoDialog";
+import {
+  DeliveryLine,
+  useDeliveryStatuses,
+} from "@/components/delivery/DeliveryLine";
 import { getManualPhotoConfirmEligibility } from "@/lib/vps-client";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -135,6 +139,8 @@ export function PaymentQueue({
     enabled: pendingOrderIds.length > 0,
     refetchInterval: 15000,
   });
+  // Hãng giao + tài xế (Lalamove / Ahamove) cho từng đơn — VPS lib/delivery.js.
+  const { data: deliveries } = useDeliveryStatuses(pendingOrderIds);
   // NHÓM thẻ đơn theo khách (tên + SĐT) — theo yêu cầu: tài xế đến lấy
   // nhiều đơn của cùng 1 khách thấy chúng đứng liền nhau. Nhóm có đơn SỚM
   // NHẤT xếp trước; trong nhóm xếp theo giờ đặt (cũ nhất trước). Vì nhóm
@@ -327,6 +333,10 @@ export function PaymentQueue({
                           />
                         </p>
                       )}
+                      <DeliveryLine
+                        info={deliveries?.[order.orderId]}
+                        ocid={`queue.delivery.${idx + 1}`}
+                      />
                       {order.items && order.items.length > 0 && (
                         <ul
                           className="mt-2 flex flex-col gap-0.5 border-t border-border/60 pt-2"

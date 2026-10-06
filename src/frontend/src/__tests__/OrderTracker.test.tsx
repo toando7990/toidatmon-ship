@@ -11,7 +11,7 @@ import {
   type OrderStatus,
   PaymentStatus,
 } from "@/backend";
-import type { LalamoveTrackingInfo } from "@/lib/vps-client";
+import type { DeliveryInfo } from "@/lib/vps-client";
 import { OrderStatusView } from "@/pages/OrderTracker";
 import { cleanup, render, screen } from "@testing-library/react";
 import type React from "react";
@@ -99,7 +99,24 @@ function makeStatus(order: Order): OrderStatus {
   };
 }
 
-function renderView(order: Order, lalamoveInfo?: LalamoveTrackingInfo | null) {
+function delivery(overrides: Partial<DeliveryInfo> = {}): DeliveryInfo {
+  return {
+    provider: "lalamove",
+    providerName: "Lalamove",
+    status: "to_pickup",
+    statusLabel: "Tài xế đang đến quán",
+    step: 1,
+    driver: null,
+    shareLink: "",
+    times: { createdAt: 1, assignedAt: 2, pickedAt: null, completedAt: null },
+    switched: null,
+    allFailed: false,
+    attempts: 1,
+    ...overrides,
+  };
+}
+
+function renderView(order: Order, deliveryInfo?: DeliveryInfo | null) {
   return render(
     <OrderStatusView
       status={makeStatus(order)}
@@ -111,7 +128,7 @@ function renderView(order: Order, lalamoveInfo?: LalamoveTrackingInfo | null) {
       invoiceState={{ kind: "idle" }}
       onDownloadInvoice={vi.fn()}
       onRestaurantChanged={vi.fn()}
-      lalamoveInfo={lalamoveInfo ?? null}
+      deliveryInfo={deliveryInfo ?? null}
     />,
   );
 }
@@ -155,86 +172,146 @@ describe("OrderStatusView — QR nhận hàng", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the real Lalamove tracking panel (with map link) instead of the old 2-step timeline when the order has a lalamoveOrderId", () => {
-    renderView(makeOrder({}), {
-      lalamoveOrderId: "LALA-1",
-      lalamoveDriverId: "DRV-1",
-      lalamoveShareLink: "https://share.lalamove.com/xyz",
-      lalamoveStatus: "ON_GOING",
-    });
-
+  it("shows the delivery panel (provider, driver, map link) instead of the old 2-step timeline once a driver is booked", () => {
+    renderView(
+      makeOrder({}),
+      delivery({
+        provider: "ahamove",
+        providerName: "Ahamove",
+        shareLink: "https://aha/s/1",
+        driver: {
+          name: "Nguyễn Văn Hùng",
+          phone: "84901234567",
+          plate: "29B1-123.45",
+        },
+      }),
+    );
     expect(
-      screen.getByTestId("order_tracker.lalamove_panel"),
+      screen.getByTestId("order_tracker.delivery_panel"),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("delivery.provider.ahamove")).toBeInTheDocument();
     expect(
-      screen.getByTestId("order_tracker.lalamove_status"),
-    ).toHaveTextContent("Tài xế đang di chuyển");
-    const mapLink = screen.getByTestId("order_tracker.lalamove_map_link");
-    expect(mapLink).toHaveAttribute("href", "https://share.lalamove.com/xyz");
-    // Timeline 2 bước cũ (dự phòng) KHÔNG hiện khi đã có Lalamove thật.
+      screen.getByTestId("order_tracker.delivery_status"),
+    ).toHaveTextContent("Tài xế đang đến quán");
+    expect(
+      screen.getByTestId("order_tracker.delivery_driver"),
+    ).toHaveTextContent("29B1-123.45");
+    expect(screen.getByTestId("order_tracker.delivery_call")).toHaveAttribute(
+      "href",
+      "tel:+84901234567",
+    );
+    expect(
+      screen.getByTestId("order_tracker.delivery_map_link"),
+    ).toHaveAttribute("href", "https://aha/s/1");
     expect(
       screen.queryByTestId("order_tracker.timeline_panel"),
     ).not.toBeInTheDocument();
   });
 
-  it("falls back to the old 2-step timeline when the order has no Lalamove tracking (LALAMOVE_AUTO_DISPATCH off, or dispatch failed)", () => {
-    renderView(makeOrder({}), {
-      lalamoveOrderId: "",
-      lalamoveDriverId: "",
-      lalamoveShareLink: "",
-      lalamoveStatus: "",
-    });
-
+  it("falls back to the old 2-step timeline when no driver was booked", () => {
+    renderView(makeOrder({}), null);
     expect(
       screen.getByTestId("order_tracker.timeline_panel"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByTestId("order_tracker.lalamove_panel"),
+      screen.queryByTestId("order_tracker.delivery_panel"),
     ).not.toBeInTheDocument();
   });
 
-  it("shows an unrecognized Lalamove status verbatim instead of hiding it", () => {
-    renderView(makeOrder({}), {
-      lalamoveOrderId: "LALA-1",
-      lalamoveDriverId: "",
-      lalamoveShareLink: "",
-      lalamoveStatus: "SOME_NEW_STATUS_LALAMOVE_ADDED",
-    });
-
-    expect(
-      screen.getByTestId("order_tracker.lalamove_status"),
-    ).toHaveTextContent("SOME_NEW_STATUS_LALAMOVE_ADDED");
-  });
-
-  it("marks Lalamove timeline steps done/active/pending according to the REAL Lalamove status (PICKED_UP)", () => {
-    renderView(makeOrder({}), {
-      lalamoveOrderId: "LALA-1",
-      lalamoveDriverId: "DRV-1",
-      lalamoveShareLink: "",
-      lalamoveStatus: "PICKED_UP",
-    });
-    const state = (s: string) =>
+  it("marks steps done/active/pending by the unified step", () => {
+    renderView(
+      makeOrder({}),
+      delivery({
+        status: "delivering",
+        statusLabel: "Đang giao đến bạn",
+        step: 2,
+      }),
+    );
+    const state = (i: number) =>
       screen
-        .getByTestId(`order_tracker.lalamove_step.${s}`)
+        .getByTestId(`order_tracker.delivery_step.${i}`)
         .getAttribute("data-state");
-    expect(state("ASSIGNING_DRIVER")).toBe("done");
-    expect(state("ON_GOING")).toBe("done");
-    expect(state("PICKED_UP")).toBe("active");
-    expect(state("COMPLETED")).toBe("pending");
+    expect(state(0)).toBe("done");
+    expect(state(1)).toBe("done");
+    expect(state(2)).toBe("active");
+    expect(state(3)).toBe("pending");
   });
 
-  it("shows a failure notice instead of the timeline when Lalamove REJECTED/EXPIRED the order", () => {
-    renderView(makeOrder({}), {
-      lalamoveOrderId: "LALA-1",
-      lalamoveDriverId: "",
-      lalamoveShareLink: "",
-      lalamoveStatus: "EXPIRED",
-    });
+  it("explains an automatic provider switch", () => {
+    renderView(
+      makeOrder({}),
+      delivery({
+        provider: "ahamove",
+        switched: {
+          from: "lalamove",
+          fromName: "Lalamove",
+          reason:
+            "Lalamove chưa có tài xế sau 7 phút — đã tự chuyển sang hãng khác",
+          at: 0,
+        },
+      }),
+    );
     expect(
-      screen.queryByTestId("order_tracker.lalamove_steps"),
+      screen.getByTestId("order_tracker.delivery_switched"),
+    ).toHaveTextContent("Bạn không phải trả thêm phí");
+  });
+
+  it("shows a failure notice when every provider failed", () => {
+    renderView(
+      makeOrder({}),
+      delivery({
+        status: "cancelled",
+        statusLabel: "Đơn giao hàng đã huỷ",
+        step: -1,
+        allFailed: true,
+      }),
+    );
+    expect(
+      screen.getByTestId("order_tracker.delivery_failed"),
+    ).toHaveTextContent("Chưa tìm được tài xế");
+    expect(
+      screen.queryByTestId("order_tracker.delivery_steps"),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("OrderStatusView — nút 'Đặt nhầm nhà hàng? Chuyển sang nhà hàng khác'", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("shows the change-restaurant link for an unpaid order with no driver booked", () => {
+    renderView(makeOrder({ paymentStatus: PaymentStatus.unpaid }), null);
     expect(
-      screen.getByTestId("order_tracker.lalamove_status"),
-    ).toHaveTextContent("Hết thời gian tìm tài xế");
+      screen.getByTestId("order_tracker.change_restaurant_button"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the change-restaurant link once a driver has been booked", () => {
+    renderView(makeOrder({ paymentStatus: PaymentStatus.unpaid }), delivery());
+    expect(
+      screen.queryByTestId("order_tracker.change_restaurant_button"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the change-restaurant link while the delivery status is still unknown (loading / network error)", () => {
+    const order = makeOrder({ paymentStatus: PaymentStatus.unpaid });
+    render(
+      <OrderStatusView
+        status={makeStatus(order)}
+        order={order}
+        restaurants={[]}
+        restaurantAddress="69 đường Láng, Hà Nội"
+        lastUpdated="10:00"
+        isFetching={false}
+        invoiceState={{ kind: "idle" }}
+        onDownloadInvoice={vi.fn()}
+        onRestaurantChanged={vi.fn()}
+        deliveryInfo={undefined}
+      />,
+    );
+    expect(
+      screen.queryByTestId("order_tracker.change_restaurant_button"),
+    ).not.toBeInTheDocument();
   });
 });

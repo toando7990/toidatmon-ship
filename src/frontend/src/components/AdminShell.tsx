@@ -40,6 +40,7 @@ import {
   Settings2,
   Smartphone,
   Store,
+  Truck,
   Wallet,
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -72,6 +73,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       },
       { to: "/admin/doi-soat", label: "Đối soát & trả tiền", icon: Wallet },
       { to: "/admin/nhom-mon", label: "Nhóm món chung", icon: Layers },
+      { to: "/admin/giao-hang", label: "Giao hàng", icon: Truck },
       { to: "/admin/cai-dat", label: "Cài đặt nền tảng", icon: Settings2 },
       { to: "/admin", label: "Hệ thống & mã kích hoạt", icon: ServerCog },
     ],

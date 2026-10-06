@@ -94,6 +94,8 @@ export interface QuoteResponse {
   // phải lấy từ ĐÚNG lần /quote gần nhất, không thể tự tạo lại.
   lalamovePickupStopId: string;
   lalamoveDropStopId: string;
+  /** Hãng giao dự kiến (Lalamove/Ahamove) — theo cài đặt giao hàng của sàn. */
+  deliveryProvider?: "lalamove" | "ahamove" | "";
 }
 // VPS create-order payload — sent to VPS worker /order/create (HMAC signed server-side).
 export interface CreateOrderPayload {
@@ -119,6 +121,9 @@ export interface CreateOrderPayload {
   // này, không chặn tạo đơn.
   lalamovePickupStopId?: string;
   lalamoveDropStopId?: string;
+  /** Toạ độ khách — VPS lưu để đặt tài xế và đặt lại khi chuyển hãng. */
+  dropLat?: number;
+  dropLng?: number;
   voucherCode?: string;
   /** true = đơn tại quầy (CounterOrder.tsx) — VPS routes/create.js gọi
    * applyPromotionCounter (Giờ Vàng tự động, không cần email) thay vì

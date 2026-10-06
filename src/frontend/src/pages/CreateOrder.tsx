@@ -595,6 +595,11 @@ export default function CreateOrder() {
         ahamoveOrderId: freshShipQuote?.lalamoveQuotationId ?? "",
         lalamovePickupStopId: freshShipQuote?.lalamovePickupStopId,
         lalamoveDropStopId: freshShipQuote?.lalamoveDropStopId,
+        // Toạ độ khách — VPS đặt tài xế Lalamove/Ahamove (và đặt lại
+        // bằng hãng kia nếu quá lâu chưa có tài xế).
+        ...(selectedAddress
+          ? { dropLat: selectedAddress.lat, dropLng: selectedAddress.lng }
+          : {}),
         ...(cartDiscounts.selectedVoucherCode
           ? { voucherCode: cartDiscounts.selectedVoucherCode }
           : {}),

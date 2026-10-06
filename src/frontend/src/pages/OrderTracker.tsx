@@ -10,11 +10,12 @@ import type { Restaurant } from "@/backend";
 import { ChangeRestaurantDialog } from "@/components/ChangeRestaurantDialog";
 import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
 import { StatusBadge } from "@/components/StatusBadge";
+import { DeliveryTrackingPanel } from "@/components/delivery/DeliveryTrackingPanel";
 import { useOrderStatus } from "@/hooks/useOrderStatus";
 import { useGetOrder, useRestaurants } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
-import { getInvoice, getLalamoveStatus } from "@/lib/vps-client";
-import type { LalamoveTrackingInfo } from "@/lib/vps-client";
+import { getDeliveryStatus, getInvoice } from "@/lib/vps-client";
+import type { DeliveryInfo } from "@/lib/vps-client";
 import type { Order, OrderStatus } from "@/types";
 import { BookingStatus, InvoiceStatus, PaymentStatus } from "@/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -73,55 +74,6 @@ function stepIndex(status: BookingStatus): number {
     return 1;
   }
   return 0;
-}
-
-// Map trạng thái Lalamove thật sang tiếng Việt dễ hiểu cho khách. Các giá
-// trị theo tài liệu chính thức Lalamove — nếu gặp giá trị lạ chưa từng
-// thấy (Lalamove có thể thêm mới), hiện NGUYÊN VĂN thay vì ẩn đi, tránh
-// mất thông tin cho khách.
-const LALAMOVE_STATUS_LABELS: Record<string, string> = {
-  ASSIGNING_DRIVER: "Đang tìm tài xế",
-  ON_GOING: "Tài xế đang di chuyển",
-  PICKED_UP: "Tài xế đã lấy hàng",
-  COMPLETED: "Đã giao xong",
-  CANCELED: "Đơn giao hàng đã bị huỷ",
-  REJECTED: "Không tìm được tài xế",
-  EXPIRED: "Hết thời gian tìm tài xế",
-};
-
-// Hành trình giao theo Lalamove — 4 bước tuần tự. Trạng thái kết thúc bất
-// thường (CANCELED/REJECTED/EXPIRED) hiện riêng thay vì đánh dấu bước.
-const LALAMOVE_STEPS: Array<{
-  status: string;
-  label: string;
-  description: string;
-}> = [
-  {
-    status: "ASSIGNING_DRIVER",
-    label: "Đang tìm tài xế",
-    description: "Lalamove đang tìm tài xế gần nhà hàng.",
-  },
-  {
-    status: "ON_GOING",
-    label: "Tài xế đang đến nhà hàng",
-    description: "Tài xế đã nhận đơn, đang tới lấy hàng.",
-  },
-  {
-    status: "PICKED_UP",
-    label: "Tài xế đã lấy hàng",
-    description: "Đang giao tới địa chỉ của bạn.",
-  },
-  {
-    status: "COMPLETED",
-    label: "Đã giao xong",
-    description: "Đơn hàng đã được giao.",
-  },
-];
-function lalamoveStepIndex(status: string): number {
-  return LALAMOVE_STEPS.findIndex((s) => s.status === status);
-}
-function lalamoveStatusLabel(status: string): string {
-  return LALAMOVE_STATUS_LABELS[status] ?? status;
 }
 
 // Định dạng số tiền VND từ bigint (đơn vị đồng).
@@ -191,11 +143,11 @@ export default function OrderTracker({ shopName }: { shopName?: string } = {}) {
   const { data: order } = useGetOrder(orderId);
   // Tra cứu địa chỉ nhà hàng theo restaurantId của đơn.
   const { data: restaurants } = useRestaurants();
-  // Theo dõi trực quan Lalamove thật (Phần 6/6) — poll 10s (không cần
-  // nhanh như getOrderStatus's 5s, trạng thái Lalamove ít đổi hơn).
-  const { data: lalamoveInfo } = useQuery({
-    queryKey: ["lalamoveStatus", orderId],
-    queryFn: () => getLalamoveStatus(orderId as string),
+  // Hành trình giao Lalamove / Ahamove (VPS lib/delivery.js) — poll 10s
+  // (VPS tự làm mới từ hãng tối đa 20 giây/lần; webhook Ahamove tức thì).
+  const { data: deliveryInfo } = useQuery({
+    queryKey: ["deliveryStatus", orderId],
+    queryFn: () => getDeliveryStatus(orderId as string),
     enabled: !!orderId,
     refetchInterval: 10000,
   });
@@ -388,7 +340,7 @@ export default function OrderTracker({ shopName }: { shopName?: string } = {}) {
           onRestaurantChanged={() =>
             queryClient.invalidateQueries({ queryKey: ["order", orderId] })
           }
-          lalamoveInfo={lalamoveInfo}
+          deliveryInfo={deliveryInfo}
         />
       )}
     </section>
@@ -405,10 +357,10 @@ interface OrderStatusViewProps {
   invoiceState: InvoiceState;
   onDownloadInvoice: () => void;
   onRestaurantChanged: () => void;
-  // Theo dõi trực quan Lalamove thật (Phần 6/6) — undefined khi chưa
-  // tải xong/lỗi mạng, null khi tải xong nhưng đơn không có Lalamove
-  // (chưa bật LALAMOVE_AUTO_DISPATCH hoặc gọi thất bại lúc tạo đơn).
-  lalamoveInfo: LalamoveTrackingInfo | null | undefined;
+  // Hành trình giao Lalamove / Ahamove — undefined khi chưa tải xong/lỗi
+  // mạng, null khi đơn chưa gọi tài xế (chưa bật tự đặt hoặc đơn tự đặt
+  // tài xế bằng app ngoài) → giữ timeline 2 bước dự phòng.
+  deliveryInfo: DeliveryInfo | null | undefined;
 }
 
 export function OrderStatusView({
@@ -421,7 +373,7 @@ export function OrderStatusView({
   invoiceState,
   onDownloadInvoice,
   onRestaurantChanged,
-  lalamoveInfo,
+  deliveryInfo,
 }: OrderStatusViewProps) {
   const [changeRestaurantOpen, setChangeRestaurantOpen] = useState(false);
   const booking = status.bookingStatus as BookingStatus;
@@ -555,16 +507,22 @@ export function OrderStatusView({
               )}
             </div>
 
-            {order && payment === PaymentStatus.unpaid && (
-              <button
-                type="button"
-                onClick={() => setChangeRestaurantOpen(true)}
-                data-ocid="order_tracker.change_restaurant_button"
-                className="self-start text-xs font-semibold text-primary underline underline-offset-2"
-              >
-                Đặt nhầm nhà hàng? Chuyển sang nhà hàng khác
-              </button>
-            )}
+            {/* Ẩn khi đã gọi tài xế (hoặc chưa biết chắc — đang tải/lỗi
+                mạng): tài xế đã được điều tới chi nhánh hiện tại. VPS cũng
+                chặn thêm 1 lớp (routes/order-restaurant.js). */}
+            {order &&
+              payment === PaymentStatus.unpaid &&
+              deliveryInfo !== undefined &&
+              !deliveryInfo && (
+                <button
+                  type="button"
+                  onClick={() => setChangeRestaurantOpen(true)}
+                  data-ocid="order_tracker.change_restaurant_button"
+                  className="self-start text-xs font-semibold text-primary underline underline-offset-2"
+                >
+                  Đặt nhầm nhà hàng? Chuyển sang nhà hàng khác
+                </button>
+              )}
 
             {/* Tổng tiền hàng */}
             <div className="flex items-start justify-between gap-3">
@@ -586,104 +544,11 @@ export function OrderStatusView({
         </div>
       )}
 
-      {/* Hành trình giao hàng — theo dõi trực quan Lalamove thật khi có
-          (Phần 6/6, đơn được tự động gọi tài xế thành công), nếu không
-          thì giữ nguyên timeline 2 bước dự phòng (tài xế tự đặt qua app
-          ngoài — vẫn cần khi LALAMOVE_AUTO_DISPATCH tắt hoặc gọi thất
-          bại lúc tạo đơn). */}
-      {!isCancelled && lalamoveInfo?.lalamoveOrderId ? (
-        <div
-          className="rounded-lg border border-border bg-card p-5 shadow-sm"
-          data-ocid="order_tracker.lalamove_panel"
-        >
-          <h2 className="font-display text-lg font-semibold">
-            Hành trình giao
-          </h2>
-          <p
-            className="mt-1 text-sm font-semibold text-primary"
-            data-ocid="order_tracker.lalamove_status"
-          >
-            {lalamoveStatusLabel(lalamoveInfo.lalamoveStatus)}
-          </p>
-          {lalamoveStepIndex(lalamoveInfo.lalamoveStatus) >= 0 ? (
-            <ol
-              className="mt-4 space-y-4"
-              data-ocid="order_tracker.lalamove_steps"
-            >
-              {LALAMOVE_STEPS.map((step, i) => {
-                const current = lalamoveStepIndex(lalamoveInfo.lalamoveStatus);
-                const done =
-                  i < current || lalamoveInfo.lalamoveStatus === "COMPLETED";
-                const active = i === current && !done;
-                return (
-                  <li
-                    key={step.status}
-                    className="flex items-start gap-3"
-                    data-ocid={`order_tracker.lalamove_step.${step.status}`}
-                    data-state={done ? "done" : active ? "active" : "pending"}
-                  >
-                    <span
-                      className={cn(
-                        "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold",
-                        done
-                          ? "border-success bg-success text-success-foreground"
-                          : active
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-card text-muted-foreground",
-                      )}
-                    >
-                      {done ? (
-                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        i + 1
-                      )}
-                    </span>
-                    <div>
-                      <p
-                        className={cn(
-                          "text-sm font-medium",
-                          active
-                            ? "text-foreground"
-                            : done
-                              ? "text-foreground"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {step.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {step.description}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          ) : (
-            <div className="mt-3 flex items-center gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
-              <Truck
-                className="h-6 w-6 shrink-0 text-destructive"
-                aria-hidden="true"
-              />
-              <p className="text-sm text-foreground">
-                Lalamove không giao được đơn này — nhà hàng sẽ liên hệ đặt tài
-                xế khác.
-              </p>
-            </div>
-          )}
-          {lalamoveInfo.lalamoveShareLink && (
-            <a
-              href={lalamoveInfo.lalamoveShareLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-ocid="order_tracker.lalamove_map_link"
-              className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition-smooth hover:bg-secondary"
-            >
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Xem vị trí tài xế trên bản đồ Lalamove
-            </a>
-          )}
-        </div>
+      {/* Hành trình giao hàng — theo dõi Lalamove / Ahamove khi đơn đã
+          được tự động gọi tài xế; nếu không thì giữ timeline 2 bước dự
+          phòng (tài xế tự đặt qua app ngoài). */}
+      {!isCancelled && deliveryInfo ? (
+        <DeliveryTrackingPanel info={deliveryInfo} />
       ) : (
         <div
           className="rounded-lg border border-border bg-card p-5 shadow-sm"

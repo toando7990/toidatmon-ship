@@ -49,6 +49,8 @@ const anasystemRoutes = require('./routes/anasystem');
 const partnerTingeeRoutes = require('./routes/partner-tingee');
 const payoutsRoutes = require('./routes/payouts');
 const bestSellersRoutes = require('./routes/best-sellers');
+const deliveryRoutes = require('./routes/delivery');
+const delivery = require('./lib/delivery');
 
 const cronJobs = [];
 
@@ -105,6 +107,7 @@ app.use('/', anasystemRoutes);
 app.use('/', partnerTingeeRoutes);
 app.use('/', payoutsRoutes);
 app.use('/', bestSellersRoutes);
+app.use('/', deliveryRoutes);
 app.use('/', uploadRoutes);
 app.use('/', manualPaymentPhotoRoutes);
 app.use('/', customersRoutes);
@@ -132,6 +135,21 @@ app.use((err, req, res, _next) => {
 
 // --- Cron jobs ---
 // Backup daily 03:00
+// Giao hàng 30s: làm mới trạng thái Lalamove/Ahamove, tự chuyển hãng khi
+// quá lâu chưa có tài xế hoặc hãng huỷ, thử lại đơn chưa đặt được (lib/delivery.js).
+let deliveryTickRunning = false;
+cronJobs.push(cron.schedule('*/30 * * * * *', async () => {
+  if (shutdown.shuttingDown || deliveryTickRunning) return;
+  deliveryTickRunning = true;
+  try {
+    await delivery.tick(db);
+  } catch (e) {
+    console.error('[cron] delivery tick lỗi:', e.message);
+  } finally {
+    deliveryTickRunning = false;
+  }
+}));
+
 cronJobs.push(cron.schedule('0 3 * * *', () => {
   if (shutdown.shuttingDown) return;
   try {

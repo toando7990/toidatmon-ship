@@ -15,7 +15,7 @@
 
 const express = require('express');
 const canister = require('../lib/canister');
-const lalamove = require('../lib/lalamove');
+const delivery = require('../lib/delivery');
 
 const router = express.Router();
 const VAT_RATE = 0.08; // VAT cố định 8%
@@ -118,32 +118,34 @@ router.post('/quote', async (req, res, next) => {
     // lý, không chặn tạo đơn).
     let lalamovePickupStopId = '';
     let lalamoveDropStopId = '';
+    let deliveryProvider = '';
     const pickup = await findRestaurantCoordinates(tenantId, restaurantId);
     if (!pickup) {
-      console.warn('[quote] Chưa có toạ độ nhà hàng hợp lệ cho', restaurantId, '— bỏ qua Lalamove');
+      console.warn('[quote] Chưa có toạ độ nhà hàng hợp lệ cho', restaurantId, '— bỏ qua báo giá giao hàng');
     } else if (dropLat == null || dropLng == null) {
-      console.warn('[quote] Thiếu dropLat/dropLng trong request — bỏ qua Lalamove');
+      console.warn('[quote] Thiếu dropLat/dropLng trong request — bỏ qua báo giá giao hàng');
     } else {
+      // Báo giá Lalamove + Ahamove song song, chọn hãng theo cài đặt "Giao
+      // hàng" (lib/delivery.js) — phí hiện cho khách là phí hãng được chọn.
       try {
-        const quotation = await lalamove.getQuotation({
-          pickupLat: pickup.lat,
-          pickupLng: pickup.lng,
-          pickupAddress: pickupAddress || pickup.address,
-          dropLat: Number(dropLat),
-          dropLng: Number(dropLng),
-          dropAddress: dropAddress || '',
+        const r = await delivery.quoteForCustomer(req.app.locals.db, {
+          pickup: { lat: pickup.lat, lng: pickup.lng, address: pickupAddress || pickup.address },
+          drop: { lat: Number(dropLat), lng: Number(dropLng), address: dropAddress || '' },
         });
-        shippingFee = quotation.feeVnd;
-        lalamoveQuotationId = quotation.quotationId || '';
-        lalamovePickupStopId = quotation.pickupStopId || '';
-        lalamoveDropStopId = quotation.dropStopId || '';
-        if (quotation.distanceMeters != null) {
-          estimatedDeliveryMinutes = Math.round(
-            quotation.distanceMeters / AVG_SPEED_M_PER_MIN + PREP_TIME_MINUTES,
-          );
+        if (r) {
+          deliveryProvider = r.provider;
+          shippingFee = r.quote.feeVnd;
+          if (r.provider === 'lalamove') {
+            lalamoveQuotationId = r.quote.quotationId || '';
+            lalamovePickupStopId = r.quote.pickupStopId || '';
+            lalamoveDropStopId = r.quote.dropStopId || '';
+          }
+          if (r.quote.distanceMeters != null) {
+            estimatedDeliveryMinutes = Math.round(r.quote.distanceMeters / AVG_SPEED_M_PER_MIN + PREP_TIME_MINUTES);
+          }
         }
       } catch (e) {
-        console.error('[quote] Lalamove getQuotation lỗi:', e.message);
+        console.error('[quote] báo giá giao hàng lỗi:', e.message);
       }
     }
 
@@ -158,6 +160,7 @@ router.post('/quote', async (req, res, next) => {
       estimatedDeliveryMinutes,
       lalamovePickupStopId,
       lalamoveDropStopId,
+      deliveryProvider,
     });
   } catch (e) {
     next(e);

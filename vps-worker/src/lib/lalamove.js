@@ -212,7 +212,7 @@ async function placeOrder({
 
   let res;
   try {
-    res = await client.post(path, body, { headers });
+    res = await client.post(path, body, { headers, timeout: 30000 });
   } catch (err) {
     if (err.response) {
       console.error(
@@ -273,4 +273,56 @@ async function getOrderDetails(lalamoveOrderId) {
   };
 }
 
-module.exports = { getQuotation, placeOrder, getOrderDetails, toE164Vn, LalamoveError };
+// Gọi API ký HMAC, không body (GET/DELETE) — dùng cho huỷ đơn + thông tin tài xế.
+async function signedNoBody(method, path, op) {
+  const headers = buildHeaders(method, path, '');
+  try {
+    const res = await client.request({ method, url: path, headers });
+    return res.data || {};
+  } catch (err) {
+    if (err.response) {
+      console.error(`[lalamove] ${op} lỗi:`, err.response.status, JSON.stringify(err.response.data));
+      throw new LalamoveError(`Lalamove ${op} failed: ${err.response.status}`, err.response.status, err.response.data);
+    }
+    throw new LalamoveError(`Lalamove network error: ${err.message}`, null, null);
+  }
+}
+
+// cancelOrder — DELETE /v3/orders/:id (chỉ được khi chưa lấy hàng). Dùng
+// khi chuyển sang Ahamove vì quá lâu chưa có tài xế.
+async function cancelOrder(lalamoveOrderId) {
+  await signedNoBody('DELETE', `/v3/orders/${encodeURIComponent(lalamoveOrderId)}`, 'cancel');
+  return true;
+}
+
+// getDriver — GET /v3/orders/:id/drivers/:driverId → tên, SĐT, biển số
+// (hiện trên "Theo dõi đơn" và thẻ đơn /driver).
+async function getDriver(lalamoveOrderId, driverId) {
+  const body = await signedNoBody(
+    'GET',
+    `/v3/orders/${encodeURIComponent(lalamoveOrderId)}/drivers/${encodeURIComponent(driverId)}`,
+    'driver',
+  );
+  const d = body.data || {};
+  return {
+    name: String(d.name || ''),
+    phone: String(d.phone || ''),
+    plate: String(d.plateNumber || ''),
+  };
+}
+
+function isConfigured() {
+  return !!(API_KEY && API_SECRET);
+}
+
+module.exports = {
+  getQuotation,
+  placeOrder,
+  getOrderDetails,
+  cancelOrder,
+  getDriver,
+  isConfigured,
+  ENV: IS_PRODUCTION ? 'production' : 'sandbox',
+  toE164Vn,
+  LalamoveError,
+};
