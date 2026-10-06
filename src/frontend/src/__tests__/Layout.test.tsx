@@ -35,6 +35,15 @@ vi.mock("@/hooks/useAuth", () => ({
 vi.mock("@/hooks/useQueries", () => ({
   useGetStoreHours: () => ({ data: undefined }),
   useIsStoreOpen: () => ({ data: undefined }),
+  useTenants: () => ({ data: [] }),
+}));
+
+// Khung quản trị (AdminShell) đọc canister cho số đơn đăng ký chờ duyệt.
+vi.mock("@/lib/canister", () => ({
+  useCanister: () => ({ actor: null, isFetching: false }),
+}));
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: undefined }),
 }));
 
 // Mock the router so the test can set the current pathname and observe the
@@ -252,5 +261,24 @@ describe("Layout device header (used by /counter, /driver)", () => {
     expect(
       screen.queryByTestId("nav.device_page_title"),
     ).not.toBeInTheDocument();
+  });
+
+  it("trang quản trị dùng menu trái chia nhóm, link KM cũ sáng mục Khuyến mại", () => {
+    mockAuth.isAuthenticated = true;
+    mockAuth.isAdmin = true;
+    mockPathname = "/admin/sales-promo";
+    renderLayout();
+    expect(
+      document.querySelector('[data-ocid="admin_shell.nav"]'),
+    ).toBeTruthy();
+    for (const g of ["Nền tảng", "Cửa hàng", "Kinh doanh"]) {
+      expect(screen.getAllByText(g).length).toBeGreaterThan(0);
+    }
+    const promo = document.querySelector(
+      '[data-ocid="admin_shell.link._admin_khuyen-mai"]',
+    );
+    expect(promo?.getAttribute("aria-current")).toBe("page");
+    // Không còn thanh menu khách hàng trên trang quản trị.
+    expect(screen.queryByText("Theo dõi đơn")).toBeNull();
   });
 });
