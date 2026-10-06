@@ -14,6 +14,7 @@ import {
   AnasystemCard,
   CounterAccountCard,
 } from "@/components/PartnerConnections";
+import { TdmIcon, TdmLogo, useTdmTheme } from "@/components/TdmLogo";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import {
@@ -281,9 +282,12 @@ function LoginView({
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-6 bg-background px-5 pb-8 pt-12">
-      <p className="text-lg font-extrabold text-primary">
-        Tôi Đặt Món · {tenantName}
-      </p>
+      <div className="flex flex-col gap-2">
+        <TdmLogo />
+        <p className="text-[15px] font-bold text-muted-foreground">
+          {tenantName}
+        </p>
+      </div>
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-extrabold">Vào trang quản lý quán</h1>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
@@ -1291,6 +1295,7 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
 // ---------- Trang chính ----------
 
 export default function PartnerConsole() {
+  useTdmTheme();
   const { tenant, isLoading: tenantLoading } = useTenant();
   const { actor, isFetching } = useCanister();
   const qc = useQueryClient();
@@ -1423,7 +1428,8 @@ export default function PartnerConsole() {
     <div className="min-h-screen bg-background pb-24" data-ocid="console.page">
       <header className="sticky top-0 z-30 border-b bg-card">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
-          <span className="flex min-w-0 flex-col">
+          <TdmIcon className="h-9 w-9" />
+          <span className="mr-auto flex min-w-0 flex-col">
             <span className="truncate text-lg font-extrabold">
               {tenant.name}
             </span>

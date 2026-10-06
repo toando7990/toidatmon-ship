@@ -410,7 +410,7 @@ export default function PlatformHome() {
           type="button"
           onClick={locate}
           disabled={locating}
-          className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-2 text-sm font-semibold hover:bg-muted"
+          className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-2 text-sm font-semibold hover:bg-card/50"
           data-ocid="platform_home.locate_button"
         >
           <LocateFixed className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -512,7 +512,7 @@ export default function PlatformHome() {
                   className={cn(
                     "flex h-9 shrink-0 items-center gap-1 rounded-lg border px-3 text-[13px] font-semibold",
                     filters[f.key]
-                      ? "border-primary bg-primary/10 text-primary"
+                      ? "border-[var(--tdm-lime)] bg-[var(--tdm-lime-soft)] text-[var(--tdm-olive)]"
                       : "bg-card hover:bg-muted",
                   )}
                 >

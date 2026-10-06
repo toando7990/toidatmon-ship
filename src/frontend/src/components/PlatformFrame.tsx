@@ -3,6 +3,7 @@
 // Đặt món · Theo dõi · Lịch sử · Tôi. Mục Theo dõi có chấm đỏ khi có đơn
 // trong vài giờ gần đây.
 
+import { TdmLogo, useTdmTheme } from "@/components/TdmLogo";
 import { recentMyOrders } from "@/lib/my-orders";
 import { cn } from "@/lib/utils";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -55,19 +56,21 @@ export function PlatformFrame({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const activeOrders = useActiveOrderCount();
+  useTdmTheme();
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <header className="border-b bg-card">
+      <header className="bg-[var(--tdm-lime)] text-[var(--tdm-olive)]">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2">
           <Link
             to="/"
-            className="shrink-0 font-display text-lg font-extrabold text-primary"
+            className="shrink-0"
+            aria-label="Tôi Đặt Món — trang chủ"
           >
-            Tôi Đặt Món
+            <TdmLogo size="sm" />
           </Link>
           {title && (
-            <span className="truncate text-sm font-semibold text-muted-foreground md:hidden">
+            <span className="truncate text-sm font-bold md:hidden">
               · {title}
             </span>
           )}
@@ -82,8 +85,8 @@ export function PlatformFrame({
                 className={cn(
                   "relative flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-sm font-semibold",
                   isActive(pathname, n.to)
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-card text-primary shadow-sm"
+                    : "hover:bg-card/50",
                 )}
               >
                 <n.icon className="h-4 w-4" aria-hidden="true" />
@@ -120,7 +123,14 @@ export function PlatformFrame({
                 )}
                 aria-current={on ? "page" : undefined}
               >
-                <n.icon className="h-6 w-6" aria-hidden="true" />
+                <span
+                  className={cn(
+                    "flex h-7 w-12 items-center justify-center rounded-full",
+                    on && "bg-[var(--tdm-lime-soft)]",
+                  )}
+                >
+                  <n.icon className="h-6 w-6" aria-hidden="true" />
+                </span>
                 {n.short}
                 {n.to === "/track" && activeOrders > 0 && (
                   <span className="absolute right-[calc(50%-20px)] top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">

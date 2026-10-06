@@ -2,6 +2,7 @@
 // của Tôi Đặt Món (4 bước), rồi tra cứu trạng thái bằng mã đơn + email.
 // Admin trung tâm duyệt ở /admin/partner-applications.
 
+import { TdmLogo, useTdmTheme } from "@/components/TdmLogo";
 import { RESERVED_SLUGS } from "@/components/TenantForm";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -185,6 +186,7 @@ function StatusLookup() {
 }
 
 export default function PartnerApply() {
+  useTdmTheme();
   const { actor } = useCanister();
   const [step, setStep] = useState(0);
   const [d, setD] = useState<ApplicationDraft>(EMPTY_DRAFT);
@@ -225,19 +227,12 @@ export default function PartnerApply() {
 
   return (
     <div className="min-h-screen bg-background" data-ocid="partner_apply.page">
-      <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Store className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="font-display text-lg font-bold leading-tight">
-              Tôi Đặt Món
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Đăng ký làm đối tác bán hàng
-            </p>
-          </div>
+      <header className="bg-[var(--tdm-lime)]">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-3">
+          <TdmLogo />
+          <p className="ml-auto text-xs font-semibold text-[var(--tdm-olive)]">
+            Đăng ký làm đối tác
+          </p>
         </div>
       </header>
 

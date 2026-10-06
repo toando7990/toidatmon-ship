@@ -395,6 +395,36 @@
    Brand scope wrapper: an ancestor element carries the partner's brand
    overrides; descendants consume --brand-* only. When no partner brand is
    set the --brand-* defaults fall back to the existing brand tokens. */
+/* --- Thương hiệu Tôi Đặt Món (theo logo: đỏ gạch + xanh cốm) -------------
+   Gắn class .tdm-theme lên <html> ở các trang CỦA Tôi Đặt Món (trang chính,
+   trang quản lý quán, đăng ký đối tác) — useTdmTheme(). Trang đặt món của
+   từng quán giữ màu riêng của quán. */
+.tdm-theme {
+  --background: 0.976 0.012 111.8;
+  --foreground: 0.252 0.036 113.4;
+  --card: 1 0 0;
+  --card-foreground: 0.252 0.036 113.4;
+  --popover: 1 0 0;
+  --popover-foreground: 0.252 0.036 113.4;
+  /* Đỏ gạch #9A3426 — nút chính, chữ thương hiệu */
+  --primary: 0.472 0.139 30.7;
+  --primary-foreground: 1 0 0;
+  --secondary: 0.954 0.024 114.5;
+  --secondary-foreground: 0.387 0.079 119.9;
+  --muted: 0.954 0.024 114.5;
+  --muted-foreground: 0.533 0.041 116.3;
+  /* Xanh cốm #BACF50 — điểm nhấn, chữ ô liu đậm trên nền cốm */
+  --accent: 0.814 0.153 117.9;
+  --accent-foreground: 0.387 0.079 119.9;
+  --border: 0.916 0.031 115;
+  --input: 0.916 0.031 115;
+  --ring: 0.472 0.139 30.7;
+  --tdm-red: #9a3426;
+  --tdm-lime: #bacf50;
+  --tdm-lime-soft: #e9f0c9;
+  --tdm-olive: #3f4a12;
+}
+
 .brand-scope {
   --brand-primary: var(--primary);
   --brand-primary-foreground: var(--primary-foreground);
