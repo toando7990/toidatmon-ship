@@ -102,9 +102,9 @@ function OrderRow({
         {d?.driver?.name && <span>· tài xế {d.driver.name}</span>}
         {o.restaurantName && <span>· {o.restaurantName}</span>}
       </p>
-      <div className="mt-1 flex flex-wrap gap-2">
-        {canRedispatch &&
-          providers.map((p) => (
+      {canRedispatch && providers.length > 0 && (
+        <div className="mt-1 flex gap-2">
+          {providers.map((p) => (
             <button
               key={p.id}
               type="button"
@@ -121,6 +121,9 @@ function OrderRow({
               Đặt lại {p.name}
             </button>
           ))}
+        </div>
+      )}
+      <div className="flex gap-2">
         {o.restaurantPhone && (
           <a
             href={`tel:${o.restaurantPhone}`}

@@ -38,6 +38,12 @@ function useTdmTheme() {
   }, []);
 }
 
+/** "Nguyễn Văn Hậu" → "Chào Hậu 👋"; máy không có tên người (TV…) → "Xin chào 👋". */
+function greeting(name: string): string {
+  const last = name.trim().split(/\s+/).pop() ?? "";
+  return /\p{L}/u.test(last) ? `Chào ${last} 👋` : "Xin chào 👋";
+}
+
 function initialCode(): string {
   try {
     return new URLSearchParams(window.location.search).get("ma") ?? "";
@@ -257,9 +263,7 @@ export default function PlatformStaff() {
       ) : (
         <main className="mx-auto w-full max-w-6xl px-4 py-4 md:px-6">
           <div className="mb-3">
-            <h1 className="text-lg font-extrabold">
-              Chào {device.name.split(" ").pop()} 👋
-            </h1>
+            <h1 className="text-lg font-extrabold">{greeting(device.name)}</h1>
             <p className="text-[13px] text-muted-foreground">
               {device.note || device.deviceId} · {ROLE_INFO[device.role].name}
             </p>

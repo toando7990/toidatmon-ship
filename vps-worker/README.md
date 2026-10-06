@@ -90,6 +90,17 @@ nano .env
 - `BKAV_PROXY_URL`: mặc định `https://proxy.bunbohue65.com` — domain proxy giải mã đã có, xem `vps-worker/bkav-proxy/README.md` để triển khai.
 - `BKAV_USE_DEMO`: `true` để gọi Bkav DEMO (test), mặc định production.
 
+**Giao hàng 2 hãng (tài khoản chung của sàn cho mọi quán) — `src/lib/delivery.js`:**
+- `LALAMOVE_API_KEY`, `LALAMOVE_API_SECRET`, `LALAMOVE_ENV=production` (bỏ trống = sandbox).
+- `AHAMOVE_API_KEY`, `AHAMOVE_PHONE` (SĐT tài khoản doanh nghiệp). `AHAMOVE_ENV=staging` để thử; bỏ trống = máy chủ thật.
+- `AHAMOVE_SERVICE_ID` (tuỳ chọn): ép 1 dịch vụ cho mọi đơn; bỏ trống = tự chọn theo thành phố của quán (SGN-BIKE, HAN-BIKE, DAD-BIKE…).
+- `LALAMOVE_AUTO_DISPATCH=true` / `AHAMOVE_AUTO_DISPATCH=true`: CHỈ hãng bật cờ này mới được tự đặt tài xế thật (phát sinh phí).
+- `VPS_PUBLIC_URL`: địa chỉ công khai của VPS (link QR nhận hàng cho tài xế + webhook Ahamove `<VPS_PUBLIC_URL>/webhook/ahamove`).
+- `AHAMOVE_WEBHOOK_KEY` (tuỳ chọn): khoá Ahamove gửi kèm webhook.
+- Chọn hãng / số phút chuyển hãng: trang admin **Giao hàng** (`/admin/giao-hang`).
+
+**Thiết bị cấp sàn** (máy nhân viên Tôi Đặt Món, trang `/san`): VPS hỏi canister `getPlatformDevice` theo header `X-Platform-Device` — không cần cấu hình thêm. Kiểm thử: `npm test`.
+
 ### 4. Tạo thư mục data + uploads
 
 ```bash

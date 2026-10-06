@@ -111,7 +111,7 @@ function CreateSheet({
             năng của vai trò được cấp.
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-4 px-4 pb-6">
           <fieldset disabled={!!created} className="flex flex-col gap-1.5">
             <legend className="mb-1.5 text-sm font-bold">Vai trò</legend>
             {PLATFORM_ROLES.map((k) => {
