@@ -11,6 +11,7 @@
 // của bạn"). Các mục còn lại (Hướng dẫn Grab, Đối tác đặt món, Giới
 // thiệu) vẫn nằm trong nút "Menu" như cũ trên mobile.
 
+import { AdminShell, isAdminShellPath } from "@/components/AdminShell";
 import {
   DeviceHeaderProvider,
   useDeviceHeader,
@@ -92,89 +93,6 @@ const BOTTOM_NAV: NavItem[] = [
   { to: "/profile", label: "Tôi", icon: User },
 ];
 const BOTTOM_NAV_PATHS = new Set(BOTTOM_NAV.map((item) => item.to));
-
-const ADMIN_NAV: NavItem[] = [
-  { to: "/admin", label: "Quản lý", icon: ShieldCheck, adminOnly: true },
-  {
-    to: "/admin/devices",
-    label: "Thiết bị",
-    icon: ShieldCheck,
-    adminOnly: true,
-  },
-  { to: "/admin/menu", label: "Menu", icon: ShieldCheck, adminOnly: true },
-  {
-    to: "/admin/restaurants",
-    label: "Nhà hàng",
-    icon: ShieldCheck,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/promotions",
-    label: "Khuyến mại",
-    icon: Percent,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/registration-promo",
-    label: "KM đăng ký",
-    icon: Percent,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/sales-promo",
-    label: "KM doanh số",
-    icon: Percent,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/theo-doi-km",
-    label: "Theo dõi KM",
-    icon: Percent,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/analytics",
-    label: "Báo cáo",
-    icon: ShieldCheck,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/partners",
-    label: "Đối tác",
-    icon: Building2,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/partner-applications",
-    label: "Đơn đăng ký đối tác",
-    icon: ClipboardList,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/doi-soat",
-    label: "Đối soát & trả tiền",
-    icon: Wallet,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/nhom-mon",
-    label: "Nhóm món chung",
-    icon: Layers,
-    adminOnly: true,
-  },
-  {
-    to: "/admin/cai-dat",
-    label: "Cài đặt nền tảng",
-    icon: Settings2,
-    adminOnly: true,
-  },
-  {
-    to: "/enterprise/management",
-    label: "Quản lý thiết bị doanh nghiệp",
-    icon: Building2,
-    adminOnly: true,
-  },
-];
 
 function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
   const router = useRouterState();
@@ -312,7 +230,6 @@ function LayoutInner({ children }: { children: ReactNode }) {
   const brandLogo = tenant?.logoUrl?.trim() || "";
   const brandStyle = tenantBrandStyle(tenant);
 
-  const visibleAdminNav = showAdminNav();
   // Lọc mục nav theo route hiện tại — ví dụ /driver (thiết bị nhân viên
   // thanh toán) không cần thấy "Đặt món"/"Theo dõi đơn"/"Lịch sử đặt đơn".
   const visiblePrimaryNav = PRIMARY_NAV.filter(
@@ -343,8 +260,10 @@ function LayoutInner({ children }: { children: ReactNode }) {
     void navigate({ to: "/" });
   }
 
-  function showAdminNav() {
-    return ADMIN_NAV;
+  // Trang quản trị: khung riêng (menu trái chia nhóm) thay cho thanh menu
+  // ngang của khách — xem components/AdminShell.tsx.
+  if (showAdmin && isAdminShellPath(router.location.pathname)) {
+    return <AdminShell>{children}</AdminShell>;
   }
 
   return (
@@ -425,10 +344,11 @@ function LayoutInner({ children }: { children: ReactNode }) {
               {visiblePrimaryNav.map((item) => (
                 <NavLink key={item.to} item={item} />
               ))}
-              {showAdmin &&
-                visibleAdminNav.map((item) => (
-                  <NavLink key={item.to} item={item} />
-                ))}
+              {showAdmin && (
+                <NavLink
+                  item={{ to: "/admin", label: "Quản trị", icon: ShieldCheck }}
+                />
+              )}
               {showLogout && (
                 <button
                   type="button"
@@ -480,14 +400,12 @@ function LayoutInner({ children }: { children: ReactNode }) {
                 onClick={() => setMobileOpen(false)}
               />
             ))}
-            {showAdmin &&
-              visibleAdminNav.map((item) => (
-                <NavLink
-                  key={item.to}
-                  item={item}
-                  onClick={() => setMobileOpen(false)}
-                />
-              ))}
+            {showAdmin && (
+              <NavLink
+                item={{ to: "/admin", label: "Quản trị", icon: ShieldCheck }}
+                onClick={() => setMobileOpen(false)}
+              />
+            )}
             {showLogout && (
               <button
                 type="button"

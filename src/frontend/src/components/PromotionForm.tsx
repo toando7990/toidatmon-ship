@@ -4,6 +4,7 @@
 // đa 5), active (chỉ hiện khi sửa — tạo mới luôn active=true). UI tiếng Việt.
 
 import type { Promotion } from "@/backend";
+import { FormHeading } from "@/components/promo/FormHeading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -267,6 +268,7 @@ export function PromotionForm({
       className="flex flex-col gap-5"
       data-ocid="promotion.form"
     >
+      <FormHeading>Thông tin</FormHeading>
       <div className="flex flex-col gap-2">
         <Label htmlFor="promo-name">Tên chương trình</Label>
         <Input
@@ -294,6 +296,7 @@ export function PromotionForm({
         </p>
       </div>
 
+      <FormHeading>Thời gian áp dụng</FormHeading>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <Label htmlFor="promo-start-date">Ngày bắt đầu</Label>
@@ -436,6 +439,7 @@ export function PromotionForm({
         ))}
       </div>
 
+      <FormHeading>Giới hạn</FormHeading>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-2">
           <Label htmlFor="promo-daily-limit">
@@ -467,6 +471,7 @@ export function PromotionForm({
         </div>
       </div>
 
+      <FormHeading>Mức giảm theo giá trị đơn</FormHeading>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <Label>Mức khuyến mại theo tổng đơn (tối đa 5)</Label>
@@ -547,6 +552,7 @@ export function PromotionForm({
         ))}
       </div>
 
+      {initial && <FormHeading>Trạng thái &amp; kênh bán</FormHeading>}
       {initial && (
         <>
           <label className="flex cursor-pointer items-center gap-2 text-sm">

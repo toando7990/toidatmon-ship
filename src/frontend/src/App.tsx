@@ -12,7 +12,6 @@ import { TenantProvider, useTenant } from "@/hooks/useTenant";
 import { loadEnterpriseActivation } from "@/lib/enterprise-activation";
 import { resolveTenant, stripPartnerPrefix } from "@/lib/tenant";
 import { AdminPanel } from "@/pages/AdminPanel";
-import { AdminPromoDashboard } from "@/pages/AdminPromoDashboard";
 import { AnalyticsDashboard } from "@/pages/AnalyticsDashboard";
 import { ClaimOrder } from "@/pages/ClaimOrder";
 import CounterOrder from "@/pages/CounterOrder";
@@ -37,10 +36,8 @@ import PlatformHome from "@/pages/PlatformHome";
 import PlatformSettings from "@/pages/PlatformSettings";
 import { PlatformTrackDetail, PlatformTrackList } from "@/pages/PlatformTrack";
 import Profile from "@/pages/Profile";
-import PromotionManager from "@/pages/PromotionManager";
-import RegistrationPromoManager from "@/pages/RegistrationPromoManager";
+import { PromoManagerPage } from "@/pages/PromoManagerPage";
 import RestaurantManager from "@/pages/RestaurantManager";
-import SalesPromoManager from "@/pages/SalesPromoManager";
 import {
   Link,
   Outlet,
@@ -443,7 +440,7 @@ const adminPromotionsRoute = createRoute({
   path: "/admin/promotions",
   component: () => (
     <AdminGate>
-      <PromotionManager />
+      <PromoManagerPage initialKind="gio" />
     </AdminGate>
   ),
 });
@@ -453,7 +450,7 @@ const adminRegistrationPromoRoute = createRoute({
   path: "/admin/registration-promo",
   component: () => (
     <AdminGate>
-      <RegistrationPromoManager />
+      <PromoManagerPage initialKind="dangky" />
     </AdminGate>
   ),
 });
@@ -463,7 +460,7 @@ const adminSalesPromoRoute = createRoute({
   path: "/admin/sales-promo",
   component: () => (
     <AdminGate>
-      <SalesPromoManager />
+      <PromoManagerPage initialKind="doanhso" />
     </AdminGate>
   ),
 });
@@ -483,7 +480,7 @@ const adminPromoDashboardRoute = createRoute({
   path: "/admin/theo-doi-km",
   component: () => (
     <AdminGate>
-      <AdminPromoDashboard />
+      <PromoManagerPage />
     </AdminGate>
   ),
 });
@@ -542,6 +539,18 @@ const adminPayoutsRoute = createRoute({
   component: () => (
     <AdminGate>
       <PayoutsAdmin />
+    </AdminGate>
+  ),
+});
+
+// Quản lý khuyến mại — gộp Khuyến mại / KM đăng ký / KM doanh số / Theo dõi
+// KM vào 1 màn hình (link cũ vẫn mở trang này, lọc sẵn đúng loại).
+const adminPromoManagerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/khuyen-mai",
+  component: () => (
+    <AdminGate>
+      <PromoManagerPage />
     </AdminGate>
   ),
 });
@@ -657,6 +666,7 @@ const router = createRouter({
     adminPlatformSettingsRoute,
     adminPayoutsRoute,
     adminDishGroupsRoute,
+    adminPromoManagerRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
   ]),
