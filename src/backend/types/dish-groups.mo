@@ -21,4 +21,9 @@ module {
   public type AssignmentStore = Map.Map<Text, Text>;
 
   public let NO_GROUP : Text = "-";
+
+  // Giới hạn (hằng số module — KHÔNG đặt trong mixin vì sẽ thành biến stable).
+  public let MAX_GROUPS : Nat = 60;
+  public let MAX_KEYWORDS : Nat = 40;
+  public let MAX_ASSIGNMENTS : Nat = 20_000;
 };

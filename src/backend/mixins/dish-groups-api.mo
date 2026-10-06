@@ -15,10 +15,6 @@ mixin (
   dishGroups : Types.GroupStore,
   dishGroupAssignments : Types.AssignmentStore,
 ) {
-  let MAX_GROUPS : Nat = 60;
-  let MAX_KEYWORDS : Nat = 40;
-  let MAX_ASSIGNMENTS : Nat = 20_000;
-
   func validId(id : Text) : Bool {
     if (id.size() == 0 or id.size() > 40) return false;
     for (c in id.chars()) {
@@ -53,14 +49,14 @@ mixin (
     if (not validId(groupId)) return #err("Mã nhóm không hợp lệ");
     let n = name.trim(#char ' ');
     if (n.size() == 0 or n.size() > 40) return #err("Tên nhóm 1–40 ký tự");
-    if (keywords.size() > MAX_KEYWORDS) return #err("Tối đa 40 từ khoá");
+    if (keywords.size() > Types.MAX_KEYWORDS) return #err("Tối đa 40 từ khoá");
     let kws = keywords.filterMap(
       func(k : Text) : ?Text {
         let t = k.trim(#char ' ');
         if (t.size() == 0 or t.size() > 40) null else ?t;
       }
     );
-    if (dishGroups.get(groupId) == null and dishGroups.size() >= MAX_GROUPS) {
+    if (dishGroups.get(groupId) == null and dishGroups.size() >= Types.MAX_GROUPS) {
       return #err("Tối đa 60 nhóm");
     };
     let g : Types.DishGroup = {
@@ -102,7 +98,7 @@ mixin (
       return #ok(());
     };
     if (groupId != Types.NO_GROUP and dishGroups.get(groupId) == null) return #err("Không tìm thấy nhóm");
-    if (dishGroupAssignments.get(key) == null and dishGroupAssignments.size() >= MAX_ASSIGNMENTS) {
+    if (dishGroupAssignments.get(key) == null and dishGroupAssignments.size() >= Types.MAX_ASSIGNMENTS) {
       return #err("Đã đạt giới hạn gán tay");
     };
     dishGroupAssignments.add(key, groupId);

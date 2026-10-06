@@ -18,13 +18,11 @@ mixin (
   secretState : SecretTypes.SecretState,
   platformParams : PlatformParamsTypes.ParamStore,
 ) {
-  let TICKET_TTL_MS : Nat = 3_600_000; // 1 giờ
-
   public shared ({ caller }) func issueVpsAdminTicket() : async Result.Result<{ principal : Text; expiresAt : Nat; sig : Text }, Text> {
     if (not AccessControl.isAdmin(accessControlState, caller)) return #err("Admin only");
     if (secretState.vpsSecret.size() == 0) return #err("Chưa cài khoá VPS trên canister");
     let nowMs : Nat = (Time.now() / 1_000_000).toNat();
-    let expiresAt = nowMs + TICKET_TTL_MS;
+    let expiresAt = nowMs + 3_600_000; // vé hiệu lực 1 giờ
     let principal = caller.toText();
     let payload = "vps-admin|" # principal # "|" # expiresAt.toText();
     #ok({ principal; expiresAt; sig = HmacLib.hmacSha256(secretState.vpsSecret, payload) });
