@@ -294,7 +294,7 @@ function LayoutInner({ children }: { children: ReactNode }) {
   // Partner branding: when a partner record is loaded its name/logo replace
   // the built-in Bunbohue65 lockup. With no partner (draft/preview domain) the
   // existing look is preserved.
-  const brandName = tenant?.name?.trim() || "Bún Bò Huế 65";
+  const brandName = tenant?.name?.trim() || "Tôi Đặt Món";
   const brandLogo = tenant?.logoUrl?.trim() || "";
   const brandStyle = tenantBrandStyle(tenant);
 

@@ -480,8 +480,8 @@ router.post('/invoice/:orderId/email', async (req, res, next) => {
       });
       await transporter.sendMail({
         from: process.env.SMTP_USER, to: row.receiver_email,
-        subject: `Hóa đơn điện tử Bunbohue65 — đơn ${row.order_id}`,
-        text: `Cảm ơn quý khách đã đặt hàng.\n\nLink tải hóa đơn: ${pdfUrl}\n\nBunbohue65`,
+        subject: `Hóa đơn điện tử — đơn ${row.order_id}`,
+        text: `Cảm ơn quý khách đã đặt hàng.\n\nLink tải hóa đơn: ${pdfUrl}\n\nTôi Đặt Món`,
       });
       db.prepare(`INSERT INTO bkav_logs (order_id, invoice_id, command, created_at) VALUES (?, ?, 'email', ?)`)
         .run(row.order_id, row.invoice_id, Date.now());
@@ -542,8 +542,8 @@ router.post('/order/:id/invoice/email', async (req, res, next) => {
     });
     await transporter.sendMail({
       from: process.env.SMTP_USER, to: row.receiver_email,
-      subject: `Hóa đơn điện tử Bunbohue65 — đơn ${row.order_id}`,
-      text: `Cảm ơn quý khách đã đặt hàng.\n\nLink tải hóa đơn: ${pdf.pdf_url}\n\nBunbohue65`,
+      subject: `Hóa đơn điện tử — đơn ${row.order_id}`,
+      text: `Cảm ơn quý khách đã đặt hàng.\n\nLink tải hóa đơn: ${pdf.pdf_url}\n\nTôi Đặt Món`,
     });
     db.prepare(`INSERT INTO bkav_logs (order_id, invoice_id, command, created_at) VALUES (?, ?, 'email', ?)`)
       .run(row.order_id, row.invoice_id, Date.now());

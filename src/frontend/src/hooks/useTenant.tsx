@@ -13,6 +13,7 @@
 //     or a failed call is treated as "not found" rather than a crash.
 
 import { createActor } from "@/backend";
+import { setCurrentCompanyTenant } from "@/lib/company-info";
 import { type TenantResolution, resolveTenant } from "@/lib/tenant";
 import type { Tenant } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
@@ -124,6 +125,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [actor, isFetching, slug, isDefault]);
+
+  // Phiếu in (thanh toán / hoá đơn) lấy thông tin doanh nghiệp của quán này.
+  useEffect(() => {
+    setCurrentCompanyTenant(tenant);
+  }, [tenant]);
 
   const value = useMemo<TenantContextValue>(
     () => ({

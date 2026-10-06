@@ -32,6 +32,8 @@ import VoucherLib "../lib/voucher";
 import Common "../types/common";
 import DevicesLib "../lib/devices";
 import HmacLib "../lib/hmac";
+import TenantLib "../lib/tenant";
+import TenantTypes "../types/tenant";
 
 import DeviceAuthTypes "../types/device-auth";
 mixin (
@@ -42,6 +44,7 @@ mixin (
   salesBonusIssued : SalesPromoTypes.SalesBonusIssuedStore,
   vouchers : VoucherTypes.VoucherStore,
   secretState : SecretTypes.SecretState,
+  tenants : TenantTypes.TenantStore,
 ) {
   // Enterprise gating helper: true when the caller is an admin OR the device
   // identified by `deviceId` is an active #salesPromoReporting device OF THE
@@ -235,11 +238,12 @@ mixin (
     // lỗi (email chỉ là thông báo phụ, voucher đã phát xong).
     switch (issued) {
       case (#ok(?voucher)) {
-        let subject = "Bạn đã nhận được phiếu giảm giá Khách hàng thân thiết — Bunbohue65";
-        let htmlBody = "<p>Chúc mừng! Đơn hàng của bạn đã đạt mức doanh số của chương trình <b>Khách hàng thân thiết</b>.</p>" #
+        let shop = TenantLib.displayName(tenants, tenantId);
+        let subject = "Bạn đã nhận được phiếu giảm giá Khách hàng thân thiết — " # shop;
+        let htmlBody = "<p>Chúc mừng! Đơn hàng của bạn ở " # shop # " đã đạt mức doanh số của chương trình <b>Khách hàng thân thiết</b>.</p>" #
           "<p>Bạn đã nhận được phiếu giảm giá <b>" # voucher.value.toText() #
           "đ</b> (mã <b>" # voucher.code # "</b>), có hiệu lực đến " #
-          voucher.endDate # ".</p><p>Bunbohue65</p>";
+          voucher.endDate # ".</p><p>" # shop # " · Tôi Đặt Món</p>";
         ignore await EmailClient.sendServiceEmail("no-reply", [email], subject, htmlBody);
       };
       case (#ok(null)) {};

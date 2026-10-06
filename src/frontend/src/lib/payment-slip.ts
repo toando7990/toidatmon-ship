@@ -17,7 +17,7 @@
 // ============================================================
 
 import type { Order } from "@/backend";
-import { COMPANY_INFO } from "@/lib/company-info";
+import { currentCompanyInfo } from "@/lib/company-info";
 import { isPrinterConnected, reconnectPrinter, sendBytes } from "@/lib/printer";
 import ReceiptPrinterEncoder from "@point-of-sale/receipt-printer-encoder";
 
@@ -68,7 +68,7 @@ export function buildPaymentSlipBytes(
   encoder
     .align("center")
     .bold(true)
-    .line(COMPANY_INFO.name)
+    .line(currentCompanyInfo().name)
     .bold(false)
     .newline()
     .bold(true)
@@ -134,7 +134,7 @@ hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
 .total { font-weight: bold; font-size: 14px; }
 .c { text-align: center; }
 </style></head><body>
-<h1>${escapeHtml(COMPANY_INFO.name)}</h1>
+<h1>${escapeHtml(currentCompanyInfo().name)}</h1>
 <h2>PHIẾU THANH TOÁN</h2>
 <div>Mã đơn: ${escapeHtml(order.orderId)}</div>
 <div>Thời gian: ${orderTime(order)}</div>

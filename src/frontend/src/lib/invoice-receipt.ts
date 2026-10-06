@@ -11,7 +11,7 @@
 // hoá đơn, throw để giao diện báo rõ.
 // ============================================================
 
-import { COMPANY_INFO } from "@/lib/company-info";
+import { currentCompanyInfo } from "@/lib/company-info";
 import { getPrintMode, printViaSystem } from "@/lib/payment-slip";
 import {
   isPrinterConnected,
@@ -47,6 +47,7 @@ export function buildInvoiceReceiptHtml(
 ): string {
   const items = invoice.items ?? [];
   const totalQty = items.reduce((sum, it) => sum + it.quantity, 0);
+  const co = currentCompanyInfo();
   const rows = items
     .map(
       (it) =>
@@ -63,8 +64,8 @@ table { width: 100%; border-collapse: collapse; } td, th { padding: 2px 0; verti
 th { text-align: left; } hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
 .total td { font-weight: bold; font-size: 14px; } .link { word-break: break-all; }
 </style></head><body>
-<div class="c"><h1>${esc(COMPANY_INFO.name)}</h1>
-<div>${esc(COMPANY_INFO.address)}</div><div>MST: ${esc(COMPANY_INFO.taxCode)}</div><div>ĐT: ${esc(COMPANY_INFO.phone)}</div></div>
+<div class="c"><h1>${esc(co.name)}</h1>
+${co.address ? `<div>${esc(co.address)}</div>` : ""}${co.taxCode ? `<div>MST: ${esc(co.taxCode)}</div>` : ""}${co.phone ? `<div>ĐT: ${esc(co.phone)}</div>` : ""}</div>
 <h2>PHIẾU THANH TOÁN</h2>
 <div>Mã đơn: ${esc(orderId)}</div>
 <div>Ngày tạo: ${dateTime(invoice.createdAt ?? Date.now())}</div>

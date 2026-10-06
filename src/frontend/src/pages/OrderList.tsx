@@ -43,8 +43,8 @@ export default function OrderList() {
             Theo dõi đơn
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Danh sách đơn hàng của Bún Bò Huế 65. Chọn một đơn để xem chi tiết
-            và hành trình giao hàng.
+            Đơn bạn đã đặt ở quán này. Chọn một đơn để xem chi tiết và hành
+            trình giao hàng.
           </p>
         </div>
         <button

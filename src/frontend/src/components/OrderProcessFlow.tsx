@@ -19,6 +19,7 @@
 // Xây từ bản xem trước HTML đã duyệt — giữ nguyên timing, icon, màu sắc
 // của phần mở rộng.
 
+import { useTenant } from "@/hooks/useTenant";
 import {
   Bike,
   ChevronDown,
@@ -84,6 +85,7 @@ const DELIVERY_SERVICES: {
 
 export function OrderProcessFlow() {
   const [expanded, setExpanded] = useState(false);
+  const shopName = useTenant().tenant?.name ?? "quán";
 
   if (!expanded) {
     return (
@@ -142,7 +144,7 @@ export function OrderProcessFlow() {
         >
           <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
         </svg>
-        <span className="flex-1">Cách Bún Bò Huế 65 giao hàng đến bạn</span>
+        <span className="flex-1">Cách {shopName} giao hàng đến bạn</span>
         <ChevronDown
           className="h-3.5 w-3.5 shrink-0 rotate-180 text-muted-foreground transition-transform"
           aria-hidden="true"

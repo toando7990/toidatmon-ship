@@ -28,7 +28,7 @@ const router = express.Router();
 const NOMINATIM_URL = process.env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org/search';
 // Nominatim yêu cầu User-Agent định danh ứng dụng thật — không phải yêu
 // cầu kỹ thuật tuỳ chọn, vi phạm có thể bị họ chặn IP vĩnh viễn.
-const USER_AGENT = process.env.GEOCODE_USER_AGENT || 'bunbohue65-ship-vps-worker/1.0 (admin restaurant geocoding)';
+const USER_AGENT = process.env.GEOCODE_USER_AGENT || 'toidatmon-vps-worker/1.0 (admin restaurant geocoding)';
 
 router.use(
   '/geocode',

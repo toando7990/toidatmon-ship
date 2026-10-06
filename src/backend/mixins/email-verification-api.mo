@@ -11,6 +11,8 @@ import VoucherLib "../lib/voucher";
 import HmacTypes "../types/hmac";
 import SecretTypes "../types/secret";
 import HmacLib "../lib/hmac";
+import TenantLib "../lib/tenant";
+import TenantTypes "../types/tenant";
 
 // Public API surface for the email OTP verification domain. State is injected
 // from main.mo.
@@ -32,6 +34,7 @@ mixin (
   registrationBonusIssued : RegistrationPromoTypes.RegistrationBonusIssuedStore,
   vouchers : VoucherTypes.VoucherStore,
   secretState : SecretTypes.SecretState,
+  tenants : TenantTypes.TenantStore,
 ) {
   // Generate a 6-digit OTP for `email`, store it (hashed) with a 15-minute
   // expiry, and send the code via the transactional email extension. Sending
@@ -93,11 +96,12 @@ mixin (
         // xong; gửi thất bại không nên làm hỏng cả luồng xác thực chính).
         switch (issued) {
           case (?voucher) {
-            let subject = "Bạn đã nhận được phiếu giảm giá — Bunbohue65";
+            let shop = TenantLib.displayName(tenants, tenantId);
+            let subject = "Bạn đã nhận được phiếu giảm giá — " # shop;
             let htmlBody = "<p>Cảm ơn bạn đã xác thực email!</p>" #
               "<p>Bạn đã nhận được phiếu giảm giá <b>" # voucher.value.toText() #
-              "đ</b> (mã <b>" # voucher.code # "</b>), có hiệu lực đến " #
-              voucher.endDate # ".</p><p>Bunbohue65</p>";
+              "đ</b> (mã <b>" # voucher.code # "</b>) của " # shop # ", có hiệu lực đến " #
+              voucher.endDate # ".</p><p>" # shop # " · Tôi Đặt Món</p>";
             ignore await EmailClient.sendServiceEmail("no-reply", [email], subject, htmlBody);
           };
           case null {};

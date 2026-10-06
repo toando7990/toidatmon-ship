@@ -308,11 +308,11 @@ actor Main {
   include SecretApi(secretState, accessControlState);
   include MenuApi(accessControlState, tenants, devices, deviceAuth, menus, restaurants, restaurantMenuOverrides);
   include MenuSeedApi(accessControlState, devices, deviceAuth, menus);
-  include EmailVerificationApi(otpRecords, registrationPromos, registrationBonusIssued, vouchers, secretState);
+  include EmailVerificationApi(otpRecords, registrationPromos, registrationBonusIssued, vouchers, secretState, tenants);
   include PromotionApi(accessControlState, devices, deviceAuth, kmUsage, kmDailyCount, promotions, secretState, otpRecords, promotionUsed);
   include VoucherApi(vouchers, secretState);
   include RegistrationPromoApi(accessControlState, devices, deviceAuth, registrationPromos, vouchers);
-  include SalesPromoApi(accessControlState, devices, deviceAuth, salesPromos, salesBonusIssued, vouchers, secretState);
+  include SalesPromoApi(accessControlState, devices, deviceAuth, salesPromos, salesBonusIssued, vouchers, secretState, tenants);
   include PromoMaintenanceApi(promotions, registrationPromos, salesPromos, vouchers, secretState);
   include PaymentModeConfigApi(accessControlState, paymentModeState, coreState);
   include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);

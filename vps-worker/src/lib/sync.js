@@ -135,7 +135,7 @@ function startReconciliation(db) {
       }
       if (driftCount > 0) {
         await sendAlert(
-          '[Bunbohue65] Sync drift detected',
+          '[Tôi Đặt Món] Lệch dữ liệu VPS ↔ canister',
           `${driftCount} order(s) lệch state giữa VPS và canister. Kiểm tra logs VPS.`,
         );
       }

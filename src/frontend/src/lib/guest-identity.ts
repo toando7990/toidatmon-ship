@@ -21,7 +21,7 @@ import type { CustomerAddress } from "@/types";
 
 const GUEST_EMAIL_KEY = "bbh_guest_email";
 const GUEST_ADDRESSES_KEY = "bbh_guest_addresses";
-const GUEST_EMAIL_DOMAIN = "khach.bunbohue65.vn";
+const GUEST_EMAIL_DOMAIN = "khach.toidatmon.vn";
 
 function randomToken(): string {
   // 10 ký tự chữ+số, đủ để tránh trùng lặp giữa các trình duyệt trong

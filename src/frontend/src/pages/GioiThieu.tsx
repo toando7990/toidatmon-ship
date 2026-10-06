@@ -9,6 +9,9 @@
 // khi có thêm/bớt chi nhánh, không cần sửa code mỗi lần đổi.
 
 import { useRestaurants } from "@/hooks/useQueries";
+import { useTenant } from "@/hooks/useTenant";
+import { getCompanyInfo } from "@/lib/company-info";
+import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
 import {
   Building2,
   Globe,
@@ -25,12 +28,32 @@ const TERMS: string[] = [
   "Mỗi đơn hàng chỉ áp dụng tối đa 1 phiếu giảm giá. Khuyến mại theo khung giờ và phiếu giảm giá có thể cộng dồn với nhau.",
   "Mỗi chương trình có giới hạn số lượt/ngày (tổng và theo từng khách hàng). Khi đạt giới hạn, khuyến mại tự động ngừng áp dụng cho các đơn tiếp theo trong ngày.",
   "Phiếu giảm giá không quy đổi thành tiền mặt, không áp dụng cho đơn đã đặt trước khi phiếu được phát hành.",
-  "Doanh nghiệp có quyền điều chỉnh hoặc chấm dứt chương trình khuyến mại bất kỳ lúc nào mà không cần báo trước, đối với các chương trình chưa có khách hàng sử dụng.",
-  "Quyết định của Doanh nghiệp về các tranh chấp liên quan đến khuyến mại là quyết định cuối cùng.",
+  "Quán có quyền điều chỉnh hoặc chấm dứt chương trình khuyến mại bất kỳ lúc nào mà không cần báo trước, đối với các chương trình chưa có khách hàng sử dụng.",
+  "Quyết định của quán về các tranh chấp liên quan đến khuyến mại là quyết định cuối cùng.",
 ];
 
 export default function GioiThieu() {
   const { data: restaurants, isLoading: restaurantsLoading } = useRestaurants();
+  const { tenant } = useTenant();
+  const co = getCompanyInfo(tenant);
+  const site = tenant ? `${tenant.slug}.${PARTNER_ROOT_DOMAIN}` : "";
+  const infoRows = [
+    { icon: Building2, label: "Đơn vị", value: co.name },
+    { icon: ScrollText, label: "Mã số thuế", value: co.taxCode },
+    { icon: MapPin, label: "Trụ sở", value: co.address },
+    {
+      icon: Phone,
+      label: "Điện thoại",
+      value: co.phone,
+      href: co.phone ? `tel:${co.phone.replace(/[^\d+]/g, "")}` : undefined,
+    },
+    {
+      icon: Globe,
+      label: "Đặt món online",
+      value: site,
+      href: site ? `https://${site}` : undefined,
+    },
+  ].filter((r) => r.value);
   const visibleRestaurants = (restaurants ?? []).filter((r) => r.visible);
 
   return (
@@ -46,86 +69,49 @@ export default function GioiThieu() {
       </header>
 
       <div className="rounded-xl border border-border bg-gradient-to-br from-primary/5 to-accent/5 p-5">
-        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-accent">
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-primary">
           Về chúng tôi
         </p>
         <h2 className="mb-2 font-display text-lg font-bold leading-snug text-foreground">
-          Hương vị Huế truyền thống, gói trọn trong từng tô bún
+          {tenant?.name ?? "Quán của chúng tôi"}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Bún Bò Huế 65 mang đến hương vị đậm đà, chuẩn vị cố đô — từ nước dùng
-          ninh xương nhiều giờ đến từng loại rau thơm được tuyển chọn kỹ lưỡng
-          mỗi ngày.
+          Đặt món online qua Tôi Đặt Món: chọn món, tự gọi tài xế hoặc ghé quán
+          nhận món, thanh toán chuyển khoản QR.
         </p>
       </div>
 
-      {/* Thông tin doanh nghiệp */}
+      {/* Thông tin doanh nghiệp — của đúng quán (khai ở trang Đối tác) */}
       <div className="mt-6" data-ocid="gioi_thieu.business_info">
         <h3 className="mb-3 flex items-center gap-1.5 font-display text-base font-bold text-foreground">
           <Building2 className="h-4 w-4 text-primary" aria-hidden="true" />
           Thông tin doanh nghiệp
         </h3>
         <div className="divide-y divide-border rounded-xl border border-border bg-card">
-          <div className="flex items-start gap-3 px-4 py-3 text-sm">
-            <Building2
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="w-20 shrink-0 text-muted-foreground">Đơn vị</span>
-            <span className="font-medium text-foreground">
-              Công ty TNHH Thực phẩm Gia Khánh (Gia Khánh Foods)
-            </span>
-          </div>
-          <div className="flex items-start gap-3 px-4 py-3 text-sm">
-            <ScrollText
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="w-20 shrink-0 text-muted-foreground">
-              Mã số thuế
-            </span>
-            <span className="font-medium text-foreground">0111063397</span>
-          </div>
-          <div className="flex items-start gap-3 px-4 py-3 text-sm">
-            <MapPin
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="w-20 shrink-0 text-muted-foreground">Trụ sở</span>
-            <span className="font-medium text-foreground">
-              69 đường Láng, P. Đống Đa, Tp. Hà Nội
-            </span>
-          </div>
-          <div className="flex items-start gap-3 px-4 py-3 text-sm">
-            <Phone
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="w-20 shrink-0 text-muted-foreground">Hotline</span>
-            <a
-              href="tel:0838656865"
-              className="font-medium text-primary underline-offset-2 hover:underline"
+          {infoRows.map((r) => (
+            <div
+              key={r.label}
+              className="flex items-start gap-3 px-4 py-3 text-sm"
             >
-              0838 656 865
-            </a>
-          </div>
-          <div className="flex items-start gap-3 px-4 py-3 text-sm">
-            <Globe
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <span className="w-20 shrink-0 text-muted-foreground">
-              Đặt món online
-            </span>
-            <a
-              href="https://www.bunbohue65.com"
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-primary underline-offset-2 hover:underline"
-            >
-              https://www.bunbohue65.com
-            </a>
-          </div>
+              <r.icon
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <span className="w-24 shrink-0 text-muted-foreground">
+                {r.label}
+              </span>
+              {r.href ? (
+                <a
+                  href={r.href}
+                  className="break-all font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  {r.value}
+                </a>
+              ) : (
+                <span className="font-medium text-foreground">{r.value}</span>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 

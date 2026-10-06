@@ -17,6 +17,7 @@
 // cầu nhập mã — xem ghi chú trong routes/qr.js (VPS).
 
 import { type Order, PaymentStatus } from "@/backend";
+import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import { getOrderStatus } from "@/lib/canister";
 import { printInvoiceReceipt } from "@/lib/invoice-receipt";
@@ -76,6 +77,8 @@ export function QRDisplay({
   initialPickupCode,
 }: QRDisplayProps) {
   const { actor } = useCanister();
+  // Số điện thoại của quán (khai ở trang Đối tác) — không có thì ẩn nút gọi.
+  const hotline = useTenant().tenant?.phone?.trim() ?? "";
   const [status, setStatus] = useState<PaymentStatus>(order.paymentStatus);
   const [polling, setPolling] = useState(true);
   const [qrState, setQrState] = useState<QrState>({ kind: "needCode" });
@@ -556,14 +559,16 @@ export function QRDisplay({
               Thử lại
             </button>
 
-            <a
-              href="tel:19006565"
-              data-ocid="qr.hotline_link"
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-input bg-background px-4 py-3 text-sm font-semibold text-foreground transition-smooth hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <Phone className="h-4 w-4" aria-hidden="true" />
-              Gọi tổng đài: 1900 6565
-            </a>
+            {hotline && (
+              <a
+                href={`tel:${hotline.replace(/[^\d+]/g, "")}`}
+                data-ocid="qr.hotline_link"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-input bg-background px-4 py-3 text-sm font-semibold text-foreground transition-smooth hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                Gọi quán: {hotline}
+              </a>
+            )}
 
             <p className="text-center text-xs text-muted-foreground">
               Đơn hàng: {order.orderId}

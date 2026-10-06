@@ -127,6 +127,14 @@ module {
     tenants.get(tenantId);
   };
 
+  /// Tên hiển thị của đối tác (email, thông báo). Không tìm thấy → "Tôi Đặt Món".
+  public func displayName(tenants : TenantStore, tenantId : TenantId) : Text {
+    switch (tenants.get(tenantId)) {
+      case (?t) { if (t.name.size() > 0) t.name else "Tôi Đặt Món" };
+      case null { "Tôi Đặt Món" };
+    };
+  };
+
   /// Lấy đối tác theo slug (đã chuẩn hoá chữ thường). Dùng để phân giải đối
   /// tác từ hostname subdomain hoặc tiền tố đường dẫn /<slug>.
   public func getTenantBySlug(tenants : TenantStore, slug : Text) : ?Tenant {

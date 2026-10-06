@@ -20,7 +20,7 @@
 // (text, bảng, QR code, cắt giấy...) — phần này không liên quan tới
 // bước kết nối, an toàn khi tách riêng.
 
-import { COMPANY_INFO } from "@/lib/company-info";
+import { currentCompanyInfo } from "@/lib/company-info";
 import type { InvoiceResponse } from "@/types";
 import ReceiptPrinterEncoder from "@point-of-sale/receipt-printer-encoder";
 
@@ -212,15 +212,13 @@ export function buildReceiptBytes(input: PrintReceiptInput): Uint8Array {
   });
 
   encoder.initialize().codepage("windows1258");
+  const company = currentCompanyInfo();
 
+  encoder.align("center").bold(true).line(company.name).bold(false);
+  if (company.address) encoder.line(company.address);
+  if (company.taxCode) encoder.line(`MST: ${company.taxCode}`);
+  if (company.phone) encoder.line(`ĐT: ${company.phone}`);
   encoder
-    .align("center")
-    .bold(true)
-    .line(COMPANY_INFO.name)
-    .bold(false)
-    .line(COMPANY_INFO.address)
-    .line(`MST: ${COMPANY_INFO.taxCode}`)
-    .line(`ĐT: ${COMPANY_INFO.phone}`)
     .newline()
     .bold(true)
     .line("PHIẾU THANH TOÁN")
