@@ -122,9 +122,9 @@ function getTingeeTimestamp() {
 // Signature Tingee: HMAC_SHA512(timestamp + ':' + body, secret) → hex lowercase.
 // Body là JSON string RAW (đúng chuỗi gửi đi, không reformat).
 // ------------------------------------------------------------
-function signTingeeRequest(timestamp, body) {
+function signTingeeRequest(timestamp, body, secret = CLIENT_SECRET) {
   return crypto
-    .createHmac('sha512', CLIENT_SECRET)
+    .createHmac('sha512', secret)
     .update(`${timestamp}:${body}`)
     .digest('hex');
 }
@@ -132,13 +132,15 @@ function signTingeeRequest(timestamp, body) {
 // ------------------------------------------------------------
 // Build headers cho request: dùng CÙNG một timestamp cho cả header và signature.
 // ------------------------------------------------------------
-function buildHeaders(body) {
+// creds: { clientId, secret } của tài khoản Tingee RIÊNG của đối tác (đơn tại
+// quầy, tiền về thẳng quán). Không truyền = tài khoản Tingee của Tôi Đặt Món.
+function buildHeaders(body, creds) {
   const timestamp = getTingeeTimestamp();
   return {
     accept: 'application/json',
     'Content-Type': 'application/json',
-    'x-client-id': CLIENT_ID,
-    'x-signature': signTingeeRequest(timestamp, body),
+    'x-client-id': creds ? creds.clientId : CLIENT_ID,
+    'x-signature': signTingeeRequest(timestamp, body, creds ? creds.secret : CLIENT_SECRET),
     'x-request-timestamp': timestamp,
   };
 }
@@ -146,9 +148,9 @@ function buildHeaders(body) {
 // ------------------------------------------------------------
 // Helper: POST với body raw string, log request/response.
 // ------------------------------------------------------------
-async function postSigned(endpoint, payload, action) {
+async function postSigned(endpoint, payload, action, creds) {
   const body = JSON.stringify(payload);
-  const headers = buildHeaders(body);
+  const headers = buildHeaders(body, creds);
 
   console.log(`[tingee] ${action} → ${endpoint}`);
   let res;
@@ -206,7 +208,7 @@ async function generateDynamicQr(params = {}) {
   if (params.extraInfo !== undefined) payload.extraInfo = params.extraInfo;
   if (params.merchantId !== undefined) payload.merchantId = params.merchantId;
 
-  const data = await postSigned('/v1/generate-dynamic-qr', payload, 'generateDynamicQr');
+  const data = await postSigned('/v1/generate-dynamic-qr', payload, 'generateDynamicQr', params.creds);
 
   if (data.code !== '00') {
     throw new TingeeError(data.code, data.message || 'generateDynamicQr failed');
@@ -227,11 +229,11 @@ async function generateDynamicQr(params = {}) {
 // Trả { code, message, data, raw }.
 // Throw Error khi code !== '00'.
 // ------------------------------------------------------------
-async function deleteDynamicQr({ qrAccount, billId, merchantId } = {}) {
+async function deleteDynamicQr({ qrAccount, billId, merchantId, creds } = {}) {
   const payload = { qrAccount, billId };
   if (merchantId !== undefined) payload.merchantId = merchantId;
 
-  const data = await postSigned('/v1/delete-dynamic-qr', payload, 'deleteDynamicQr');
+  const data = await postSigned('/v1/delete-dynamic-qr', payload, 'deleteDynamicQr', creds);
 
   if (data.code !== '00') {
     throw new TingeeError(data.code, data.message || 'deleteDynamicQr failed');
@@ -251,11 +253,11 @@ async function deleteDynamicQr({ qrAccount, billId, merchantId } = {}) {
 // Trả { code, message, data: { billInfo, transactionInfos }, raw }.
 // Throw Error khi code !== '00'.
 // ------------------------------------------------------------
-async function getDynamicQrStatus({ qrAccount, billId, merchantId } = {}) {
+async function getDynamicQrStatus({ qrAccount, billId, merchantId, creds } = {}) {
   const payload = { qrAccount, billId };
   if (merchantId !== undefined) payload.merchantId = merchantId;
 
-  const data = await postSigned('/v1/get-status-dynamic-qr', payload, 'getDynamicQrStatus');
+  const data = await postSigned('/v1/get-status-dynamic-qr', payload, 'getDynamicQrStatus', creds);
 
   if (data.code !== '00') {
     throw new TingeeError(data.code, data.message || 'getDynamicQrStatus failed');
@@ -273,16 +275,7 @@ async function getDynamicQrStatus({ qrAccount, billId, merchantId } = {}) {
   };
 }
 
-// Tham chiếu QR của 1 đơn (row SQLite) — kèm merchantId khi QR tạo cho
-// tài khoản riêng của đối tác (đơn tại quầy, tiền về thẳng quán).
-function qrRef(row) {
-  const ref = { qrAccount: row.tingee_qr_account, billId: row.tingee_bill_id };
-  if (row.tingee_merchant_id) ref.merchantId = row.tingee_merchant_id;
-  return ref;
-}
-
 module.exports = {
-  qrRef,
   BASE_URL,
   signTingeeRequest,
   getTingeeTimestamp,

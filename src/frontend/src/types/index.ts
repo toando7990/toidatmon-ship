@@ -151,6 +151,9 @@ export type RequestQrResponse =
       billId: string;
       expireAt: number;
       reused: boolean;
+      /** 'auto' = Tingee tự xác nhận; 'photo' = QR ngân hàng thường, xác
+       * nhận bằng ảnh chuyển khoản (quán chưa có Tingee). */
+      confirm?: "auto" | "photo";
     }
   | { ok: false; retryable: boolean; message: string };
 

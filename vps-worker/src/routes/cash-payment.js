@@ -27,6 +27,7 @@
 const express = require('express');
 const canister = require('../lib/canister');
 const tingee = require('../lib/tingee');
+const partnerTingee = require('../lib/partner-tingee');
 const { normalizePickupCode } = require('../lib/pickup-code');
 const { rateLimit } = require('../middleware/rate-limit');
 
@@ -52,7 +53,7 @@ async function markPaidCash(db, order) {
     .run(Date.now(), order.order_id);
   if (order.tingee_qr_account && order.tingee_bill_id) {
     try {
-      await tingee.deleteDynamicQr(tingee.qrRef(order));
+      await tingee.deleteDynamicQr(partnerTingee.refFor(db, order));
     } catch (e) {
       console.warn('[cash-payment] deleteDynamicQr failed:', e.message);
     }
@@ -62,7 +63,7 @@ async function markPaidCash(db, order) {
 function loadOrderForCashConfirm(db, orderId) {
   return db.prepare(
     `SELECT order_id, tenant_id, is_counter, restaurant_id, amount, payment_status, booking_status,
-            pickup_code, tingee_qr_account, tingee_bill_id, tingee_merchant_id
+            pickup_code, tingee_qr_account, tingee_bill_id, tingee_merchant_id, tenant_id, payment_destination
      FROM orders WHERE order_id = ?`,
   ).get(orderId);
 }

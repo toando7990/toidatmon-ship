@@ -1127,7 +1127,10 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
       </Card>
 
       <FeesCard params={ctx.params} />
-      <CounterAccountCard tenantId={ctx.tenantId} />
+      <CounterAccountCard
+        tenantId={ctx.tenantId}
+        deviceId={ctx.device.deviceId}
+      />
       <AnasystemCard deviceId={ctx.device.deviceId} />
 
       <Card>

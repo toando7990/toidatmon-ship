@@ -144,6 +144,16 @@ EOF
 chmod 755 /usr/local/bin/toidatmon-backup
 echo "30 2 * * * root /usr/local/bin/toidatmon-backup" > /etc/cron.d/toidatmon-backup
 
+# ---------- Khoá mã hoá bí mật của đối tác (Tingee riêng từng quán) ----------
+# Tự sinh 1 lần nếu còn trống. KHÔNG đổi sau khi đã có quán nhập Tingee.
+if grep -qE '^PARTNER_SECRETS_KEY=$' "$ENV_FILE"; then
+  sed -i "s/^PARTNER_SECRETS_KEY=$/PARTNER_SECRETS_KEY=$(openssl rand -hex 32)/" "$ENV_FILE"
+  log "Đã sinh PARTNER_SECRETS_KEY (sao lưu file .env cẩn thận)"
+elif ! grep -qE '^PARTNER_SECRETS_KEY=' "$ENV_FILE"; then
+  echo "PARTNER_SECRETS_KEY=$(openssl rand -hex 32)" >> "$ENV_FILE"
+  log "Đã thêm PARTNER_SECRETS_KEY vào .env"
+fi
+
 # ---------- Khởi động app ----------
 log "Khởi động app"
 MISSING="$(grep -E '^(VPS_SECRET|CANISTER_ID|TINGEE_CLIENT_ID|TINGEE_SECRET)=$' "$ENV_FILE" | cut -d= -f1 | tr '\n' ' ' || true)"

@@ -65,7 +65,7 @@ Trả về đơn theo thứ tự **thời điểm cập nhật** tăng dần:
 - `amount` = `goodsAmount` − `kmDiscountAmount` − `voucherDiscountAmount` (+ phí ship nếu có) — số khách thực trả.
 - `channel`: `counter` (bán tại quầy) hoặc `online`.
 - `paymentMethod`: `transfer` (chuyển khoản/QR) hoặc `cash`.
-- `paymentDestination`: `partner` = tiền đã về thẳng tài khoản quán (đơn tại quầy);
+- `paymentDestination`: `partner` = tiền đã về thẳng tài khoản quán (đơn tại quầy: Tingee của quán, QR ngân hàng xác nhận bằng ảnh, hoặc tiền mặt);
   `platform` = Tôi Đặt Món thu hộ, đối soát trả quán sau.
 - Đơn tại quầy không có tên/SĐT khách. `taxCode` có khi khách yêu cầu hoá đơn công ty.
 

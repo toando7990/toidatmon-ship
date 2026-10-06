@@ -707,3 +707,70 @@ export async function revokeAnasystemKey(
 export function currentVpsUrl(): string {
   return getVpsUrl();
 }
+
+// ---- Tingee riêng của quán (máy Chủ quán) ----
+// Đơn tại quầy: tiền về thẳng tài khoản quán. Có Tingee → QR tự xác nhận;
+// chưa có → QR ngân hàng thường, xác nhận bằng ảnh chuyển khoản hoặc tiền mặt.
+
+export interface PartnerTingeeInfo {
+  ok: boolean;
+  configured: boolean;
+  enabled?: boolean;
+  clientId?: string;
+  vaAccountNumber?: string;
+  bankBin?: string;
+  merchantId?: string;
+  updatedAt?: number;
+  webhookUrl?: string;
+  canStoreSecret?: boolean;
+}
+
+export async function getPartnerTingee(
+  deviceId: string,
+): Promise<PartnerTingeeInfo> {
+  return vpsFetch<PartnerTingeeInfo>({
+    method: "GET",
+    path: `/partner-tingee?deviceId=${encodeURIComponent(credentialFor(deviceId))}`,
+  });
+}
+
+export async function savePartnerTingee(
+  deviceId: string,
+  input: {
+    clientId: string;
+    secret: string;
+    vaAccountNumber: string;
+    bankBin: string;
+    merchantId: string;
+    enabled: boolean;
+  },
+): Promise<PartnerTingeeInfo> {
+  return vpsFetch<PartnerTingeeInfo>({
+    method: "POST",
+    path: "/partner-tingee",
+    body: { deviceId: credentialFor(deviceId), ...input },
+  });
+}
+
+export async function removePartnerTingee(
+  deviceId: string,
+): Promise<PartnerTingeeInfo> {
+  return vpsFetch<PartnerTingeeInfo>({
+    method: "POST",
+    path: "/partner-tingee/remove",
+    body: { deviceId: credentialFor(deviceId) },
+  });
+}
+
+/** 'tingee' = QR tự xác nhận; 'bank' = QR ngân hàng, xác nhận bằng ảnh; 'none' = chỉ tiền mặt. */
+export type CounterPaymentMode = "tingee" | "bank" | "none";
+
+export async function getCounterPaymentMode(
+  tenantId: string,
+): Promise<CounterPaymentMode> {
+  const r = await vpsFetch<{ ok: boolean; mode: CounterPaymentMode }>({
+    method: "GET",
+    path: `/counter-payment-mode/${encodeURIComponent(tenantId)}`,
+  });
+  return r.mode;
+}

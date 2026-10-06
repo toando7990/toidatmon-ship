@@ -19,6 +19,8 @@
 
 const express = require('express');
 const tingee = require('../lib/tingee');
+const partnerTingee = require('../lib/partner-tingee');
+const { buildVietQr } = require('../lib/vietqr');
 const canister = require('../lib/canister');
 const { normalizePickupCode } = require('../lib/pickup-code');
 const { rateLimit } = require('../middleware/rate-limit');
@@ -128,37 +130,70 @@ router.post('/order/:id/qr', async (req, res, next) => {
         billId: row.tingee_bill_id || '',
         expireAt: Number(row.expire_at),
         reused: true,
+        confirm: row.tingee_bill_id ? 'auto' : 'photo',
       });
     }
 
-    // Đơn TẠI QUẦY: tiền về thẳng tài khoản của quán (admin cài ở trang Đối
-    // tác). Quán chưa cài tài khoản → không tạo QR (thu tiền mặt), KHÔNG
-    // chuyển sang tài khoản Tôi Đặt Món. Đơn online: tài khoản Tôi Đặt Món.
+    // Đơn TẠI QUẦY: tiền về thẳng quán.
+    //   1. Quán có Tingee riêng → QR động trên Tingee của quán, tự xác nhận.
+    //   2. Chưa có Tingee nhưng có tài khoản ngân hàng (admin cài) → VietQR
+    //      thường có sẵn số tiền; xác nhận bằng ảnh chuyển khoản hoặc tiền mặt.
+    //   3. Chưa có gì → không tạo QR (thu tiền mặt).
+    // Đơn online: Tingee của Tôi Đặt Món.
     const qrParams = { amount: Number(row.amount) || 0, expireInMinute: QR_EXPIRE_MINUTES };
     let destination = 'platform';
     let merchantId = '';
     if (row.is_counter) {
-      let acc = null;
-      try {
-        acc = await canister.getCounterPaymentAccount(row.tenant_id);
-      } catch (e) {
-        console.error('[qr] getCounterPaymentAccount lỗi:', orderId, e.message);
-        return res.status(502).json({ ok: false, retryable: true, message: 'Không đọc được tài khoản nhận tiền của quán, vui lòng thử lại.' });
-      }
-      if (!acc || !acc.enabled || !acc.vaAccountNumber) {
-        return res.status(400).json({
-          ok: false,
-          retryable: false,
-          message: 'Quán chưa cài tài khoản nhận tiền chuyển khoản. Vui lòng thu tiền mặt.',
+      destination = 'partner';
+      const cfg = partnerTingee.getConfig(db, row.tenant_id);
+      if (cfg) {
+        qrParams.creds = { clientId: cfg.clientId, secret: cfg.secret };
+        qrParams.vaAccountNumber = cfg.vaAccountNumber;
+        qrParams.bankBin = cfg.bankBin;
+        if (cfg.merchantId) {
+          qrParams.merchantId = cfg.merchantId;
+          merchantId = cfg.merchantId;
+        }
+      } else {
+        let acc = null;
+        try {
+          acc = await canister.getCounterPaymentAccount(row.tenant_id);
+        } catch (e) {
+          console.error('[qr] getCounterPaymentAccount lỗi:', orderId, e.message);
+          return res.status(502).json({ ok: false, retryable: true, message: 'Không đọc được tài khoản nhận tiền của quán, vui lòng thử lại.' });
+        }
+        if (!acc || !acc.enabled || !acc.vaAccountNumber || !acc.bankBin) {
+          return res.status(400).json({
+            ok: false,
+            retryable: false,
+            message: 'Quán chưa cài tài khoản nhận tiền chuyển khoản. Vui lòng thu tiền mặt.',
+          });
+        }
+        const qrCode = buildVietQr({
+          bankBin: acc.bankBin,
+          accountNumber: acc.vaAccountNumber,
+          amount: row.amount,
+          info: `TDM ${orderId.replace(/[^A-Za-z0-9]/g, '').slice(-5).toUpperCase()}`,
+        });
+        const expireAtStatic = nowSec + 24 * 3600;
+        // tingee_qr_account = số tài khoản quán (để đối chiếu ảnh chuyển
+        // khoản); tingee_bill_id rỗng → không có Tingee nào để hỏi/xoá.
+        db.prepare(
+          `UPDATE orders SET tingee_qr_id = '', tingee_qr_account = ?, tingee_bill_id = '',
+             tingee_qr_code = ?, expire_at = ?, updated_at = ?,
+             qr_first_created_at = COALESCE(qr_first_created_at, ?),
+             tingee_merchant_id = '', payment_destination = 'partner'
+           WHERE order_id = ?`,
+        ).run(acc.vaAccountNumber, qrCode, expireAtStatic, Date.now(), Date.now(), orderId);
+        return res.json({
+          ok: true,
+          qrCode,
+          billId: '',
+          expireAt: expireAtStatic,
+          reused: false,
+          confirm: 'photo',
         });
       }
-      qrParams.vaAccountNumber = acc.vaAccountNumber;
-      qrParams.bankBin = acc.bankBin;
-      if (acc.merchantId) {
-        qrParams.merchantId = acc.merchantId;
-        merchantId = acc.merchantId;
-      }
-      destination = 'partner';
     }
 
     // QR hết hạn hoặc chưa từng tạo → tạo QR mới.
@@ -230,6 +265,7 @@ router.post('/order/:id/qr', async (req, res, next) => {
       billId: qr.billId,
       expireAt,
       reused: false,
+      confirm: 'auto',
       pendingSync: !canisterOk,
     });
   } catch (e) {

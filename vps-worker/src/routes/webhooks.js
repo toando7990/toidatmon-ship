@@ -37,7 +37,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const cron = require('node-cron');
-const tingee = require('../lib/tingee'); // { generateDynamicQr, deleteDynamicQr, getDynamicQrStatus, BASE_URL }
+const tingee = require('../lib/tingee');
+const partnerTingee = require('../lib/partner-tingee');
 const canister = require('../lib/canister');
 const { rateLimit } = require('../middleware/rate-limit');
 const shutdown = require('../lib/shutdown');
@@ -106,6 +107,23 @@ function verifyTingeeWebhook(req, res, next) {
   next();
 }
 
+// Webhook Tingee RIÊNG của từng quán (đơn tại quầy, tiền về thẳng quán):
+// quán dán URL /webhook/tingee/<tenantId> vào Tingee của quán; chữ ký kiểm
+// bằng secret Tingee của chính quán đó.
+function verifyPartnerTingeeWebhook(req, res, next) {
+  const cfg = partnerTingee.getConfig(req.app.locals.db, String(req.params.tenantId || ''));
+  if (!cfg) return res.status(404).json({ error: 'partner tingee not configured' });
+  const sig = req.get('x-signature');
+  const ts = req.get('x-request-timestamp');
+  if (!sig || !ts) return res.status(401).json({ error: 'missing x-signature or x-request-timestamp' });
+  const expected = crypto
+    .createHmac('sha512', cfg.secret)
+    .update(`${ts}:${req.rawBody || ''}`, 'utf8')
+    .digest('hex');
+  if (!safeEqualHex(sig, expected)) return res.status(401).json({ error: 'invalid signature' });
+  next();
+}
+
 // Tìm giá trị extraInfo (orderId) trong additionalData — tài liệu Tingee
 // chỉ mô tả "array, chứa thông tin bổ sung (ví dụ billId cho QR động)",
 // KHÔNG có ví dụ schema đầy đủ cho từng phần tử. Thử các cấu trúc phổ
@@ -148,7 +166,16 @@ function extractQrAccount(body) {
 //   accountNumber, vaAccountNumber, transactionDate, type,
 //   additionalData: "[...]" (chuỗi JSON, có billId+qrAccount cho QR động,
 //   rỗng "[]" cho giao dịch vào tài khoản ảo cố định) }
-router.post('/webhook/tingee', verifyTingeeWebhook, async (req, res, next) => {
+router.post('/webhook/tingee', verifyTingeeWebhook, (req, res, next) =>
+  handleTingeeWebhook(req, res, next, null),
+);
+router.post('/webhook/tingee/:tenantId', verifyPartnerTingeeWebhook, (req, res, next) =>
+  handleTingeeWebhook(req, res, next, String(req.params.tenantId)),
+);
+
+// tenantId = null: webhook của Tingee Tôi Đặt Món (đơn tiền về nền tảng).
+// tenantId = quán: webhook Tingee riêng của quán (chỉ đơn tiền về quán đó).
+async function handleTingeeWebhook(req, res, next, tenantId) {
   try {
     const db = req.app.locals.db;
     const body = req.body || {};
@@ -177,7 +204,15 @@ router.post('/webhook/tingee', verifyTingeeWebhook, async (req, res, next) => {
       return res.json({ code: '00', message: 'Success' });
     }
 
-    const order = db.prepare(`SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id, tingee_merchant_id FROM orders WHERE tingee_qr_account = ?`).get(qrAccount);
+    const order = tenantId
+      ? db.prepare(
+          `SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id, tingee_merchant_id, tenant_id, payment_destination
+           FROM orders WHERE tingee_qr_account = ? AND tingee_bill_id != '' AND tenant_id = ? AND payment_destination = 'partner'`,
+        ).get(qrAccount, tenantId)
+      : db.prepare(
+          `SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id, tingee_merchant_id, tenant_id, payment_destination
+           FROM orders WHERE tingee_qr_account = ? AND tingee_bill_id != '' AND payment_destination = 'platform'`,
+        ).get(qrAccount);
     if (!order) {
       console.warn('[webhook/tingee] order not found for qrAccount:', qrAccount, 'transactionCode:', transactionCode);
       return res.json({ code: '00', message: 'Success' });
@@ -210,7 +245,7 @@ router.post('/webhook/tingee', verifyTingeeWebhook, async (req, res, next) => {
       .run(Date.now(), orderId);
     if (order.tingee_qr_account && order.tingee_bill_id) {
       try {
-        await tingee.deleteDynamicQr(tingee.qrRef(order));
+        await tingee.deleteDynamicQr(partnerTingee.refFor(db, order));
       } catch (e) {
         console.warn('[webhook/tingee] deleteDynamicQr failed:', e.message);
       }
@@ -221,7 +256,7 @@ router.post('/webhook/tingee', verifyTingeeWebhook, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
-});
+}
 
 // ============================================================
 // Backup poll (cron) — bù webhook bị miss vì bất kỳ lý do gì (mạng,
@@ -251,7 +286,7 @@ function startTingeePoll(db) {
       // (expire_at > now). Đơn có QR hết hạn (expire_at <= now) sẽ được
       // startUnpaidExpiry (sync.js) xử lý markPaymentExpired.
       const rows = db.prepare(
-        `SELECT order_id, amount, tingee_qr_account, tingee_bill_id, tingee_merchant_id, expire_at
+        `SELECT order_id, amount, tingee_qr_account, tingee_bill_id, tingee_merchant_id, tenant_id, payment_destination, expire_at
          FROM orders
          WHERE payment_status = 'unpaid'
            AND tingee_qr_account != ''
@@ -265,7 +300,7 @@ function startTingeePoll(db) {
         const until = backoffUntil.get(row.order_id);
         if (until !== undefined && now < until) continue;
         try {
-          const data = await tingee.getDynamicQrStatus(tingee.qrRef(row));
+          const data = await tingee.getDynamicQrStatus(partnerTingee.refFor(db, row));
           // Log mọi kết quả get-status-dynamic-qr vào tingee_logs (action 'get_status').
           db.prepare(
             `INSERT INTO tingee_logs (order_id, tingee_qr_id, action, response_body, status_code, created_at)
@@ -286,7 +321,7 @@ function startTingeePoll(db) {
             db.prepare(`UPDATE orders SET payment_status = 'paid', payment_method = 'transfer', updated_at = ? WHERE order_id = ?`)
               .run(Date.now(), row.order_id);
             try {
-              await tingee.deleteDynamicQr(tingee.qrRef(row));
+              await tingee.deleteDynamicQr(partnerTingee.refFor(db, row));
             } catch (e) { console.warn('[poll/tingee] deleteDynamicQr failed:', e.message); }
             console.log('[poll/tingee] xác nhận thanh toán (dự phòng):', row.order_id);
           }

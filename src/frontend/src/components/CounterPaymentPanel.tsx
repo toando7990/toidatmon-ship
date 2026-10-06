@@ -1,6 +1,7 @@
-// CounterPaymentPanel — admin cài tài khoản nhận tiền QR của ĐƠN TẠI QUẦY cho
-// từng quán. Khách quét QR tại quầy → tiền về thẳng tài khoản quán (qua
-// Tingee). Quán chưa cài thì máy quầy chỉ thu tiền mặt.
+// CounterPaymentPanel — admin cài TÀI KHOẢN NGÂN HÀNG của quán cho QR tại quầy
+// khi quán chưa có Tingee riêng: VietQR thường (tiền về thẳng quán), nhân viên
+// xác nhận bằng ảnh chuyển khoản. Quán có Tingee riêng (Chủ quán cài ở
+// /quan-ly) thì VPS dùng Tingee, tự xác nhận. Chưa có gì → chỉ tiền mặt.
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,7 +154,7 @@ function Row({ tenant }: { tenant: Tenant }) {
             </div>
           )}
           <div className="space-y-1">
-            <Label htmlFor={`${id}-va`}>Số tài khoản ảo (VA) Tingee</Label>
+            <Label htmlFor={`${id}-va`}>Số tài khoản ngân hàng của quán</Label>
             <Input
               id={`${id}-va`}
               value={form.vaAccountNumber}
@@ -172,22 +173,13 @@ function Row({ tenant }: { tenant: Tenant }) {
               }
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor={`${id}-mid`}>Merchant ID Tingee của quán</Label>
-            <Input
-              id={`${id}-mid`}
-              value={form.merchantId}
-              onChange={(e) => setForm({ ...form, merchantId: e.target.value })}
-              placeholder="Để trống nếu dùng merchant chính"
-            />
-          </div>
           <label className="flex items-center gap-2 self-end text-sm">
             <input
               type="checkbox"
               checked={form.enabled}
               onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
             />
-            Bật QR chuyển khoản tại quầy
+            Dùng tài khoản này cho QR tại quầy
           </label>
           {err && (
             <p className="text-sm text-destructive sm:col-span-2">{err}</p>
@@ -226,11 +218,12 @@ export function CounterPaymentPanel({ tenants }: { tenants: Tenant[] }) {
     >
       <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
         <Landmark className="h-5 w-5 text-primary" aria-hidden="true" />
-        Tài khoản nhận tiền tại quầy
+        Tài khoản ngân hàng của quán (QR tại quầy)
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Khách quét QR ở quầy → tiền về thẳng tài khoản của quán (qua Tingee).
-        Đơn đặt online vẫn về tài khoản Tôi Đặt Món.
+        Dùng khi quán CHƯA đăng ký Tingee: khách quét QR ngân hàng, tiền về
+        thẳng quán, nhân viên chụp ảnh chuyển khoản để xác nhận. Quán đã có
+        Tingee riêng (Chủ quán tự cài ở trang quản lý) thì QR tự xác nhận.
       </p>
       <ul className="mt-3">
         {active.map((t) => (

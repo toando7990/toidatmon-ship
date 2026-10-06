@@ -40,10 +40,6 @@ import {
   shortCode,
 } from "@/lib/partner-console";
 import {
-  getCounterPaymentAccount,
-  hasPaymentAccountApi,
-} from "@/lib/platform-params";
-import {
   isPrinterConnected,
   printKitchenTicket,
   reconnectPrinter,
@@ -51,11 +47,22 @@ import {
 import { cn } from "@/lib/utils";
 import {
   confirmCashPaymentCounter,
+  confirmManualPaymentByPhoto,
+  getCounterPaymentMode,
   requestQr,
   create as vpsCreate,
 } from "@/lib/vps-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Flame, Loader2, Minus, Plus, Search, X } from "lucide-react";
+import {
+  Camera,
+  Check,
+  Flame,
+  Loader2,
+  Minus,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -316,14 +323,14 @@ export function CounterSell({
 
   // Tài khoản nhận tiền QR tại quầy (tiền về thẳng quán). Chưa cài → chỉ
   // thu tiền mặt.
-  const accQ = useQuery({
-    queryKey: ["counter-payment", tenantId],
-    queryFn: () =>
-      getCounterPaymentAccount(actor as NonNullable<typeof actor>, tenantId),
-    enabled: !!actor && hasPaymentAccountApi(actor),
+  // 'tingee' = QR tự xác nhận; 'bank' = QR ngân hàng, xác nhận bằng ảnh.
+  const modeQ = useQuery({
+    queryKey: ["counter-payment-mode", tenantId],
+    queryFn: () => getCounterPaymentMode(tenantId),
     staleTime: 5 * 60_000,
+    retry: 1,
   });
-  const qrEnabled = !!accQ.data?.enabled;
+  const qrEnabled = !!modeQ.data && modeQ.data !== "none";
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -335,6 +342,8 @@ export function CounterSell({
   const [placed, setPlaced] = useState<Placed | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [qrError, setQrError] = useState("");
+  const [photoConfirm, setPhotoConfirm] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [given, setGiven] = useState<number | null>(null);
   const [customGiven, setCustomGiven] = useState("");
   const [paidBy, setPaidBy] = useState<"qr" | "cash" | null>(null);
@@ -373,6 +382,7 @@ export function CounterSell({
     setPlaced(null);
     setQr(null);
     setQrError("");
+    setPhotoConfirm(false);
     setGiven(null);
     setCustomGiven("");
     setPaidBy(null);
@@ -450,9 +460,15 @@ export function CounterSell({
       setStep("qr");
       setQr(null);
       setQrError("");
-      const r = await requestQr(p.orderId);
-      if (r.ok) setQr(r.qrCode);
-      else setQrError(r.message);
+      try {
+        const r = await requestQr(p.orderId);
+        if (r.ok) {
+          setQr(r.qrCode);
+          setPhotoConfirm(r.confirm === "photo");
+        } else setQrError(r.message);
+      } catch (e) {
+        setQrError(e instanceof Error ? e.message : "Không tạo được mã QR");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Không tạo được đơn");
     } finally {
@@ -486,6 +502,27 @@ export function CounterSell({
       clearInterval(id);
     };
   }, [step, placed, actor, device.deviceId, tenantId]);
+
+  // Quán chưa có Tingee: xác nhận bằng ảnh màn hình chuyển khoản của khách
+  // (VPS đọc ảnh, khớp số tiền + số tài khoản quán + giờ giao dịch).
+  async function confirmPhoto(file: File) {
+    if (!placed) return;
+    setPhotoBusy(true);
+    try {
+      const r = await confirmManualPaymentByPhoto(placed.orderId, file);
+      if (!r.ok) throw new Error(r.message);
+      setPaidBy("qr");
+      setStep("done");
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Ảnh chưa khớp — chụp rõ số tiền, tài khoản nhận, giờ giao dịch",
+      );
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   async function confirmCash() {
     if (!placed) return;
@@ -559,10 +596,39 @@ export function CounterSell({
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               )}
             </div>
-            <p className="flex items-center gap-2 text-[15px] text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Đang chờ tiền về, tự
-              xác nhận…
-            </p>
+            {qr && !photoConfirm && (
+              <p className="flex items-center gap-2 text-[15px] text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang chờ tiền về,
+                tự xác nhận…
+              </p>
+            )}
+            {qr && photoConfirm && (
+              <label
+                className={cn(
+                  "flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary text-base font-extrabold text-primary-foreground",
+                  photoBusy && "pointer-events-none opacity-60",
+                )}
+                data-ocid="counter_sell.photo_confirm"
+              >
+                {photoBusy ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5" />
+                )}
+                Chụp ảnh chuyển khoản để xác nhận
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) void confirmPhoto(f);
+                  }}
+                />
+              </label>
+            )}
             <button
               type="button"
               onClick={() => setStep("cash")}
