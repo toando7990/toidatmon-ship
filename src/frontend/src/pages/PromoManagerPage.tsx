@@ -49,6 +49,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { usePlatformFunded } from "@/hooks/usePlatformFunded";
 import {
   useCreatePromotion,
   useCreateRegistrationPromo,
@@ -237,6 +238,9 @@ export function PromoManagerPage({
   const updateSales = useUpdateSalesPromo();
   const deleteSales = useDeleteSalesPromo();
   const stopSales = useStopSalesPromo();
+
+  // Khuyến mại chung (sàn tài trợ) — chỉ admin sàn đánh dấu được.
+  const funded = usePlatformFunded();
 
   const [kindFilter, setKindFilter] = useState<KindFilter>(initialKind);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -628,6 +632,12 @@ export function PromoManagerPage({
                   }
                   onStop={(r) => stop(r)}
                   onDelete={(r) => setPendingDelete(r)}
+                  funded={funded.isFunded(row.promo.code)}
+                  onToggleFunded={
+                    funded.canEdit
+                      ? (r, on) => funded.setFunded(r.promo.code, on)
+                      : undefined
+                  }
                 />
               ))
             )}

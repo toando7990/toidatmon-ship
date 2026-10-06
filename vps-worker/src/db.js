@@ -521,6 +521,17 @@ function initSchema(db) {
   if (!colNames.has('voucher_release')) db.exec("ALTER TABLE orders ADD COLUMN voucher_release TEXT NOT NULL DEFAULT ''");
   db.exec('CREATE INDEX IF NOT EXISTS idx_orders_cus_phone ON orders (cus_phone)');
 
+  // KM chung do sàn tài trợ (đối soát): ghi lại LÚC ĐẶT ĐƠN chương trình đã
+  // dùng có được sàn tài trợ không — sàn bù cho đối tác phần (100 −
+  // promo_share_percent)% tiền giảm (lib/payouts.js).
+  if (!colNames.has('km_platform_funded')) db.exec('ALTER TABLE orders ADD COLUMN km_platform_funded INTEGER NOT NULL DEFAULT 0');
+  if (!colNames.has('voucher_program_code')) db.exec("ALTER TABLE orders ADD COLUMN voucher_program_code TEXT NOT NULL DEFAULT ''");
+  if (!colNames.has('voucher_platform_funded')) db.exec('ALTER TABLE orders ADD COLUMN voucher_platform_funded INTEGER NOT NULL DEFAULT 0');
+  const poCols = new Set(db.prepare('PRAGMA table_info(payout_orders)').all().map((c) => c.name));
+  if (!poCols.has('subsidy')) db.exec('ALTER TABLE payout_orders ADD COLUMN subsidy INTEGER NOT NULL DEFAULT 0');
+  const pCols = new Set(db.prepare('PRAGMA table_info(payouts)').all().map((c) => c.name));
+  if (!pCols.has('promo_subsidy')) db.exec('ALTER TABLE payouts ADD COLUMN promo_subsidy INTEGER NOT NULL DEFAULT 0');
+
   // customers: thêm km_notify_opt_in (Giai đoạn 4b) nếu DB cũ chưa có.
   const customerCols = db.prepare('PRAGMA table_info(customers)').all();
   const customerColNames = new Set(customerCols.map((c) => c.name));

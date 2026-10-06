@@ -1137,7 +1137,7 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
         tenantId={ctx.tenantId}
         deviceId={ctx.device.deviceId}
       />
-      <PayoutsCard deviceId={ctx.device.deviceId} />
+      <PayoutsCard deviceId={ctx.device.deviceId} tenantId={ctx.tenantId} />
       <AnasystemCard deviceId={ctx.device.deviceId} />
 
       <Card>

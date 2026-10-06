@@ -1,7 +1,9 @@
 // ProgramCard — 1 chương trình khuyến mại trên trang "Quản lý khuyến mại":
 // viền màu theo loại, trạng thái, tóm tắt, thời hạn, kênh, mã, mức sử dụng
 // (Giờ vàng: số đơn hôm nay / giới hạn; Đăng ký/Doanh số: số phiếu đã phát),
-// nút Sửa + menu ⋯ (Sao chép thành mới, Dừng, Xoá).
+// nút Sửa + menu ⋯ (Sao chép thành mới, Dừng, Xoá). Admin sàn có thêm
+// "Khuyến mại chung (sàn tài trợ)": sàn gánh (100 − tỉ lệ đối tác góp)% tiền
+// giảm, trừ lại khi đối soát.
 // Chương trình ĐÃ CÓ khách dùng → không sửa/xoá được, chỉ Dừng / Sao chép
 // (giữ đúng quy tắc của các trang cũ).
 
@@ -30,6 +32,7 @@ import {
   useVoucherCountByProgram,
 } from "@/hooks/useQueries";
 import {
+  BadgePercent,
   CalendarClock,
   Clock,
   Copy,
@@ -141,8 +144,14 @@ export function ProgramCard({
   onCopy,
   onStop,
   onDelete,
+  funded = false,
+  onToggleFunded,
 }: {
   row: ProgramRow;
+  /** Khuyến mại chung do sàn tài trợ. */
+  funded?: boolean;
+  /** Chỉ truyền cho admin sàn. */
+  onToggleFunded?: (row: ProgramRow, funded: boolean) => void;
   onEdit: (row: ProgramRow) => void;
   onCopy: (row: ProgramRow) => void;
   onStop: (row: ProgramRow) => void;
@@ -172,6 +181,16 @@ export function ProgramCard({
             {STATUS_LABELS[status]}
           </span>
           <KindBadge kind={row.kind} />
+          {funded && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-semibold text-warning-foreground"
+              data-ocid={`promo.funded.${p.code}`}
+              title="Khuyến mại chung — sàn hỗ trợ một phần tiền giảm"
+            >
+              <BadgePercent className="h-3 w-3" aria-hidden="true" />
+              Sàn tài trợ
+            </span>
+          )}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {programSummary(row)}
@@ -230,6 +249,17 @@ export function ProgramCard({
                 <Copy className="h-4 w-4" aria-hidden="true" />
                 Sao chép thành mới
               </DropdownMenuItem>
+              {onToggleFunded && (
+                <DropdownMenuItem
+                  onSelect={() => onToggleFunded(row, !funded)}
+                  data-ocid={`promo.toggle_funded.${p.code}`}
+                >
+                  <BadgePercent className="h-4 w-4" aria-hidden="true" />
+                  {funded
+                    ? "Bỏ khuyến mại chung (sàn tài trợ)"
+                    : "Đánh dấu khuyến mại chung (sàn tài trợ)"}
+                </DropdownMenuItem>
+              )}
               {p.active && (
                 <DropdownMenuItem
                   onSelect={() => onStop(row)}

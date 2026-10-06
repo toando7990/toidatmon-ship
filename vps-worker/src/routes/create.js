@@ -242,6 +242,29 @@ router.post('/order/create', async (req, res, next) => {
       pickupCode, kmProgramCode, kmProgramName, kmDiscountAmount, voucherCodeApplied, voucherDiscountAmount, bookingStatus, now,
       tenantId, isCounter: isCounterOrder ? 1 : 0, cusLat, cusLng,
     });
+    // KM chung do sàn tài trợ? Ghi lại ngay lúc đặt đơn (đối soát dùng sau).
+    // Lỗi đọc canister KHÔNG chặn tạo đơn — coi như không tài trợ.
+    if (kmProgramCode || voucherCodeApplied) {
+      try {
+        const funded = await canister.platformFundedPromos();
+        const isFunded = (code) => {
+          const since = funded.get(`${tenantId}|${code}`);
+          return since !== undefined && since <= now;
+        };
+        const voucherProgram = voucherCodeApplied ? await canister.getVoucherProgram(voucherCodeApplied) : '';
+        db.prepare(
+          `UPDATE orders SET km_platform_funded = ?, voucher_program_code = ?, voucher_platform_funded = ? WHERE order_id = ?`,
+        ).run(
+          kmProgramCode && isFunded(kmProgramCode) ? 1 : 0,
+          voucherProgram,
+          voucherProgram && isFunded(voucherProgram) ? 1 : 0,
+          orderId,
+        );
+      } catch (e) {
+        console.warn('[create] không đọc được KM chung do sàn tài trợ:', e.message);
+      }
+    }
+
     const insertItem = db.prepare(`
       INSERT INTO order_items (order_id, item_id, name, price, quantity, unit_name, vat_rate)
       VALUES (@orderId, @itemId, @name, @price, @quantity, @unitName, @vatRate)

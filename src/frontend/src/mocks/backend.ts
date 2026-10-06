@@ -287,7 +287,18 @@ const deviceAuthMock = {
   }),
 };
 
+// Tài khoản nhận tiền của đối tác + KM chung (mixins/partner-finance-api.mo).
+const partnerFinanceMock = {
+  setPartnerBank: async () => ({ __kind__: "ok" as const, ok: null }),
+  listPartnerBanks: async () => ({ __kind__: "ok" as const, ok: [] }),
+  getPartnerBank: async () => null,
+  setPromoPlatformFunded: async () => ({ __kind__: "ok" as const, ok: null }),
+  listPlatformFundedPromos: async () => [],
+  getVoucherProgram: async () => "",
+};
+
 export const mockBackend: backendInterface = {
+  ...partnerFinanceMock,
   ...partnerApplicationMock,
   ...partnerConsoleMock,
   ...deviceAuthMock,

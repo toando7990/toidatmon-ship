@@ -95,7 +95,7 @@ router.get('/admin/payouts/:id', requireAccounting, (req, res) => {
   res.json({
     ok: true,
     payout: payouts.toApi(p),
-    orders: lines.map((l) => ({ orderId: l.order_id, createdAt: l.created_at, amount: l.amount, fee: l.fee, collectedBy: l.collected_by })),
+    orders: lines.map((l) => ({ orderId: l.order_id, createdAt: l.created_at, amount: l.amount, fee: l.fee, subsidy: l.subsidy || 0, collectedBy: l.collected_by })),
   });
 });
 

@@ -5,6 +5,7 @@
 
 import type { Backend } from "@/backend";
 import type { PartnerApplication } from "@/lib/partner-applications";
+import type { PartnerBank } from "@/lib/partner-finance";
 import type { Payout } from "@/lib/vps-client";
 
 type TicketResult =
@@ -70,19 +71,37 @@ export interface BankInfo {
   bankName: string;
   accountNumber: string;
   holder: string;
+  branch?: string;
+  /** "partner" = tài khoản của đối tác admin đã lưu; "application" = lấy tạm từ đơn đăng ký */
+  source: "partner" | "application";
 }
 
-/** Tài khoản nhận tiền của quán, lấy từ đơn đăng ký đối tác đã duyệt. */
+/**
+ * Tài khoản nhận tiền của ĐỐI TÁC (1 tài khoản cho mọi quán của đối tác).
+ * Ưu tiên tài khoản đối tác đã lưu (lib/partner-finance.ts); đối tác chưa
+ * lưu thì lấy tạm từ đơn đăng ký đã duyệt.
+ */
 export function bankByTenant(
   apps: PartnerApplication[],
+  saved: Map<string, PartnerBank> = new Map(),
 ): Map<string, BankInfo> {
   const m = new Map<string, BankInfo>();
   for (const a of apps) {
-    if (!a.tenantId) continue;
+    if (!a.tenantId || !a.input.bankAccountNumber) continue;
     m.set(a.tenantId, {
       bankName: a.input.bankName,
       accountNumber: a.input.bankAccountNumber,
       holder: a.input.bankAccountHolder,
+      source: "application",
+    });
+  }
+  for (const [tenantId, b] of saved) {
+    m.set(tenantId, {
+      bankName: b.bankName,
+      accountNumber: b.accountNumber,
+      holder: b.accountHolder,
+      branch: b.branch,
+      source: "partner",
     });
   }
   return m;
@@ -97,12 +116,13 @@ export function payoutsCsv(
   const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
   const head = [
     "Mã phiếu",
-    "Quán",
+    "Đối tác",
     "Từ ngày",
     "Đến ngày",
     "Số đơn",
     "Thu hộ",
     "Phí",
+    "Sàn hỗ trợ KM",
     "Cần trả",
     "Ngân hàng",
     "Số tài khoản",
@@ -119,6 +139,7 @@ export function payoutsCsv(
       p.orderCount,
       p.collected,
       p.feeTotal,
+      p.promoSubsidy ?? 0,
       p.net,
       b?.bankName ?? "",
       b?.accountNumber ?? "",

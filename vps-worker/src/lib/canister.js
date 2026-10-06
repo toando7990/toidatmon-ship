@@ -212,6 +212,9 @@ const IDL_FACTORY = ({ IDL }) => {
     getPartnerDevice: IDL.Func([IDL.Text], [IDL.Opt(Device)], ['query']),
     // Máy cấp sàn (nhân viên Tôi Đặt Món) — lib/platform-guard.js.
     getPlatformDevice: IDL.Func([IDL.Text], [IDL.Opt(PlatformDeviceView)], ['query']),
+    // KM chung do sàn tài trợ: [("tenantId|mã", từ lúc ns)] + phiếu thuộc chương trình nào.
+    listPlatformFundedPromos: IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Int))], ['query']),
+    getVoucherProgram: IDL.Func([IDL.Text], [IDL.Text], ['query']),
     // CSKH sàn hoàn phiếu giảm giá cho đơn đã huỷ (HMAC "release|tenantId|email|code").
     releaseVoucher: IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
@@ -656,7 +659,25 @@ async function releaseVoucher(tenantId, email, code) {
   return await actor.releaseVoucher(t, email, code, sig);
 }
 
+// KM chung do sàn tài trợ — Map "tenantId|mã" → tài trợ từ lúc (ms). Nhớ 5 phút.
+let _fundedCache = null;
+async function platformFundedPromos() {
+  if (_fundedCache && _fundedCache.expiresAt > Date.now()) return _fundedCache.map;
+  const actor = getActor();
+  const rows = await actor.listPlatformFundedPromos();
+  const map = new Map(rows.map(([k, ns]) => [k, Number(BigInt(ns) / 1000000n)]));
+  _fundedCache = { map, expiresAt: Date.now() + 5 * 60 * 1000 };
+  return map;
+}
+
+async function getVoucherProgram(code) {
+  const actor = getActor();
+  return String(await actor.getVoucherProgram(String(code || '')));
+}
+
 module.exports = {
+  platformFundedPromos,
+  getVoucherProgram,
   getPlatformDeviceByCredential,
   releaseVoucher,
   getActor, createOrder, updateStatus, updatePaymentStatus,

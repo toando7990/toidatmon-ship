@@ -7,6 +7,7 @@
 
 import { CounterPaymentPanel } from "@/components/CounterPaymentPanel";
 import { CounterPlanPanel } from "@/components/CounterPlanPanel";
+import { PartnerBankPanel } from "@/components/PartnerBank";
 import { TenantForm, type TenantFormValues } from "@/components/TenantForm";
 import { TenantTable } from "@/components/TenantTable";
 import {
@@ -239,6 +240,7 @@ export default function PartnerManager() {
         </div>
       )}
 
+      {mode.kind === "list" && <PartnerBankPanel tenants={tenants} />}
       {mode.kind === "list" && <CounterPlanPanel tenants={tenants} />}
       {mode.kind === "list" && <CounterPaymentPanel tenants={tenants} />}
 

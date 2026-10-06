@@ -1,12 +1,19 @@
 // PayoutsAdmin — /admin/doi-soat (admin Tôi Đặt Món): đối soát tiền đơn
-// online và trả tiền cho quán bằng chuyển khoản thủ công.
-//   1. Chưa đối soát: theo quán, tính đến hết ngày đã chọn → "Lập phiếu trả".
-//   2. Chờ chuyển khoản: thông tin tài khoản của quán (từ đơn đăng ký), tải
+// online và trả tiền cho ĐỐI TÁC bằng chuyển khoản thủ công. Mỗi đối tác (sở
+// hữu 1 hay nhiều quán / chi nhánh) có 1 tài khoản nhận tiền chung.
+//   1. Chưa đối soát: theo đối tác, tính đến hết ngày đã chọn → "Lập phiếu trả".
+//      "Sàn hỗ trợ KM": phần sàn gánh của khuyến mại chung (sàn tài trợ).
+//   2. Chờ chuyển khoản: tài khoản nhận tiền của đối tác, tải
 //      danh sách CSV để chuyển hàng loạt, bấm "Đã chuyển" + mã giao dịch.
 //   3. Đã trả: lịch sử.
 // Số liệu tính ở VPS (vps-worker/src/lib/payouts.js), phí theo tham số ở
 // /admin/cai-dat có hiệu lực lúc đặt đơn.
 
+import {
+  BankLine,
+  PartnerBankDialog,
+  usePartnerBanks,
+} from "@/components/PartnerBank";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTenants } from "@/hooks/useQueries";
@@ -37,7 +44,7 @@ import {
   adminPendingPayouts,
 } from "@/lib/vps-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Landmark, Loader2, Wallet } from "lucide-react";
+import { Download, Loader2, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -81,6 +88,7 @@ function OrdersOf({
           <th className="font-medium">Ai thu</th>
           <th className="text-right font-medium">Tiền đơn</th>
           <th className="text-right font-medium">Phí</th>
+          <th className="text-right font-medium">Sàn hỗ trợ KM</th>
         </tr>
       </thead>
       <tbody>
@@ -88,9 +96,10 @@ function OrdersOf({
           <tr key={l.orderId} className="border-t">
             <td className="py-1 font-mono">{l.orderId.slice(-8)}</td>
             <td>{fmtDate(l.createdAt)}</td>
-            <td>{l.collectedBy === "platform" ? "Tôi Đặt Món" : "Quán"}</td>
+            <td>{l.collectedBy === "platform" ? "Tôi Đặt Món" : "Đối tác"}</td>
             <td className="text-right">{vnd(l.amount)}</td>
             <td className="text-right">{vnd(l.fee)}</td>
+            <td className="text-right">{l.subsidy ? vnd(l.subsidy) : "—"}</td>
           </tr>
         ))}
       </tbody>
@@ -135,7 +144,12 @@ export default function PayoutsAdmin({
           ),
     enabled: ready,
   });
-  const bank = useMemo(() => bankByTenant(appsQ.data ?? []), [appsQ.data]);
+  const { saved } = usePartnerBanks(deviceCredential ?? "");
+  const bank = useMemo(
+    () => bankByTenant(appsQ.data ?? [], saved),
+    [appsQ.data, saved],
+  );
+  const [editBank, setEditBank] = useState<string | null>(null);
 
   const ticket = async () =>
     deviceCredential
@@ -192,7 +206,7 @@ export default function PayoutsAdmin({
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `tra-tien-quan-${vnDateInput(Date.now())}.csv`;
+    a.download = `tra-tien-doi-tac-${vnDateInput(Date.now())}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -208,7 +222,7 @@ export default function PayoutsAdmin({
       <header className="mb-5 flex items-center gap-2">
         <Wallet className="h-6 w-6 text-primary" aria-hidden="true" />
         <h1 className="font-display text-2xl font-bold tracking-tight">
-          Đối soát & trả tiền cho quán
+          Đối soát & trả tiền cho đối tác
         </h1>
       </header>
 
@@ -257,12 +271,13 @@ export default function PayoutsAdmin({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-2 font-medium">Quán</th>
+                  <th className="py-2 font-medium">Đối tác</th>
                   <th className="font-medium">Đơn</th>
                   <th className="text-right font-medium">Tôi Đặt Món thu hộ</th>
-                  <th className="text-right font-medium">Quán tự thu</th>
+                  <th className="text-right font-medium">Đối tác tự thu</th>
                   <th className="text-right font-medium">Phí</th>
-                  <th className="text-right font-medium">Cần trả quán</th>
+                  <th className="text-right font-medium">Sàn hỗ trợ KM</th>
+                  <th className="text-right font-medium">Cần trả đối tác</th>
                   <th />
                 </tr>
               </thead>
@@ -288,9 +303,14 @@ export default function PayoutsAdmin({
                       <Money n={s.feeTotal} />
                     </td>
                     <td className="text-right">
+                      <Money n={s.promoSubsidy ?? 0} />
+                    </td>
+                    <td className="text-right">
                       <Money n={s.net} strong />
                       {s.net < 0 && (
-                        <p className="text-xs text-destructive">quán cần nộp</p>
+                        <p className="text-xs text-destructive">
+                          đối tác cần nộp
+                        </p>
                       )}
                     </td>
                     <td className="pl-3 text-right">
@@ -345,17 +365,20 @@ export default function PayoutsAdmin({
                       {fmtDate(p.periodFrom)} – {fmtDate(p.periodTo)} ·{" "}
                       {p.orderCount} đơn · thu hộ {vnd(p.collected)} · phí{" "}
                       {vnd(p.feeTotal)}
+                      {(p.promoSubsidy ?? 0) > 0 &&
+                        ` · sàn hỗ trợ KM ${vnd(p.promoSubsidy ?? 0)}`}
                     </p>
-                    <p className="mt-1 flex items-center gap-1.5 text-sm">
-                      <Landmark className="h-4 w-4 text-muted-foreground" />
-                      {b ? (
-                        <>
-                          {b.bankName} · <b>{b.accountNumber}</b> · {b.holder}
-                        </>
-                      ) : (
-                        <span className="text-destructive">
-                          Chưa có tài khoản (quán không qua đơn đăng ký)
-                        </span>
+                    <p className="mt-1 flex flex-wrap items-center gap-2">
+                      <BankLine b={b} />
+                      {!deviceCredential && (
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-primary"
+                          onClick={() => setEditBank(p.tenantId)}
+                          data-ocid="payouts_admin.edit_bank"
+                        >
+                          {b?.source === "partner" ? "Sửa" : "Nhập"} tài khoản
+                        </button>
                       )}
                     </p>
                     <button
@@ -425,6 +448,15 @@ export default function PayoutsAdmin({
           </ul>
         )}
       </div>
+      <PartnerBankDialog
+        tenantId={editBank ?? ""}
+        partnerName={editBank ? nameOf(editBank) : ""}
+        current={editBank ? bank.get(editBank) : undefined}
+        open={!!editBank}
+        onOpenChange={(o) => {
+          if (!o) setEditBank(null);
+        }}
+      />
     </section>
   );
 }

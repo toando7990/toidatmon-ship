@@ -67,6 +67,14 @@ const salesOff = {
   monthlyTiers: [{ minSales: 2000000n, voucherValue: 100000n }],
 };
 
+vi.mock("@/hooks/usePlatformFunded", () => ({
+  usePlatformFunded: () => ({
+    isFunded: (code: string) => code === "KM-TRUA",
+    canEdit: false,
+    setFunded: vi.fn(),
+  }),
+}));
+
 const m = () => ({ mutate: vi.fn(), isPending: false });
 const muts = {
   createGio: m(),
@@ -138,6 +146,10 @@ describe("PromoManagerPage", () => {
       "Không có chương trình đang chạy",
     );
     const card = screen.getByTestId("promo.card.KM-TRUA");
+    expect(screen.getByTestId("promo.funded.KM-TRUA")).toHaveTextContent(
+      "Sàn tài trợ",
+    );
+    expect(screen.queryByTestId("promo.funded.DK-CHAO")).toBeNull();
     expect(card).toHaveTextContent(
       "T2–T6 · 11:00–13:00 · đơn từ 100.000đ giảm 10.000đ",
     );

@@ -8,7 +8,11 @@
 //     tính phí.
 // Phí mỗi đơn = amount × online_fee_percent% + online_fee_fixed, theo mức có
 // hiệu lực LÚC ĐẶT ĐƠN (cài ở /admin/cai-dat, chung hoặc riêng quán).
-// Cần trả quán = tiền thu hộ − tổng phí (âm = quán cần nộp lại Tôi Đặt Món).
+// Khuyến mại chung do sàn tài trợ (đánh dấu ở canister, ghi vào đơn lúc
+// đặt): tiền giảm của chương trình đó do đối tác góp promo_share_percent%,
+// sàn bù phần còn lại → "Sàn hỗ trợ KM" cộng vào tiền trả đối tác.
+// Cần trả ĐỐI TÁC = tiền thu hộ − tổng phí + sàn hỗ trợ KM (âm = đối tác cần
+// nộp lại Tôi Đặt Món). Đối soát theo ĐỐI TÁC (gộp mọi quán của đối tác).
 // Đơn tại quầy không tính phí theo đơn (gói tháng) → không vào đối soát.
 // ============================================================
 
@@ -31,13 +35,24 @@ function feeFor(order, entries, tenantId) {
   return Math.round((Number(order.amount) * pct) / 100 + fixed);
 }
 
+/** Phần tiền giảm KM chung sàn bù cho đối tác (đồng). */
+function subsidyFor(order, entries, tenantId) {
+  const base = (order.km_platform_funded ? Number(order.km_discount_amount) || 0 : 0)
+    + (order.voucher_platform_funded ? Number(order.voucher_discount_amount) || 0 : 0);
+  if (base <= 0) return 0;
+  const raw = valueAt(entries, tenantId, 'promo_share_percent', order.created_at);
+  const share = Math.min(100, Math.max(0, raw === '' ? 0 : Number(raw) || 0));
+  return Math.round((base * (100 - share)) / 100);
+}
+
 function collectedBy(order) {
   return order.payment_destination === 'platform' && order.payment_method !== 'cash' ? 'platform' : 'shop';
 }
 
 function eligibleOrders(db, tenantId, cutoffMs) {
   return db.prepare(
-    `SELECT order_id, created_at, amount, payment_destination, payment_method
+    `SELECT order_id, created_at, amount, payment_destination, payment_method,
+            km_discount_amount, voucher_discount_amount, km_platform_funded, voucher_platform_funded
      FROM orders
      WHERE tenant_id = ? AND is_counter = 0 AND payment_status = 'paid'
        AND booking_status != 'cancelled' AND payout_id IS NULL AND created_at < ?
@@ -60,18 +75,21 @@ function summarize(orders, entries, tenantId) {
     createdAt: o.created_at,
     amount: Number(o.amount),
     fee: feeFor(o, entries, tenantId),
+    subsidy: subsidyFor(o, entries, tenantId),
     collectedBy: collectedBy(o),
   }));
   const collected = lines.filter((l) => l.collectedBy === 'platform').reduce((s, l) => s + l.amount, 0);
   const shopCash = lines.filter((l) => l.collectedBy === 'shop').reduce((s, l) => s + l.amount, 0);
   const feeTotal = lines.reduce((s, l) => s + l.fee, 0);
+  const promoSubsidy = lines.reduce((s, l) => s + l.subsidy, 0);
   return {
     tenantId,
     orderCount: lines.length,
     collected,
     shopCash,
     feeTotal,
-    net: collected - feeTotal,
+    promoSubsidy,
+    net: collected - feeTotal + promoSubsidy,
     periodFrom: lines.length ? lines[0].createdAt : 0,
     periodTo: lines.length ? lines[lines.length - 1].createdAt : 0,
     lines,
@@ -83,17 +101,17 @@ function createPayout(db, summary, createdBy, note) {
   const tx = db.transaction(() => {
     const info = db.prepare(
       `INSERT INTO payouts (tenant_id, period_from, period_to, order_count, collected, shop_cash, fee_total, net,
-         status, note, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+         status, note, created_by, created_at, promo_subsidy)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
     ).run(summary.tenantId, summary.periodFrom, summary.periodTo, summary.orderCount, summary.collected,
-      summary.shopCash, summary.feeTotal, summary.net, note || '', createdBy || '', Date.now());
+      summary.shopCash, summary.feeTotal, summary.net, note || '', createdBy || '', Date.now(), summary.promoSubsidy || 0);
     const id = Number(info.lastInsertRowid);
     const ins = db.prepare(
-      'INSERT INTO payout_orders (payout_id, order_id, created_at, amount, fee, collected_by) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO payout_orders (payout_id, order_id, created_at, amount, fee, collected_by, subsidy) VALUES (?, ?, ?, ?, ?, ?, ?)',
     );
     const mark = db.prepare('UPDATE orders SET payout_id = ? WHERE order_id = ? AND payout_id IS NULL');
     for (const l of summary.lines) {
-      ins.run(id, l.orderId, l.createdAt, l.amount, l.fee, l.collectedBy);
+      ins.run(id, l.orderId, l.createdAt, l.amount, l.fee, l.collectedBy, l.subsidy || 0);
       if (mark.run(id, l.orderId).changes !== 1) throw new Error(`Đơn ${l.orderId} đã nằm trong phiếu khác`);
     }
     return id;
@@ -122,6 +140,7 @@ function toApi(p) {
     collected: p.collected,
     shopCash: p.shop_cash,
     feeTotal: p.fee_total,
+    promoSubsidy: p.promo_subsidy || 0,
     net: p.net,
     status: p.status,
     paidAt: p.paid_at || 0,
@@ -132,5 +151,5 @@ function toApi(p) {
 }
 
 module.exports = {
-  valueAt, feeFor, collectedBy, eligibleOrders, tenantsWithPending, summarize, createPayout, cancelPayout, toApi,
+  valueAt, feeFor, subsidyFor, collectedBy, eligibleOrders, tenantsWithPending, summarize, createPayout, cancelPayout, toApi,
 };

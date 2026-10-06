@@ -6,6 +6,11 @@
 
 import { useCanister } from "@/lib/canister";
 import {
+  formatAccount,
+  getPartnerBank,
+  hasFinanceApi,
+} from "@/lib/partner-finance";
+import {
   BANKS,
   getCounterPaymentAccount,
   hasPaymentAccountApi,
@@ -380,7 +385,22 @@ export function AnasystemCard({ deviceId }: { deviceId: string }) {
 }
 
 /** Tiền Tôi Đặt Món thu hộ đơn online và đã trả cho quán. */
-export function PayoutsCard({ deviceId }: { deviceId: string }) {
+export function PayoutsCard({
+  deviceId,
+  tenantId,
+}: {
+  deviceId: string;
+  tenantId: string;
+}) {
+  const { actor, isFetching } = useCanister();
+  // Tài khoản nhận tiền của ĐỐI TÁC (1 tài khoản cho mọi quán / chi nhánh).
+  const bankQ = useQuery({
+    queryKey: ["partner-bank", tenantId, deviceId],
+    queryFn: () =>
+      getPartnerBank(actor as NonNullable<typeof actor>, tenantId, deviceId),
+    enabled: !!actor && !isFetching && hasFinanceApi(actor) && !!tenantId,
+    retry: false,
+  });
   const q = useQuery({
     queryKey: ["partner-payouts", deviceId],
     queryFn: () => partnerPayouts(deviceId),
@@ -395,9 +415,33 @@ export function PayoutsCard({ deviceId }: { deviceId: string }) {
     <Card>
       <h2 className="text-base font-extrabold">Tiền đơn online</h2>
       <p className="text-[13px] text-muted-foreground">
-        Đơn khách đặt online do Tôi Đặt Món thu hộ, trừ phí rồi chuyển về tài
-        khoản của quán theo lịch.
+        Đơn khách đặt online ở mọi quán / chi nhánh của bạn do Tôi Đặt Món thu
+        hộ, trừ phí (cộng phần sàn hỗ trợ khuyến mại chung) rồi chuyển về tài
+        khoản của đối tác theo lịch.
       </p>
+      <div className="flex flex-col gap-0.5 rounded-xl border p-3 text-[15px]">
+        <span className="text-xs font-bold text-muted-foreground">
+          Tài khoản nhận tiền của đối tác
+        </span>
+        {bankQ.data ? (
+          <span>
+            {bankQ.data.bankName} ·{" "}
+            <b className="tabular-nums">
+              {formatAccount(bankQ.data.accountNumber)}
+            </b>{" "}
+            · {bankQ.data.accountHolder}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            {bankQ.isLoading
+              ? "Đang tải…"
+              : "Chưa có — liên hệ Tôi Đặt Món để cập nhật tài khoản."}
+          </span>
+        )}
+        <span className="text-xs text-muted-foreground">
+          Muốn đổi tài khoản: liên hệ Tôi Đặt Món (đổi tài khoản cần xác minh).
+        </span>
+      </div>
       {q.isLoading && (
         <p className="text-sm text-muted-foreground">Đang tải…</p>
       )}
@@ -410,8 +454,10 @@ export function PayoutsCard({ deviceId }: { deviceId: string }) {
             Đang chờ đối soát · {p.orderCount} đơn
           </span>
           <span>
-            Thu hộ {fmt(p.collected)} − phí {fmt(p.feeTotal)} ={" "}
-            <b>{fmt(p.net)}</b>
+            Thu hộ {fmt(p.collected)} − phí {fmt(p.feeTotal)}
+            {(p.promoSubsidy ?? 0) > 0 &&
+              ` + sàn hỗ trợ KM ${fmt(p.promoSubsidy ?? 0)}`}{" "}
+            = <b>{fmt(p.net)}</b>
           </span>
         </div>
       )}
@@ -426,6 +472,9 @@ export function PayoutsCard({ deviceId }: { deviceId: string }) {
             </span>
             <span className="text-xs text-muted-foreground">
               {x.orderCount} đơn · phí {fmt(x.feeTotal)}
+              {(x.promoSubsidy ?? 0) > 0
+                ? ` · sàn hỗ trợ KM ${fmt(x.promoSubsidy ?? 0)}`
+                : ""}
               {x.paidRef ? ` · CK ${x.paidRef}` : ""}
             </span>
           </span>

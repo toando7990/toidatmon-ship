@@ -788,6 +788,8 @@ export interface PayoutSummary {
   collected: number;
   shopCash: number;
   feeTotal: number;
+  /** Sàn bù phần khuyến mại chung (đối tác chỉ góp promo_share_percent%). */
+  promoSubsidy?: number;
   net: number;
   periodFrom: number;
   periodTo: number;
@@ -808,6 +810,7 @@ export interface PayoutLine {
   createdAt: number;
   amount: number;
   fee: number;
+  subsidy?: number;
   collectedBy: "platform" | "shop";
 }
 
