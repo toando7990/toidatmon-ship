@@ -34,6 +34,8 @@ import DishGroupsApi "mixins/dish-groups-api";
 import DishGroupTypes "types/dish-groups";
 import PlatformDevicesApi "mixins/platform-devices-api";
 import PlatformDeviceTypes "types/platform-devices";
+import PartnerFinanceApi "mixins/partner-finance-api";
+import PartnerFinanceTypes "types/partner-finance";
 import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
@@ -117,6 +119,9 @@ actor Main {
   let platformDevices : PlatformDeviceTypes.DeviceStore;
   let platformActivations : PlatformDeviceTypes.ActivationStore;
   let homeHidden : PlatformDeviceTypes.HiddenStore;
+  // Tài khoản ngân hàng của ĐỐI TÁC + KM chung do sàn tài trợ — migrations/20261013_000000.mo.
+  let partnerBanks : PartnerFinanceTypes.BankStore;
+  let fundedPromos : PartnerFinanceTypes.FundedStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -312,7 +317,7 @@ actor Main {
   include MixinAuthorization(accessControlState, null);
   include ApiDocMixin();
   include TenantApi(tenants, accessControlState);
-  include PartnerApplicationApi(partnerApplications, tenants, accessControlState);
+  include PartnerApplicationApi(partnerApplications, tenants, accessControlState, partnerBanks);
   include CoreApi(accessControlState, coreState, deviceAuth);
   include HmacApi(orders, secretState);
   include DevicesApi(accessControlState, tenants, devices, deviceAuth, pendingActivations);
@@ -332,6 +337,7 @@ actor Main {
   include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams, counterPayments);
   include VpsAdminApi(accessControlState, secretState, platformParams);
   include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments, platformDevices);
+  include PartnerFinanceApi(accessControlState, partnerBanks, fundedPromos, platformDevices, devices, deviceAuth, vouchers);
   include PlatformDevicesApi(accessControlState, platformDevices, platformActivations, homeHidden, partnerApplications, tenants, devices);
 
   /// Returns the canister's own id as text, so the VPS knows which canister

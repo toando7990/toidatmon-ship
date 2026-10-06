@@ -3,6 +3,8 @@ import AccessControl "mo:caffeineai-authorization/access-control";
 import Lib "../lib/partner-application";
 import Types "../types/partner-application";
 import TenantTypes "../types/tenant";
+import Time "mo:core/Time";
+import FinanceTypes "../types/partner-finance";
 
 // API đơn đăng ký đối tác.
 //   - submitPartnerApplication / getPartnerApplicationStatus: công khai (quán
@@ -12,6 +14,7 @@ mixin (
   applications : Types.ApplicationStore,
   tenants : TenantTypes.TenantStore,
   accessControlState : AccessControl.AccessControlState,
+  partnerBanks : FinanceTypes.BankStore,
 ) {
   public shared func submitPartnerApplication(
     input : Types.ApplicationInput
@@ -43,6 +46,25 @@ mixin (
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       return #err("Admin only");
     };
-    Lib.review(applications, tenants, applicationId, decision, note);
+    let r = Lib.review(applications, tenants, applicationId, decision, note);
+    // Duyệt → lấy tài khoản ngân hàng khai trong đơn làm tài khoản nhận tiền
+    // của ĐỐI TÁC (nếu admin chưa nhập). Admin sửa lại được ở trang Đối tác.
+    switch (r, decision) {
+      case (#ok(a), #approve) {
+        let i = a.input;
+        if (a.tenantId != "" and partnerBanks.get(a.tenantId) == null and i.bankAccountNumber != "") {
+          partnerBanks.add(a.tenantId, {
+            bankName = i.bankName;
+            accountNumber = i.bankAccountNumber;
+            accountHolder = i.bankAccountHolder;
+            branch = "";
+            updatedAt = Time.now();
+            updatedBy = "application";
+          });
+        };
+      };
+      case _ {};
+    };
+    r;
   };
 };
