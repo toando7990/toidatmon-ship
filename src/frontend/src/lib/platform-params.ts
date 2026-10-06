@@ -294,3 +294,101 @@ export async function setCounterPlanUntil(
 export function currentValue(params: EffectiveParam[], key: string): string {
   return params.find((p) => p.key === key)?.current?.value ?? "";
 }
+
+// ---- Tài khoản nhận tiền QR của đơn tại quầy (tiền về thẳng quán) ----
+
+export interface CounterPaymentAccount {
+  bankBin: string;
+  bankName: string;
+  vaAccountNumber: string;
+  accountName: string;
+  merchantId: string;
+  enabled: boolean;
+  updatedAt: bigint;
+}
+
+type PaymentActor = {
+  getCounterPaymentAccount?: (
+    tenantId: string,
+  ) => Promise<CounterPaymentAccount | null | [] | [CounterPaymentAccount]>;
+  setCounterPaymentAccount?: (
+    tenantId: string,
+    bankBin: string,
+    bankName: string,
+    vaAccountNumber: string,
+    accountName: string,
+    merchantId: string,
+    enabled: boolean,
+  ) => Promise<Result<CounterPaymentAccount>>;
+};
+
+export function hasPaymentAccountApi(actor: Backend | null): boolean {
+  return (
+    !!actor &&
+    typeof (actor as unknown as PaymentActor).getCounterPaymentAccount ===
+      "function"
+  );
+}
+
+export async function getCounterPaymentAccount(
+  actor: Backend,
+  tenantId: string,
+): Promise<CounterPaymentAccount | null> {
+  const fn = (actor as unknown as PaymentActor).getCounterPaymentAccount;
+  if (typeof fn !== "function") return null;
+  const r = await fn.call(actor, tenantId);
+  if (Array.isArray(r)) return r[0] ?? null;
+  return r ?? null;
+}
+
+export async function setCounterPaymentAccount(
+  actor: Backend,
+  tenantId: string,
+  a: Omit<CounterPaymentAccount, "updatedAt">,
+) {
+  const fn = (actor as unknown as PaymentActor).setCounterPaymentAccount;
+  if (typeof fn !== "function") {
+    throw new Error("Hệ thống đang cập nhật, vui lòng thử lại sau ít phút");
+  }
+  return unwrap(
+    await fn.call(
+      actor,
+      tenantId,
+      a.bankBin.trim(),
+      a.bankName.trim(),
+      a.vaAccountNumber.trim(),
+      a.accountName.trim(),
+      a.merchantId.trim(),
+      a.enabled,
+    ),
+  );
+}
+
+/** Ngân hàng phổ biến (mã BIN VietQR). */
+export const BANKS: { bin: string; name: string }[] = [
+  { bin: "970436", name: "Vietcombank" },
+  { bin: "970415", name: "VietinBank" },
+  { bin: "970418", name: "BIDV" },
+  { bin: "970405", name: "Agribank" },
+  { bin: "970407", name: "Techcombank" },
+  { bin: "970422", name: "MB Bank" },
+  { bin: "970416", name: "ACB" },
+  { bin: "970432", name: "VPBank" },
+  { bin: "970403", name: "Sacombank" },
+  { bin: "970423", name: "TPBank" },
+  { bin: "970441", name: "VIB" },
+  { bin: "970443", name: "SHB" },
+  { bin: "970437", name: "HDBank" },
+  { bin: "970448", name: "OCB" },
+  { bin: "970426", name: "MSB" },
+  { bin: "970431", name: "Eximbank" },
+  { bin: "970440", name: "SeABank" },
+  { bin: "970449", name: "LPBank" },
+  { bin: "970428", name: "Nam A Bank" },
+  { bin: "970454", name: "BVBank" },
+];
+
+/** "•••• 1234" — che bớt số tài khoản khi hiển thị. */
+export function maskAccount(n: string): string {
+  return n.length <= 4 ? n : `•••• ${n.slice(-4)}`;
+}

@@ -103,6 +103,7 @@ actor Main {
   let deviceAuth : DeviceAuthTypes.DeviceAuthState;
   let platformParams : PlatformParamsTypes.ParamStore;
   let counterPlanUntil : PlatformParamsTypes.CounterPlanUntilStore;
+  let counterPayments : PlatformParamsTypes.CounterPaymentStore;
   let kitchenNotes : PartnerConsoleTypes.KitchenNoteStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
@@ -316,7 +317,7 @@ actor Main {
   include PaymentModeConfigApi(accessControlState, paymentModeState, coreState);
   include StoreHoursConfigApi(accessControlState, storeHoursState, partnerSettings);
   include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil, kitchenNotes);
-  include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams);
+  include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams, counterPayments);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own

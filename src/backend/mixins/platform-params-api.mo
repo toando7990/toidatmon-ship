@@ -1,4 +1,5 @@
 import Result "mo:core/Result";
+import Time "mo:core/Time";
 import AccessControl "mo:caffeineai-authorization/access-control";
 
 import Common "../types/common";
@@ -16,6 +17,7 @@ mixin (
   devices : DevicesLib.DevicesStore,
   deviceAuth : DeviceAuthTypes.DeviceAuthState,
   platformParams : Types.ParamStore,
+  counterPayments : Types.CounterPaymentStore,
 ) {
   /// Admin: mọi tham số (chung + riêng từng quán) kèm lịch sử.
   public query ({ caller }) func listPlatformParams() : async Result.Result<[Types.ParamEntry], Text> {
@@ -60,5 +62,42 @@ mixin (
       )
     ) return [];
     Lib.effectiveFor(platformParams, tenantId);
+  };
+
+  /// Tài khoản nhận tiền QR tại quầy của quán (VPS đọc khi tạo QR; null = chưa có).
+  public query func getCounterPaymentAccount(tenantId : Common.TenantId) : async ?Types.CounterPaymentAccount {
+    counterPayments.get(tenantId);
+  };
+
+  /// Admin: đặt tài khoản nhận tiền QR tại quầy cho quán.
+  public shared ({ caller }) func setCounterPaymentAccount(
+    tenantId : Common.TenantId,
+    bankBin : Text,
+    bankName : Text,
+    vaAccountNumber : Text,
+    accountName : Text,
+    merchantId : Text,
+    enabled : Bool,
+  ) : async Result.Result<Types.CounterPaymentAccount, Text> {
+    if (not AccessControl.isAdmin(accessControlState, caller)) return #err("Admin only");
+    let digits = func(t : Text) : Bool {
+      t.size() > 0 and t.size() <= 30 and t.chars().all(func(c : Char) : Bool { c >= '0' and c <= '9' });
+    };
+    if (enabled and not digits(bankBin)) return #err("Mã ngân hàng (BIN) chỉ gồm chữ số");
+    if (enabled and vaAccountNumber.size() == 0) return #err("Thiếu số tài khoản nhận tiền");
+    if (vaAccountNumber.size() > 40 or accountName.size() > 120 or bankName.size() > 80 or merchantId.size() > 80) {
+      return #err("Thông tin quá dài");
+    };
+    let acc : Types.CounterPaymentAccount = {
+      bankBin;
+      bankName;
+      vaAccountNumber;
+      accountName;
+      merchantId;
+      enabled;
+      updatedAt = Time.now().toNat();
+    };
+    counterPayments.add(tenantId, acc);
+    #ok(acc);
   };
 };

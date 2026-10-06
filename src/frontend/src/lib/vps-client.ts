@@ -660,3 +660,50 @@ export async function getOrderPromoInfo(
     path: `/order/${encodeURIComponent(orderId)}/promo-info`,
   });
 }
+
+// ---- Kết nối AnaSystem (máy Chủ quán) ----
+// Mỗi quán 1 khoá kết nối; AnaSystem tại quán dùng khoá này kéo đơn đã thanh
+// toán về và tự xuất hoá đơn điện tử (xem vps-worker/src/routes/anasystem.js).
+
+export interface AnasystemStatus {
+  ok: boolean;
+  connected: boolean;
+  keyHint?: string;
+  createdAt?: number;
+  lastUsedAt?: number;
+  key?: string;
+}
+
+export async function getAnasystemStatus(
+  deviceId: string,
+): Promise<AnasystemStatus> {
+  return vpsFetch<AnasystemStatus>({
+    method: "GET",
+    path: `/anasystem/status?deviceId=${encodeURIComponent(credentialFor(deviceId))}`,
+  });
+}
+
+export async function createAnasystemKey(
+  deviceId: string,
+): Promise<AnasystemStatus> {
+  return vpsFetch<AnasystemStatus>({
+    method: "POST",
+    path: "/anasystem/key",
+    body: { deviceId: credentialFor(deviceId) },
+  });
+}
+
+export async function revokeAnasystemKey(
+  deviceId: string,
+): Promise<AnasystemStatus> {
+  return vpsFetch<AnasystemStatus>({
+    method: "POST",
+    path: "/anasystem/key/revoke",
+    body: { deviceId: credentialFor(deviceId) },
+  });
+}
+
+/** Địa chỉ VPS mà AnaSystem cần cấu hình (đọc lúc gọi). */
+export function currentVpsUrl(): string {
+  return getVpsUrl();
+}

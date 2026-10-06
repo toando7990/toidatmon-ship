@@ -273,7 +273,16 @@ async function getDynamicQrStatus({ qrAccount, billId, merchantId } = {}) {
   };
 }
 
+// Tham chiếu QR của 1 đơn (row SQLite) — kèm merchantId khi QR tạo cho
+// tài khoản riêng của đối tác (đơn tại quầy, tiền về thẳng quán).
+function qrRef(row) {
+  const ref = { qrAccount: row.tingee_qr_account, billId: row.tingee_bill_id };
+  if (row.tingee_merchant_id) ref.merchantId = row.tingee_merchant_id;
+  return ref;
+}
+
 module.exports = {
+  qrRef,
   BASE_URL,
   signTingeeRequest,
   getTingeeTimestamp,

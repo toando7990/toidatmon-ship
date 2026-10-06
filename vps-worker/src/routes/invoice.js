@@ -170,10 +170,14 @@ function orderTaxRate(items, orderId) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
+// Hoá đơn nay do AnaSystem của từng quán xuất (routes/anasystem.js). Cron
+// Bkav ở VPS chỉ còn chạy cho quán liệt kê RÕ trong BKAV_TENANT_IDS (mặc
+// định: không quán nào).
 function invoiceTenantIds() {
-  const raw = process.env.BKAV_TENANT_IDS || process.env.DEFAULT_TENANT_ID || 'bunbohue65';
-  const ids = raw.split(',').map((x) => x.trim()).filter(Boolean);
-  return ids.length > 0 ? ids : ['bunbohue65'];
+  return String(process.env.BKAV_TENANT_IDS || '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 function startInvoiceCron(db) {
@@ -183,11 +187,10 @@ function startInvoiceCron(db) {
     invoiceCronRunning = true;
     try {
       const windowStartMs = startOfTodayUtc7(Date.now());
-      // Tài khoản Bkav hiện là của MỘT đơn vị (mã số thuế trong .env) — chỉ
-      // tự xuất hoá đơn cho các đối tác liệt kê ở BKAV_TENANT_IDS (mặc định:
-      // đối tác mặc định). Quán khác chưa có tài khoản hoá đơn riêng thì KHÔNG
-      // xuất (tránh xuất hoá đơn bằng mã số thuế của đơn vị khác).
+      // Hoá đơn của các quán do AnaSystem xuất; cron này chỉ còn cho quán
+      // liệt kê ở BKAV_TENANT_IDS (mặc định trống → không xuất gì).
       const tenantIds = invoiceTenantIds();
+      if (tenantIds.length === 0) return;
       const rows = db.prepare(
         `SELECT * FROM orders WHERE payment_status = 'paid' AND invoice_status = 'none' AND booking_status <> 'cancelled' AND created_at >= ?
            AND tenant_id IN (${tenantIds.map(() => '?').join(',')})

@@ -196,6 +196,11 @@ const IDL_FACTORY = ({ IDL }) => {
     // Tra thiết bị theo thẻ xác thực "deviceId~khoá" (giai đoạn 1 bảo mật thiết bị).
     getPartnerDevice: IDL.Func([IDL.Text], [IDL.Opt(Device)], ['query']),
     listTenants: IDL.Func([IDL.Bool], [IDL.Vec(TenantSummary)], ['query']),
+    // Tài khoản nhận tiền QR của đơn tại quầy (tiền về thẳng quán).
+    getCounterPaymentAccount: IDL.Func([IDL.Text], [IDL.Opt(IDL.Record({
+      bankBin: IDL.Text, bankName: IDL.Text, vaAccountNumber: IDL.Text,
+      accountName: IDL.Text, merchantId: IDL.Text, enabled: IDL.Bool,
+    }))], ['query']),
     // counterPlan ở đây đã tính hạn gói (mixins/partner-console-api.mo).
     getPartnerSettings: IDL.Func([IDL.Text], [IDL.Record({ counterPlan: IDL.Bool, paused: IDL.Bool })], ['query']),
     listRestaurants: IDL.Func([IDL.Text], [IDL.Vec(Restaurant)], ['query']),
@@ -377,6 +382,13 @@ async function getDeviceByCredential(credential) {
   const d = Array.isArray(r) ? r[0] : r;
   if (!d || !d.active) return null;
   return { ...d, role: Object.keys(d.role)[0] };
+}
+
+// Tài khoản nhận tiền QR tại quầy của quán, null nếu chưa cài.
+async function getCounterPaymentAccount(tenantId) {
+  const actor = getActor();
+  const r = await actor.getCounterPaymentAccount(tenantOr(tenantId));
+  return (Array.isArray(r) ? r[0] : r) || null;
 }
 
 // Quán đang có gói bán tại quầy (đã tính hạn).
@@ -593,6 +605,7 @@ module.exports = {
   isStoreOpen,
   getDeviceByCredential,
   getCounterPlanActive,
+  getCounterPaymentAccount,
   listActiveTenants,
   listActiveTenantIds,
   tenantOr,

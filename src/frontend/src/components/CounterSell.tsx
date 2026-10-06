@@ -40,6 +40,10 @@ import {
   shortCode,
 } from "@/lib/partner-console";
 import {
+  getCounterPaymentAccount,
+  hasPaymentAccountApi,
+} from "@/lib/platform-params";
+import {
   isPrinterConnected,
   printKitchenTicket,
   reconnectPrinter,
@@ -50,7 +54,7 @@ import {
   requestQr,
   create as vpsCreate,
 } from "@/lib/vps-client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Flame, Loader2, Minus, Plus, Search, X } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
@@ -127,6 +131,7 @@ function CartPanel({
   dineIn,
   note,
   busy,
+  qrEnabled,
   onQty,
   onClear,
   onDineIn,
@@ -140,6 +145,7 @@ function CartPanel({
   dineIn: boolean;
   note: string;
   busy: boolean;
+  qrEnabled: boolean;
   onQty: (itemId: string, delta: number) => void;
   onClear: () => void;
   onDineIn: (v: boolean) => void;
@@ -262,7 +268,8 @@ function CartPanel({
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
-          disabled={busy || lines.length === 0}
+          disabled={busy || lines.length === 0 || !qrEnabled}
+          title={qrEnabled ? undefined : "Quán chưa cài tài khoản nhận tiền"}
           onClick={() => onPay("qr")}
           data-ocid="counter_sell.pay_qr"
           className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-primary text-base font-extrabold text-primary-foreground disabled:opacity-50"
@@ -280,6 +287,11 @@ function CartPanel({
           Tiền mặt
         </button>
       </div>
+      {!qrEnabled && (
+        <p className="text-center text-xs text-muted-foreground">
+          Quán chưa cài tài khoản nhận chuyển khoản — chỉ thu tiền mặt.
+        </p>
+      )}
     </div>
   );
 }
@@ -301,6 +313,17 @@ export function CounterSell({
   const countdown = usePromotionCountdown(
     promotion?.enabledCounter ? promotion : null,
   );
+
+  // Tài khoản nhận tiền QR tại quầy (tiền về thẳng quán). Chưa cài → chỉ
+  // thu tiền mặt.
+  const accQ = useQuery({
+    queryKey: ["counter-payment", tenantId],
+    queryFn: () =>
+      getCounterPaymentAccount(actor as NonNullable<typeof actor>, tenantId),
+    enabled: !!actor && hasPaymentAccountApi(actor),
+    staleTime: 5 * 60_000,
+  });
+  const qrEnabled = !!accQ.data?.enabled;
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -702,6 +725,7 @@ export function CounterSell({
       dineIn={dineIn}
       note={note}
       busy={busy}
+      qrEnabled={qrEnabled}
       onQty={qty}
       onClear={() => setCart({})}
       onDineIn={setDineIn}

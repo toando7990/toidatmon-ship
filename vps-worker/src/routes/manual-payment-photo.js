@@ -112,7 +112,7 @@ router.post(
       }
 
       const order = db
-        .prepare(`SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id, qr_first_created_at, booking_status FROM orders WHERE order_id = ?`)
+        .prepare(`SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id, tingee_merchant_id, qr_first_created_at, booking_status FROM orders WHERE order_id = ?`)
         .get(orderId);
       if (!order) {
         return res.status(404).json({ ok: false, message: 'Không tìm thấy đơn hàng.' });
@@ -206,7 +206,7 @@ router.post(
         .run(referenceCode, Date.now(), orderId);
       if (order.tingee_qr_account && order.tingee_bill_id) {
         try {
-          await tingee.deleteDynamicQr({ qrAccount: order.tingee_qr_account, billId: order.tingee_bill_id });
+          await tingee.deleteDynamicQr(tingee.qrRef(order));
         } catch (e) {
           console.warn('[manual-payment-photo] deleteDynamicQr failed:', e.message);
         }

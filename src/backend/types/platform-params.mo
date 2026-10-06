@@ -36,4 +36,20 @@ module {
 
   /// Hạn gói bán quầy (ns). 0 = không hạn.
   public type CounterPlanUntilStore = Map.Map<Common.TenantId, Common.Timestamp>;
+
+  /// Tài khoản nhận tiền QR của ĐƠN TẠI QUẦY (tiền về thẳng quán, qua Tingee).
+  /// Không phải bí mật: số tài khoản/VA vốn nằm trong mã QR khách quét.
+  public type CounterPaymentAccount = {
+    /// Mã BIN ngân hàng (VietQR), vd 970436 = Vietcombank.
+    bankBin : Text;
+    bankName : Text;
+    /// Số tài khoản ảo (VA) Tingee gắn với tài khoản ngân hàng của quán.
+    vaAccountNumber : Text;
+    accountName : Text;
+    /// merchantId của quán trên Tingee (để trống nếu dùng merchant chính).
+    merchantId : Text;
+    enabled : Bool;
+    updatedAt : Common.Timestamp;
+  };
+  public type CounterPaymentStore = Map.Map<Common.TenantId, CounterPaymentAccount>;
 };

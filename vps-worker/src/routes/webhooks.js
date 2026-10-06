@@ -177,7 +177,7 @@ router.post('/webhook/tingee', verifyTingeeWebhook, async (req, res, next) => {
       return res.json({ code: '00', message: 'Success' });
     }
 
-    const order = db.prepare(`SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id FROM orders WHERE tingee_qr_account = ?`).get(qrAccount);
+    const order = db.prepare(`SELECT order_id, amount, payment_status, tingee_qr_account, tingee_bill_id, tingee_merchant_id FROM orders WHERE tingee_qr_account = ?`).get(qrAccount);
     if (!order) {
       console.warn('[webhook/tingee] order not found for qrAccount:', qrAccount, 'transactionCode:', transactionCode);
       return res.json({ code: '00', message: 'Success' });
@@ -210,7 +210,7 @@ router.post('/webhook/tingee', verifyTingeeWebhook, async (req, res, next) => {
       .run(Date.now(), orderId);
     if (order.tingee_qr_account && order.tingee_bill_id) {
       try {
-        await tingee.deleteDynamicQr({ qrAccount: order.tingee_qr_account, billId: order.tingee_bill_id });
+        await tingee.deleteDynamicQr(tingee.qrRef(order));
       } catch (e) {
         console.warn('[webhook/tingee] deleteDynamicQr failed:', e.message);
       }
@@ -251,7 +251,7 @@ function startTingeePoll(db) {
       // (expire_at > now). Đơn có QR hết hạn (expire_at <= now) sẽ được
       // startUnpaidExpiry (sync.js) xử lý markPaymentExpired.
       const rows = db.prepare(
-        `SELECT order_id, amount, tingee_qr_account, tingee_bill_id, expire_at
+        `SELECT order_id, amount, tingee_qr_account, tingee_bill_id, tingee_merchant_id, expire_at
          FROM orders
          WHERE payment_status = 'unpaid'
            AND tingee_qr_account != ''
@@ -265,10 +265,7 @@ function startTingeePoll(db) {
         const until = backoffUntil.get(row.order_id);
         if (until !== undefined && now < until) continue;
         try {
-          const data = await tingee.getDynamicQrStatus({
-            qrAccount: row.tingee_qr_account,
-            billId: row.tingee_bill_id,
-          });
+          const data = await tingee.getDynamicQrStatus(tingee.qrRef(row));
           // Log mọi kết quả get-status-dynamic-qr vào tingee_logs (action 'get_status').
           db.prepare(
             `INSERT INTO tingee_logs (order_id, tingee_qr_id, action, response_body, status_code, created_at)
@@ -289,7 +286,7 @@ function startTingeePoll(db) {
             db.prepare(`UPDATE orders SET payment_status = 'paid', payment_method = 'transfer', updated_at = ? WHERE order_id = ?`)
               .run(Date.now(), row.order_id);
             try {
-              await tingee.deleteDynamicQr({ qrAccount: row.tingee_qr_account, billId: row.tingee_bill_id });
+              await tingee.deleteDynamicQr(tingee.qrRef(row));
             } catch (e) { console.warn('[poll/tingee] deleteDynamicQr failed:', e.message); }
             console.log('[poll/tingee] xác nhận thanh toán (dự phòng):', row.order_id);
           }

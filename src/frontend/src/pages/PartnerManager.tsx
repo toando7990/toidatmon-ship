@@ -5,6 +5,7 @@
 // LƯU Ý: route và nav link đã được đăng ký sẵn ở App.tsx/Layout.tsx — file này
 // chỉ dựng phần thân trang.
 
+import { CounterPaymentPanel } from "@/components/CounterPaymentPanel";
 import { CounterPlanPanel } from "@/components/CounterPlanPanel";
 import { TenantForm, type TenantFormValues } from "@/components/TenantForm";
 import { TenantTable } from "@/components/TenantTable";
@@ -239,6 +240,7 @@ export default function PartnerManager() {
       )}
 
       {mode.kind === "list" && <CounterPlanPanel tenants={tenants} />}
+      {mode.kind === "list" && <CounterPaymentPanel tenants={tenants} />}
 
       {mode.kind === "list" && tenants.length > 0 && (
         <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">

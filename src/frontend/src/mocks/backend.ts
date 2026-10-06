@@ -230,6 +230,11 @@ const platformParamsMock = {
     until: BigInt(0),
     active: false,
   }),
+  getCounterPaymentAccount: async () => null,
+  setCounterPaymentAccount: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
   setCounterPlanUntil: async () => ({
     __kind__: "err" as const,
     err: "Mock: không hỗ trợ",

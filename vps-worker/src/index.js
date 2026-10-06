@@ -45,6 +45,7 @@ const geocodeRoutes = require('./routes/geocode');
 const orderLalamoveStatusRoutes = require('./routes/order-lalamove-status');
 const enterpriseActionsRoutes = require('./routes/enterprise-actions');
 const orderPromoInfoRoutes = require('./routes/order-promo-info');
+const anasystemRoutes = require('./routes/anasystem');
 
 const cronJobs = [];
 
@@ -97,6 +98,7 @@ app.use('/', qrRoutes);
 app.use('/', orderRestaurantRoutes);
 app.use('/', webhooksRoutes);
 app.use('/', invoiceRoutes);
+app.use('/', anasystemRoutes);
 app.use('/', uploadRoutes);
 app.use('/', manualPaymentPhotoRoutes);
 app.use('/', customersRoutes);

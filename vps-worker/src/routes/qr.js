@@ -97,7 +97,7 @@ router.post('/order/:id/qr', async (req, res, next) => {
     const submittedCode = normalizePickupCode(rawSubmittedCode);
 
     const row = db.prepare(
-      `SELECT order_id, amount, tingee_qr_id, tingee_qr_account, tingee_bill_id,
+      `SELECT order_id, tenant_id, is_counter, amount, tingee_qr_id, tingee_qr_account, tingee_bill_id,
               tingee_qr_code, expire_at, pickup_code, booking_status
        FROM orders WHERE order_id = ?`,
     ).get(orderId);
@@ -131,13 +131,40 @@ router.post('/order/:id/qr', async (req, res, next) => {
       });
     }
 
+    // Đơn TẠI QUẦY: tiền về thẳng tài khoản của quán (admin cài ở trang Đối
+    // tác). Quán chưa cài tài khoản → không tạo QR (thu tiền mặt), KHÔNG
+    // chuyển sang tài khoản Tôi Đặt Món. Đơn online: tài khoản Tôi Đặt Món.
+    const qrParams = { amount: Number(row.amount) || 0, expireInMinute: QR_EXPIRE_MINUTES };
+    let destination = 'platform';
+    let merchantId = '';
+    if (row.is_counter) {
+      let acc = null;
+      try {
+        acc = await canister.getCounterPaymentAccount(row.tenant_id);
+      } catch (e) {
+        console.error('[qr] getCounterPaymentAccount lỗi:', orderId, e.message);
+        return res.status(502).json({ ok: false, retryable: true, message: 'Không đọc được tài khoản nhận tiền của quán, vui lòng thử lại.' });
+      }
+      if (!acc || !acc.enabled || !acc.vaAccountNumber) {
+        return res.status(400).json({
+          ok: false,
+          retryable: false,
+          message: 'Quán chưa cài tài khoản nhận tiền chuyển khoản. Vui lòng thu tiền mặt.',
+        });
+      }
+      qrParams.vaAccountNumber = acc.vaAccountNumber;
+      qrParams.bankBin = acc.bankBin;
+      if (acc.merchantId) {
+        qrParams.merchantId = acc.merchantId;
+        merchantId = acc.merchantId;
+      }
+      destination = 'partner';
+    }
+
     // QR hết hạn hoặc chưa từng tạo → tạo QR mới.
     let qr;
     try {
-      qr = await tingee.generateDynamicQr({
-        amount: Number(row.amount) || 0,
-        expireInMinute: QR_EXPIRE_MINUTES,
-      });
+      qr = await tingee.generateDynamicQr(qrParams);
     } catch (e) {
       console.error('[qr] generateDynamicQr error:', orderId, e.code, e.message);
       const cls = classifyTingeeError(e);
@@ -175,7 +202,8 @@ router.post('/order/:id/qr', async (req, res, next) => {
       `UPDATE orders SET
          tingee_qr_id = ?, tingee_qr_account = ?, tingee_bill_id = ?,
          tingee_qr_code = ?, expire_at = ?, updated_at = ?,
-         qr_first_created_at = COALESCE(qr_first_created_at, ?)
+         qr_first_created_at = COALESCE(qr_first_created_at, ?),
+         tingee_merchant_id = ?, payment_destination = ?
        WHERE order_id = ?`,
     ).run(
       qr.qrAccount || '',
@@ -185,6 +213,8 @@ router.post('/order/:id/qr', async (req, res, next) => {
       expireAt,
       Date.now(),
       Date.now(),
+      merchantId,
+      destination,
       orderId,
     );
 

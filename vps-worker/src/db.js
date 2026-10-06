@@ -368,6 +368,14 @@ function initSchema(db) {
     db.exec("UPDATE orders SET is_counter = 1 WHERE cus_name = 'Khách tại quầy'");
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_orders_tenant_created ON orders (tenant_id, created_at)');
+  // Tiền QR về đâu: 'platform' (tài khoản Tôi Đặt Món, mặc định) hoặc
+  // 'partner' (đơn tại quầy — tiền về thẳng tài khoản của quán).
+  if (!colNames.has('tingee_merchant_id')) {
+    db.exec("ALTER TABLE orders ADD COLUMN tingee_merchant_id TEXT NOT NULL DEFAULT ''");
+  }
+  if (!colNames.has('payment_destination')) {
+    db.exec("ALTER TABLE orders ADD COLUMN payment_destination TEXT NOT NULL DEFAULT 'platform'");
+  }
 
   // customers: thêm km_notify_opt_in (Giai đoạn 4b) nếu DB cũ chưa có.
   const customerCols = db.prepare('PRAGMA table_info(customers)').all();

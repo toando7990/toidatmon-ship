@@ -52,7 +52,7 @@ async function markPaidCash(db, order) {
     .run(Date.now(), order.order_id);
   if (order.tingee_qr_account && order.tingee_bill_id) {
     try {
-      await tingee.deleteDynamicQr({ qrAccount: order.tingee_qr_account, billId: order.tingee_bill_id });
+      await tingee.deleteDynamicQr(tingee.qrRef(order));
     } catch (e) {
       console.warn('[cash-payment] deleteDynamicQr failed:', e.message);
     }
@@ -62,7 +62,7 @@ async function markPaidCash(db, order) {
 function loadOrderForCashConfirm(db, orderId) {
   return db.prepare(
     `SELECT order_id, tenant_id, is_counter, restaurant_id, amount, payment_status, booking_status,
-            pickup_code, tingee_qr_account, tingee_bill_id
+            pickup_code, tingee_qr_account, tingee_bill_id, tingee_merchant_id
      FROM orders WHERE order_id = ?`,
   ).get(orderId);
 }

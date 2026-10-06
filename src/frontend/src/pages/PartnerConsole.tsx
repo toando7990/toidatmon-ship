@@ -10,6 +10,10 @@
 import type { Device, MenuItem, Restaurant, StoreHours } from "@/backend";
 import { DeviceRole } from "@/backend";
 import { CounterSell } from "@/components/CounterSell";
+import {
+  AnasystemCard,
+  CounterAccountCard,
+} from "@/components/PartnerConnections";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import {
@@ -1123,6 +1127,8 @@ function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
       </Card>
 
       <FeesCard params={ctx.params} />
+      <CounterAccountCard tenantId={ctx.tenantId} />
+      <AnasystemCard deviceId={ctx.device.deviceId} />
 
       <Card>
         <h2 className="text-base font-extrabold">Máy dùng trang quản lý</h2>
