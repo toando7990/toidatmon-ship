@@ -43,6 +43,7 @@ import {
   Check,
   ChevronRight,
   Clock,
+  Flame,
   LocateFixed,
   Minus,
   Plus,
@@ -91,11 +92,14 @@ function persistCart(c: HomeCart | null) {
 const DishCard = memo(function DishCard({
   dish,
   qty,
+  rank,
   onAdd,
   onRemove,
 }: {
   dish: FeedDish;
   qty: number;
+  /** Hạng bán chạy toàn nền tảng (1–10), không có = không xếp hạng. */
+  rank?: number;
   onAdd: (d: FeedDish) => void;
   onRemove: (d: FeedDish) => void;
 }) {
@@ -143,6 +147,14 @@ const DishCard = memo(function DishCard({
             Đang đóng cửa
           </span>
         )}
+        {rank != null && (
+          <span
+            className="absolute right-2 top-2 flex items-center gap-0.5 rounded-md bg-[var(--tdm-lime)] px-1.5 py-0.5 text-[11px] font-extrabold text-[var(--tdm-olive)]"
+            data-ocid="platform_home.best_seller_badge"
+          >
+            <Flame className="h-3 w-3" aria-hidden="true" />#{rank}
+          </span>
+        )}
       </a>
       <div className="flex flex-1 flex-col gap-0.5 p-2.5">
         <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-tight">
@@ -155,6 +167,11 @@ const DishCard = memo(function DishCard({
           {dish.tenantName}
           {dish.distanceKm != null && ` · ${formatKm(dish.distanceKm)}`}
         </a>
+        {dish.sold >= 3 && (
+          <span className="text-[11px] font-semibold text-[var(--tdm-olive)]">
+            Đã bán {dish.sold} tuần này
+          </span>
+        )}
         <div className="mt-1 flex items-center justify-between gap-1">
           <span className="text-[15px] font-extrabold">
             {formatVnd(dish.price)}
@@ -205,7 +222,7 @@ export default function PlatformHome() {
   );
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
-  const { dishes, loading, tenantCount } = usePlatformCatalog(location);
+  const { dishes, groups, loading, tenantCount } = usePlatformCatalog(location);
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -236,41 +253,88 @@ export default function PlatformHome() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset khi điều kiện đổi
   useEffect(() => setLimit(PAGE_SIZE), [query, category, filters]);
 
-  // Nhóm món lấy từ dữ liệu thật của các quán, nhiều món xếp trước.
-  const categories = useMemo(() => {
+  // Nhóm món: nhóm dùng chung do admin Tôi Đặt Món tạo (theo thứ tự admin
+  // đặt, chỉ nhóm đang có món). Chưa có nhóm nào → dùng danh mục của các
+  // quán, nhiều món xếp trước.
+  const useGroups = groups.length > 0;
+  const chips = useMemo(() => {
     const count = new Map<string, number>();
     for (const d of dishes) {
-      if (d.category) count.set(d.category, (count.get(d.category) ?? 0) + 1);
+      const k = useGroups ? d.groupId : d.category;
+      if (k) count.set(k, (count.get(k) ?? 0) + 1);
     }
-    return [...count.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+    if (useGroups) {
+      return groups
+        .filter((g) => count.has(g.groupId))
+        .map((g) => ({ id: g.groupId, label: g.name }));
+    }
+    return [...count.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([c]) => ({ id: c, label: c }));
+  }, [dishes, groups, useGroups]);
+  const groupName = useMemo(
+    () => new Map(groups.map((g) => [g.groupId, g.name])),
+    [groups],
+  );
+  const categoryLabel = category
+    ? (chips.find((c) => c.id === category)?.label ?? category)
+    : null;
+
+  // Bán chạy 7 ngày qua trên toàn nền tảng: top 10 có hạng (huy hiệu #1…).
+  const rankOf = useMemo(() => {
+    const top = dishes
+      .filter((d) => d.sold > 0)
+      .sort((a, b) => b.sold - a.sold)
+      .slice(0, 10);
+    return new Map(top.map((d, i) => [d.key, i + 1]));
   }, [dishes]);
+  const bestSellers = useMemo(
+    () =>
+      dishes
+        .filter((d) => rankOf.has(d.key) && d.open)
+        .sort((a, b) => (rankOf.get(a.key) ?? 0) - (rankOf.get(b.key) ?? 0)),
+    [dishes, rankOf],
+  );
 
   const results = useMemo(() => {
     const q = query.trim();
     const scored = dishes
       .filter(
         (d) =>
-          (!category || d.category === category) &&
+          (!category ||
+            (useGroups ? d.groupId === category : d.category === category)) &&
           (!filters.open || d.open) &&
           (!filters.cheap || d.price < 50_000) &&
           (!filters.promo || d.hasPromo),
       )
       .map((d) => ({
         d,
-        s: q ? matchScore(q, d.name, d.tenantName, d.category) : 1,
+        s: q
+          ? matchScore(
+              q,
+              d.name,
+              d.tenantName,
+              d.category,
+              (d.groupId && groupName.get(d.groupId)) || "",
+            )
+          : 1,
       }))
       .filter((x) => x.s > 0);
     const dist = (d: FeedDish) => d.distanceKm ?? 999;
+    // Quán trong bán kính 5 km xếp trước; rồi khuyến mại, bán chạy, gần hơn.
+    const near = (d: FeedDish) => dist(d) <= 5;
     scored.sort((a, b) => {
       if (q && b.s !== a.s) return b.s - a.s;
       if (a.d.open !== b.d.open) return a.d.open ? -1 : 1;
+      if (near(a.d) !== near(b.d)) return near(a.d) ? -1 : 1;
       if (a.d.hasPromo !== b.d.hasPromo) return a.d.hasPromo ? -1 : 1;
+      if (a.d.sold !== b.d.sold) return b.d.sold - a.d.sold;
       return dist(a.d) - dist(b.d);
     });
     const list = scored.map((x) => x.d);
     // Khi đang tìm theo từ khoá: giữ thứ tự độ khớp. Còn lại: trộn quán.
     return q ? list : interleaveByStore(list);
-  }, [dishes, query, category, filters]);
+  }, [dishes, query, category, filters, useGroups, groupName]);
 
   // Quán có tên khớp từ khoá → lối tắt vào thẳng trang quán.
   const storeHits = useMemo(() => {
@@ -395,13 +459,21 @@ export default function PlatformHome() {
     cart && cart.tenantId === d.tenantId ? (cart.lines[d.itemId]?.qty ?? 0) : 0;
 
   const searching = !!query.trim() || !!category;
-  const title = category
-    ? `${category}${query.trim() ? ` · “${query.trim()}”` : ""}`
+  const title = categoryLabel
+    ? `${categoryLabel}${query.trim() ? ` · “${query.trim()}”` : ""}`
     : query.trim()
       ? `Kết quả cho “${query.trim()}”`
       : `Gợi ý ${MEAL_LABEL[meal]}${location ? " gần bạn" : ""}`;
   const showRecent = focused && !query && recent.length > 0;
-  const visible = results.slice(0, limit);
+  // Dải "Bán chạy tuần này" chỉ hiện khi không tìm/lọc nhóm; món đã ở dải
+  // thì không lặp lại ở lưới bên dưới.
+  const showBest = !searching && bestSellers.length >= 3;
+  const listed = useMemo(() => {
+    if (!showBest) return results;
+    const inStrip = new Set(bestSellers.map((d) => d.key));
+    return results.filter((d) => !inStrip.has(d.key));
+  }, [results, bestSellers, showBest]);
+  const visible = listed.slice(0, limit);
 
   return (
     <PlatformFrame
@@ -445,10 +517,10 @@ export default function PlatformHome() {
                 <button
                   type="button"
                   onClick={() => setCategory(null)}
-                  aria-label={`Bỏ nhóm ${category}`}
+                  aria-label={`Bỏ nhóm ${categoryLabel}`}
                   className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground pl-2.5 pr-2 text-[13px] font-semibold text-background"
                 >
-                  <span className="max-w-[9rem] truncate">{category}</span>
+                  <span className="max-w-[9rem] truncate">{categoryLabel}</span>
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -459,8 +531,8 @@ export default function PlatformHome() {
                 onFocus={() => setFocused(true)}
                 onBlur={() => setTimeout(() => setFocused(false), 150)}
                 placeholder={
-                  category
-                    ? `Tìm trong ${category}…`
+                  categoryLabel
+                    ? `Tìm trong ${categoryLabel}…`
                     : "Tìm món hoặc quán, vd: bún bò, bbh"
                 }
                 aria-label="Tìm món hoặc quán"
@@ -483,19 +555,20 @@ export default function PlatformHome() {
             </label>
 
             <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
-              {categories
-                .filter((c) => c !== category)
+              {chips
+                .filter((c) => c.id !== category)
                 .map((c) => (
                   <button
-                    key={c}
+                    key={c.id}
                     type="button"
-                    onClick={() => setCategory(c)}
+                    onClick={() => setCategory(c.id)}
                     className="h-9 shrink-0 rounded-full border bg-card px-3.5 text-sm font-semibold hover:bg-muted"
+                    data-ocid="platform_home.group_chip"
                   >
-                    {c}
+                    {c.label}
                   </button>
                 ))}
-              {categories.length > 0 && (
+              {chips.length > 0 && (
                 <span
                   className="h-6 w-px shrink-0 bg-border"
                   aria-hidden="true"
@@ -575,11 +648,37 @@ export default function PlatformHome() {
         </div>
 
         <main className="mx-auto max-w-6xl px-4 pt-4">
+          {showBest && (
+            <section className="mb-5" data-ocid="platform_home.best_sellers">
+              <div className="mb-2 flex items-center gap-1.5">
+                <Flame
+                  className="h-5 w-5 text-[var(--tdm-red)]"
+                  aria-hidden="true"
+                />
+                <h2 className="text-base font-extrabold md:text-lg">
+                  Bán chạy tuần này
+                </h2>
+              </div>
+              <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+                {bestSellers.map((d) => (
+                  <div key={d.key} className="w-[9.5rem] shrink-0 sm:w-44">
+                    <DishCard
+                      dish={d}
+                      qty={qtyOf(d)}
+                      rank={rankOf.get(d.key)}
+                      onAdd={addDish}
+                      onRemove={removeDish}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
           <div className="mb-2.5 flex items-baseline justify-between gap-2">
             <h1 className="text-base font-extrabold md:text-xl">{title}</h1>
             {!loading && (
               <span className="shrink-0 text-[13px] text-muted-foreground">
-                {results.length} món
+                {listed.length} món
               </span>
             )}
           </div>
@@ -650,12 +749,13 @@ export default function PlatformHome() {
                     key={d.key}
                     dish={d}
                     qty={qtyOf(d)}
+                    rank={rankOf.get(d.key)}
                     onAdd={addDish}
                     onRemove={removeDish}
                   />
                 ))}
               </div>
-              {results.length > limit && (
+              {listed.length > limit && (
                 <div className="mt-4 flex justify-center">
                   <button
                     type="button"
@@ -663,7 +763,7 @@ export default function PlatformHome() {
                     className="h-11 rounded-xl border bg-card px-5 text-sm font-bold"
                     data-ocid="platform_home.load_more"
                   >
-                    Xem thêm món ({results.length - limit})
+                    Xem thêm món ({listed.length - limit})
                   </button>
                 </div>
               )}

@@ -899,3 +899,25 @@ export async function partnerPayouts(
     timeoutMs: 30000,
   });
 }
+
+// ── Món bán chạy (trang chủ Tôi Đặt Món) ───────────────────────────────────
+// Công khai, chỉ số liệu tổng: số phần đã bán của đơn đã thanh toán trong N
+// ngày gần nhất, theo (đối tác, món). VPS nhớ kết quả 10 phút.
+export interface BestSeller {
+  tenantId: string;
+  itemId: string;
+  name: string;
+  qty: number;
+  orders: number;
+}
+
+export async function getBestSellers(
+  days = 7,
+  limit = 100,
+): Promise<BestSeller[]> {
+  const res = await vpsFetch<{ ok: boolean; items: BestSeller[] }>({
+    method: "GET",
+    path: `/platform/best-sellers?days=${days}&limit=${limit}`,
+  });
+  return res.items ?? [];
+}

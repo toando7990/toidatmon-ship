@@ -48,6 +48,7 @@ const orderPromoInfoRoutes = require('./routes/order-promo-info');
 const anasystemRoutes = require('./routes/anasystem');
 const partnerTingeeRoutes = require('./routes/partner-tingee');
 const payoutsRoutes = require('./routes/payouts');
+const bestSellersRoutes = require('./routes/best-sellers');
 
 const cronJobs = [];
 
@@ -103,6 +104,7 @@ app.use('/', invoiceRoutes);
 app.use('/', anasystemRoutes);
 app.use('/', partnerTingeeRoutes);
 app.use('/', payoutsRoutes);
+app.use('/', bestSellersRoutes);
 app.use('/', uploadRoutes);
 app.use('/', manualPaymentPhotoRoutes);
 app.use('/', customersRoutes);

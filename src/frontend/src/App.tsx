@@ -18,6 +18,7 @@ import { ClaimOrder } from "@/pages/ClaimOrder";
 import CounterOrder from "@/pages/CounterOrder";
 import CreateOrder from "@/pages/CreateOrder";
 import { DeviceManager } from "@/pages/DeviceManager";
+import DishGroupsAdmin from "@/pages/DishGroupsAdmin";
 import { DriverPaymentScreen } from "@/pages/DriverPaymentScreen";
 import { EnterpriseManagementPage } from "@/pages/EnterpriseManagementPage";
 import GioiThieu from "@/pages/GioiThieu";
@@ -545,6 +546,17 @@ const adminPayoutsRoute = createRoute({
   ),
 });
 
+// Nhóm món dùng chung cho trang chủ Tôi Đặt Món.
+const adminDishGroupsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/nhom-mon",
+  component: () => (
+    <AdminGate>
+      <DishGroupsAdmin />
+    </AdminGate>
+  ),
+});
+
 // Partner-unavailable notice as a standalone route — an unknown or hidden
 // slug renders this instead of a blank screen.
 const partnerUnavailableRoute = createRoute({
@@ -644,6 +656,7 @@ const router = createRouter({
     adminPartnerApplicationsRoute,
     adminPlatformSettingsRoute,
     adminPayoutsRoute,
+    adminDishGroupsRoute,
     partnerUnavailableRoute,
     enterpriseManagementRoute,
   ]),

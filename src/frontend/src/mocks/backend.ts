@@ -214,6 +214,17 @@ const partnerConsoleMock = {
   listKitchenNotes: async () => [],
 };
 // Tham số nền tảng + hạn gói bán quầy (mixins/platform-params-api.mo).
+const dishGroupsMock = {
+  listDishGroups: async () => [],
+  listDishGroupAssignments: async () => [] as Array<[string, string]>,
+  saveDishGroup: async () => ({ __kind__: "err" as const, err: "mock" }),
+  deleteDishGroup: async () => ({ __kind__: "ok" as const, ok: null }),
+  setDishGroupAssignment: async () => ({
+    __kind__: "ok" as const,
+    ok: null,
+  }),
+};
+
 const platformParamsMock = {
   listPlatformParams: async () => ({ __kind__: "ok" as const, ok: [] }),
   setPlatformParam: async () => ({
@@ -258,6 +269,7 @@ export const mockBackend: backendInterface = {
   ...partnerConsoleMock,
   ...deviceAuthMock,
   ...platformParamsMock,
+  ...dishGroupsMock,
   _initialize_access_control: async () => {},
   _internet_identity_sign_in_finish: async () => ({ __kind__: "ok", ok: null }),
   _internet_identity_sign_in_start: async () => new Uint8Array(),

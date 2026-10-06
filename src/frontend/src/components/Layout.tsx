@@ -29,6 +29,7 @@ import {
   Clock,
   History,
   Info,
+  Layers,
   LogOut,
   type LucideIcon,
   Percent,
@@ -153,6 +154,12 @@ const ADMIN_NAV: NavItem[] = [
     to: "/admin/doi-soat",
     label: "Đối soát & trả tiền",
     icon: Wallet,
+    adminOnly: true,
+  },
+  {
+    to: "/admin/nhom-mon",
+    label: "Nhóm món chung",
+    icon: Layers,
     adminOnly: true,
   },
   {

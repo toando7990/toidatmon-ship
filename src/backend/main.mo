@@ -30,6 +30,8 @@ import TenantApi "mixins/tenant-api";
 import PartnerApplicationApi "mixins/partner-application-api";
 import PartnerConsoleApi "mixins/partner-console-api";
 import PlatformParamsApi "mixins/platform-params-api";
+import DishGroupsApi "mixins/dish-groups-api";
+import DishGroupTypes "types/dish-groups";
 import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
@@ -106,6 +108,9 @@ actor Main {
   let counterPlanUntil : PlatformParamsTypes.CounterPlanUntilStore;
   let counterPayments : PlatformParamsTypes.CounterPaymentStore;
   let kitchenNotes : PartnerConsoleTypes.KitchenNoteStore;
+  // Nhóm món dùng chung toàn nền tảng — supplied by migrations/20261011_000000.mo.
+  let dishGroups : DishGroupTypes.GroupStore;
+  let dishGroupAssignments : DishGroupTypes.AssignmentStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -320,6 +325,7 @@ actor Main {
   include PartnerConsoleApi(accessControlState, tenants, devices, deviceAuth, menus, storeHoursState, partnerSettings, soldOutItems, orderPrep, counterPlanUntil, kitchenNotes);
   include PlatformParamsApi(accessControlState, devices, deviceAuth, platformParams, counterPayments);
   include VpsAdminApi(accessControlState, secretState, platformParams);
+  include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
   /// it is talking to. `Principal.fromActor(Main)` resolves the actor's own

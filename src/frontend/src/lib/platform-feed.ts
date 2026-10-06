@@ -14,6 +14,10 @@ export interface FeedDish {
   hasPromo: boolean;
   /** km tới chi nhánh gần khách nhất của quán; null = chưa biết vị trí */
   distanceKm: number | null;
+  /** Nhóm món dùng chung của nền tảng (null = chưa thuộc nhóm nào). */
+  groupId: string | null;
+  /** Số phần đã bán 7 ngày qua (đơn đã thanh toán); 0 = chưa có số liệu. */
+  sold: number;
 }
 
 /**
