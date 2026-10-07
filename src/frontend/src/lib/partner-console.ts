@@ -5,7 +5,14 @@
 // lib/partner-applications.ts). Hàm cũ (listOrders, addItem…) gọi thẳng và
 // LUÔN gửi deviceId của máy này để backend kiểm tra vai trò.
 
-import type { Backend, Device, MenuItem, Order, StoreHours } from "@/backend";
+import type {
+  Backend,
+  Device,
+  MenuItem,
+  Order,
+  Restaurant,
+  StoreHours,
+} from "@/backend";
 import { BookingStatus, DeviceRole, PaymentStatus } from "@/backend";
 import {
   credentialFor,
@@ -176,7 +183,7 @@ export function roleOf(d: Device | null): ConsoleRole | null {
 }
 
 export const ROLE_LABEL: Record<ConsoleRole, string> = {
-  owner: "Chủ quán",
+  owner: "Chủ đối tác",
   staff: "Nhân viên",
 };
 
@@ -527,4 +534,110 @@ export function timeOf(ns: bigint): string {
     minute: "2-digit",
     timeZone: "Asia/Ho_Chi_Minh",
   });
+}
+
+// ---- Nhà hàng (Chủ đối tác tự quản lý — canister cho máy tenantAdmin) ----
+
+type RestaurantResult =
+  | { __kind__: "ok"; ok: Restaurant }
+  | { __kind__: "err"; err: string };
+
+function unwrapR(r: RestaurantResult): Restaurant {
+  if (r.__kind__ === "err") {
+    throw new Error(
+      r.err === "Admin only" ? "Chỉ Chủ đối tác được sửa nhà hàng" : r.err,
+    );
+  }
+  return r.ok;
+}
+
+export interface RestaurantDraft {
+  name: string;
+  address: string;
+  phone: string;
+  visible: boolean;
+  lat: number;
+  lng: number;
+}
+
+/** Mã nhà hàng mới: "<đối tác>-<chuỗi ngẫu nhiên>". */
+export function newRestaurantId(tenantId: string): string {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${tenantId}-${rand}`;
+}
+
+export async function saveRestaurant(
+  actor: Backend,
+  tenantId: string,
+  deviceId: string,
+  restaurantId: string | null,
+  d: RestaurantDraft,
+): Promise<Restaurant> {
+  const cred = credentialFor(deviceId);
+  if (!restaurantId) {
+    const r = unwrapR(
+      (await actor.addRestaurant(
+        tenantId,
+        cred,
+        newRestaurantId(tenantId),
+        d.name.trim(),
+        d.address.trim(),
+        d.phone.trim(),
+        d.lat,
+        d.lng,
+      )) as RestaurantResult,
+    );
+    if (!d.visible) {
+      return unwrapR(
+        (await actor.updateRestaurant(
+          tenantId,
+          cred,
+          r.restaurantId,
+          r.name,
+          r.address,
+          r.phone,
+          false,
+          r.lat,
+          r.lng,
+        )) as RestaurantResult,
+      );
+    }
+    return r;
+  }
+  return unwrapR(
+    (await actor.updateRestaurant(
+      tenantId,
+      cred,
+      restaurantId,
+      d.name.trim(),
+      d.address.trim(),
+      d.phone.trim(),
+      d.visible,
+      d.lat,
+      d.lng,
+    )) as RestaurantResult,
+  );
+}
+
+export async function setBranchPrice(
+  actor: Backend,
+  tenantId: string,
+  deviceId: string,
+  restaurantId: string,
+  itemId: string,
+  price: bigint,
+): Promise<void> {
+  const r = (await actor.setRestaurantPriceOverride(
+    tenantId,
+    credentialFor(deviceId),
+    restaurantId,
+    itemId,
+    price,
+  )) as { __kind__: "ok" } | { __kind__: "err"; err: string };
+  if (r.__kind__ === "err") throw new Error(r.err);
+}
+
+/** Nhà hàng đã ghim vị trí (0,0 = chưa ghim — không gọi được tài xế). */
+export function hasPin(r: { lat: number; lng: number }): boolean {
+  return !(r.lat === 0 && r.lng === 0);
 }

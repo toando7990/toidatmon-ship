@@ -22,7 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRestaurants } from "@/hooks/useQueries";
+import { useRestaurants, useTenantId } from "@/hooks/useQueries";
+import { useCanister } from "@/lib/canister";
+import { getAdminTicket } from "@/lib/payouts";
 import { getAnalytics } from "@/lib/vps-client";
 import type { AnalyticsResponse } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -63,9 +65,17 @@ function formatNumber(n: number): string {
 export function AnalyticsDashboard() {
   const [range, setRange] = useState<Range>("30d");
 
+  const { actor, isFetching } = useCanister();
+  const tenantId = useTenantId();
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["analytics", range],
-    queryFn: () => getAnalytics(range),
+    queryKey: ["analytics", range, tenantId],
+    queryFn: async () =>
+      getAnalytics(
+        range,
+        await getAdminTicket(actor as NonNullable<typeof actor>),
+        tenantId,
+      ),
+    enabled: !!actor && !isFetching && !!tenantId,
     retry: 1,
   });
   // Danh sách nhà hàng thật (canister getRestaurants) — dùng để đối chiếu

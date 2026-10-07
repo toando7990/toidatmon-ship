@@ -527,6 +527,12 @@ function initSchema(db) {
   if (!colNames.has('km_platform_funded')) db.exec('ALTER TABLE orders ADD COLUMN km_platform_funded INTEGER NOT NULL DEFAULT 0');
   if (!colNames.has('voucher_program_code')) db.exec("ALTER TABLE orders ADD COLUMN voucher_program_code TEXT NOT NULL DEFAULT ''");
   if (!colNames.has('voucher_platform_funded')) db.exec('ALTER TABLE orders ADD COLUMN voucher_platform_funded INTEGER NOT NULL DEFAULT 0');
+  // Trang quản lý đối tác (routes/partner-console.js): nhận đơn (tắt chuông
+  // trên mọi máy của đối tác) + huỷ đơn kèm lý do.
+  if (!colNames.has('accepted_at')) db.exec('ALTER TABLE orders ADD COLUMN accepted_at INTEGER');
+  if (!colNames.has('accepted_by')) db.exec("ALTER TABLE orders ADD COLUMN accepted_by TEXT NOT NULL DEFAULT ''");
+  if (!colNames.has('cancel_reason')) db.exec("ALTER TABLE orders ADD COLUMN cancel_reason TEXT NOT NULL DEFAULT ''");
+  if (!colNames.has('cancelled_by')) db.exec("ALTER TABLE orders ADD COLUMN cancelled_by TEXT NOT NULL DEFAULT ''");
   const poCols = new Set(db.prepare('PRAGMA table_info(payout_orders)').all().map((c) => c.name));
   if (!poCols.has('subsidy')) db.exec('ALTER TABLE payout_orders ADD COLUMN subsidy INTEGER NOT NULL DEFAULT 0');
   const pCols = new Set(db.prepare('PRAGMA table_info(payouts)').all().map((c) => c.name));

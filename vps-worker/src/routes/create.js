@@ -101,6 +101,19 @@ router.post('/order/create', async (req, res, next) => {
       if (!check.ok) return res.status(check.status).json({ ok: false, error: check.error });
     }
 
+    // Đơn khách đặt online: đối tác phải đang nhận đơn (không tạm nghỉ) và
+    // trong giờ mở cửa — trước đây chỉ trang khách tự chặn. Đơn tại quầy
+    // không chặn (nhân viên đang trực tại quầy). Lỗi mạng: cho qua, ghi log.
+    if (!isCounterOrder) {
+      try {
+        if (!(await canister.isStoreOpen(tenantId))) {
+          return res.status(409).json({ ok: false, code: 'STORE_CLOSED', error: 'Quán đang tạm nghỉ hoặc ngoài giờ nhận đơn. Vui lòng quay lại sau.' });
+        }
+      } catch (e) {
+        console.error('[create] isStoreOpen lỗi:', tenantId, e.message);
+      }
+    }
+
     // Chi nhánh phải thuộc đúng đối tác (không cho tạo đơn chéo đối tác).
     try {
       if (!(await restaurantBelongsTo(tenantId, restaurantId))) {
