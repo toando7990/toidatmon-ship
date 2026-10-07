@@ -75,12 +75,16 @@ router.get('/platform/report/summary', requirePlatform(['viewer']), async (req, 
     const s = summarize(db, days);
     let names = new Map();
     try {
-      names = new Map((await canister.listActiveTenants()).map((t) => [t.tenantId, t.name]));
+      names = new Map((await canister.listActiveTenants()).map((t) => [t.tenantId, t]));
     } catch {
       /* bỏ qua tên quán */
     }
-    s.topTenants = s.topTenants.map((t) => ({ ...t, name: names.get(t.tenantId) || t.tenantId }));
-    const best = bestSellers(db, days, 10, '', Date.now()).items.map((b) => ({ ...b, tenantName: names.get(b.tenantId) || b.tenantId }));
+    s.topTenants = s.topTenants.map((t) => ({
+      ...t,
+      name: names.get(t.tenantId)?.partnerName || t.tenantId,
+      brandName: names.get(t.tenantId)?.name || '',
+    }));
+    const best = bestSellers(db, days, 10, '', Date.now()).items.map((b) => ({ ...b, tenantName: names.get(b.tenantId)?.name || b.tenantId }));
     res.json({ ok: true, ...s, bestSellers: best, delivery: delivery.stats(db, days) });
   } catch (e) {
     next(e);

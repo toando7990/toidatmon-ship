@@ -3,8 +3,9 @@ import Common "common";
 
 // Tenant (đối tác) domain types.
 //
-// Mỗi đối tác (partner) sở hữu 1 chuỗi nhà hàng riêng, có subdomain riêng của
-// toidatmon.com (ví dụ "bunbohue65.toidatmon.com") và menu riêng. Dữ liệu cốt
+// Mỗi đối tác (partner, pháp nhân) sở hữu 1 thương hiệu với 1 hoặc nhiều nhà
+// hàng và menu riêng. KHÔNG dùng tên miền con: trang của thương hiệu là
+// toidatmon.vn/<slug> (vd toidatmon.vn/bunbohue65). Dữ liệu cốt
 // lõi (đơn hàng, menu, nhà hàng, thiết bị, khuyến mại) được lưu trên canister
 // và PHẢI cách ly hoàn toàn giữa các đối tác.
 //
@@ -15,9 +16,9 @@ module {
 
   /// Một đối tác (partner) của nền tảng.
   ///
-  /// - `slug` là nhãn subdomain (ví dụ "bunbohue65" cho
-  ///   bunbohue65.toidatmon.com). Frontend phân giải đối tác từ hostname
-  ///   (subdomain) hoặc từ tiền tố đường dẫn /<slug> dự phòng.
+  /// - `slug` là đường dẫn của thương hiệu (vd "bunbohue65" →
+  ///   toidatmon.vn/bunbohue65). Frontend phân giải đối tác từ tiền tố đường
+  ///   dẫn /<slug>; tên miền con cũ được chuyển hướng về đường dẫn này.
   /// - `logoUrl` / `brandColor` phục vụ giao diện thương hiệu riêng của đối
   ///   tác. `brandColor` là chuỗi hex hoặc oklch; rỗng = dùng mặc định.
   /// - `active` = false thì đối tác bị ẩn/ngừng hoạt động: frontend KHÔNG được
@@ -47,7 +48,7 @@ module {
   /// chạy sau nâng cấp.
   public let defaultTenantId : TenantId = "bunbohue65";
 
-  /// Slug của đối tác mặc định (khớp subdomain bunbohue65.toidatmon.com).
+  /// Slug của đối tác mặc định (toidatmon.vn/bunbohue65).
   public let defaultTenantSlug : Text = "bunbohue65";
 
   /// Tên hiển thị của đối tác mặc định.
@@ -76,6 +77,18 @@ module {
     "support",
     "help",
     "status",
+    "san",
+    "quan-ly",
+    "track",
+    "history",
+    "profile",
+    "counter",
+    "driver",
+    "enterprise",
+    "claim",
+    "gioi-thieu",
+    "dang-ky-doi-tac",
+    "ordering-partners",
   ];
 
   /// Chuẩn hoá slug: chữ thường, chỉ giữ [a-z0-9-]. Dùng để so khớp hostname

@@ -20,10 +20,12 @@ type Result<T> = { __kind__: "ok"; ok: T } | { __kind__: "err"; err: string };
 interface FinanceActor {
   setPartnerBank(
     tenantId: string,
+    bankBin: string,
     bankName: string,
     accountNumber: string,
     accountHolder: string,
     branch: string,
+    counterQr: boolean,
   ): Promise<Result<PartnerBank>>;
   listPartnerBanks(
     credential: string,
@@ -62,21 +64,28 @@ function unwrap<T>(r: Result<T>): T {
   return r.ok;
 }
 
+/**
+ * Lưu tài khoản nhận tiền của đối tác. 1 tài khoản cho cả đối soát và
+ * chuyển khoản tại quầy: counterQr = true → khách quét QR ở mọi nhà hàng của
+ * đối tác, tiền về tài khoản này (cần bankBin để tạo VietQR).
+ */
 export async function setPartnerBank(
   actor: Backend,
   tenantId: string,
   b: Pick<
     PartnerBank,
     "bankName" | "accountNumber" | "accountHolder" | "branch"
-  >,
+  > & { bankBin: string; counterQr: boolean },
 ): Promise<PartnerBank> {
   return unwrap(
     await api(actor).setPartnerBank(
       tenantId,
+      b.bankBin.trim(),
       b.bankName.trim(),
       b.accountNumber.replace(/\s+/g, ""),
       b.accountHolder.trim(),
       b.branch.trim(),
+      b.counterQr,
     ),
   );
 }

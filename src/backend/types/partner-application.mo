@@ -26,7 +26,8 @@ module {
 
   /// Dữ liệu quán tự khai trong form (4 bước).
   public type ApplicationInput = {
-    // Bước 1 — Quán
+    // Bước 1 — Thương hiệu & nhà hàng (storeAddress: nhà hàng chính, để thẩm
+    // định; KHÔNG dùng làm địa chỉ đối tác). contact*: liên hệ của đối tác.
     brandName : Text;
     desiredSlug : Text;
     cuisine : Text;
@@ -41,6 +42,9 @@ module {
     taxCode : Text;
     registrationNumber : Text;
     representativeName : Text;
+    /// Địa chỉ trụ sở (theo đăng ký kinh doanh) — địa chỉ của ĐỐI TÁC, khác
+    /// địa chỉ nhà hàng (storeAddress chỉ để sàn thẩm định).
+    headOfficeAddress : Text;
     usesEInvoice : Bool;
     // Bước 3 — Nhận tiền
     bankName : Text;

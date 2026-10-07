@@ -20,7 +20,10 @@ const DEVICES = {
 };
 const released = [];
 canister.getPlatformDeviceByCredential = async (c) => DEVICES[c] || null;
-canister.listActiveTenants = async () => [{ tenantId: 'phoba', name: 'Phở Bà Hạnh' }, { tenantId: 'comtam', name: 'Cơm Tấm' }];
+canister.listActiveTenants = async () => [
+  { tenantId: 'phoba', name: 'Phở Bà Hạnh', partnerName: 'Công ty TNHH Hạnh Phúc' },
+  { tenantId: 'comtam', name: 'Cơm Tấm', partnerName: 'Hộ kinh doanh Nguyễn Văn Tâm' },
+];
 canister.listRestaurants = async () => [{ restaurantId: 'R1', name: 'CN1', phone: '0901', lat: 10.77, lng: 106.7, address: 'A' }];
 canister.releaseVoucher = async (t, e, c) => { released.push([t, e, c]); return { ok: '20261231' }; };
 canister.getOrderStatus = async () => ({ ok: { bookingStatus: { confirmed: null } } });
@@ -81,7 +84,8 @@ test('phân quyền: không thẻ 401, sai vai trò 403, đúng vai trò 200', a
 test('CSKH: tìm theo SĐT (khác định dạng) ở mọi quán, ghi khiếu nại, bỏ đơn, hoàn phiếu', async () => {
   const [, s] = await call('GET', '/platform/support/search?q=%2B84912345678', 'san-cs~k');
   assert.deepEqual(s.orders.map((o) => o.orderId).sort(), ['ORD-1', 'ORD-2']);
-  assert.equal(s.orders.find((o) => o.orderId === 'ORD-2').tenantName, 'Cơm Tấm');
+  assert.equal(s.orders.find((o) => o.orderId === 'ORD-2').tenantName, 'Hộ kinh doanh Nguyễn Văn Tâm');
+  assert.equal(s.orders.find((o) => o.orderId === 'ORD-2').brandName, 'Cơm Tấm');
   const [st, c] = await call('POST', '/platform/support/complaints', 'san-cs~k', { orderId: 'ORD-1', category: 'delivery', content: 'Giao chậm' });
   assert.equal(st, 200);
   assert.equal(c.complaint.createdBy, 'Anh');
@@ -105,7 +109,8 @@ test('điều phối: đơn chưa đặt được tài xế sau 3 phút → cầ
   const one = o.orders.find((x) => x.orderId === 'ORD-1');
   assert.equal(one.attention, 'Chưa đặt được tài xế');
   assert.equal(one.restaurantPhone, '0901');
-  assert.equal(one.tenantName, 'Phở Bà Hạnh');
+  assert.equal(one.tenantName, 'Công ty TNHH Hạnh Phúc');
+  assert.equal(one.brandName, 'Phở Bà Hạnh');
   assert.equal(o.orders.find((x) => x.orderId === 'ORD-3').attention, '');
   assert.equal(o.orders[0].orderId, 'ORD-1'); // cần xử lý xếp trước
 });
@@ -117,5 +122,6 @@ test('báo cáo sàn: doanh số chỉ tính đơn đã thanh toán', async () =
   assert.equal(r.totals.orders, 3);
   assert.equal(r.totals.cancelled, 1);
   assert.equal(r.series.length, 7);
-  assert.equal(r.topTenants[0].name, 'Phở Bà Hạnh');
+  assert.equal(r.topTenants[0].name, 'Công ty TNHH Hạnh Phúc');
+  assert.equal(r.topTenants[0].brandName, 'Phở Bà Hạnh');
 });

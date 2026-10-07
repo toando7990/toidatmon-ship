@@ -47,8 +47,18 @@ describe("đối soát", () => {
       note: "",
       createdAt: 0,
     } as Payout;
-    const csv = payoutsCsv([p], () => "Phở Bà Hạnh", bank);
-    expect(csv.split("\n")[1]).toContain('"Phở Bà Hạnh"');
+    const csv = payoutsCsv(
+      [p],
+      () => ({
+        name: "Công ty TNHH Hạnh Phúc",
+        taxCode: "0312345678",
+        brand: "Phở Bà Hạnh",
+      }),
+      bank,
+    );
+    expect(csv.split("\n")[1]).toContain(
+      '"Công ty TNHH Hạnh Phúc","0312345678","Phở Bà Hạnh"',
+    );
     expect(csv.split("\n")[1]).toContain(
       '"264000","VCB","0011","NGUYEN VAN A","TDM tra tien phieu 7"',
     );
@@ -110,7 +120,11 @@ describe("đối soát", () => {
       note: "",
       createdAt: 0,
     } as Payout;
-    const csv = payoutsCsv([p], () => "Phở Bà", bank);
+    const csv = payoutsCsv(
+      [p],
+      () => ({ name: "Công ty Phở Bà", taxCode: "", brand: "Phở Bà" }),
+      bank,
+    );
     expect(csv.split("\n")[0]).toContain("Sàn hỗ trợ KM");
     expect(csv.split("\n")[1]).toContain(
       '"20000","15000","195000","Techcombank","1903","CONG TY PHO BA"',

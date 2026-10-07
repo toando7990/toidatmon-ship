@@ -178,7 +178,7 @@ const IDL_FACTORY = ({ IDL }) => {
   });
   // Chỉ khai các field VPS cần — candid cho phép bản ghi trả về có thêm field.
   const TenantSummary = IDL.Record({
-    tenantId: IDL.Text, slug: IDL.Text, name: IDL.Text, active: IDL.Bool,
+    tenantId: IDL.Text, slug: IDL.Text, name: IDL.Text, companyName: IDL.Text, active: IDL.Bool,
   });
   return IDL.Service({
     // Mọi lệnh theo đối tác nhận tenantId ĐẦU TIÊN (khớp backend nhiều đối tác).
@@ -452,8 +452,14 @@ async function listActiveTenants() {
   if (_tenantsCache && _tenantsCache.expiresAt > Date.now()) return _tenantsCache.rows;
   const actor = getActor();
   const all = await actor.listTenants(true);
-  let rows = all.filter((t) => t.active).map((t) => ({ tenantId: t.tenantId, name: t.name }));
-  if (rows.length === 0) rows = [{ tenantId: DEFAULT_TENANT_ID, name: DEFAULT_TENANT_ID }];
+  // name = thương hiệu; partnerName = tên pháp lý của ĐỐI TÁC (sàn làm việc
+  // với đối tác — vd "Công ty Gia Khánh Foods" sở hữu "Bún Bò Huế 65").
+  let rows = all.filter((t) => t.active).map((t) => ({
+    tenantId: t.tenantId,
+    name: t.name,
+    partnerName: t.companyName || t.name,
+  }));
+  if (rows.length === 0) rows = [{ tenantId: DEFAULT_TENANT_ID, name: DEFAULT_TENANT_ID, partnerName: DEFAULT_TENANT_ID }];
   _tenantsCache = { rows, expiresAt: Date.now() + 10 * 60 * 1000 };
   return rows;
 }

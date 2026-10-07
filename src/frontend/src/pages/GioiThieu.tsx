@@ -11,7 +11,7 @@
 import { useRestaurants } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
 import { getCompanyInfo } from "@/lib/company-info";
-import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
+import { partnerPath } from "@/lib/tenant";
 import {
   Building2,
   Globe,
@@ -36,7 +36,7 @@ export default function GioiThieu() {
   const { data: restaurants, isLoading: restaurantsLoading } = useRestaurants();
   const { tenant } = useTenant();
   const co = getCompanyInfo(tenant);
-  const site = tenant ? `${tenant.slug}.${PARTNER_ROOT_DOMAIN}` : "";
+  const site = tenant ? partnerPath(tenant.slug) : "";
   const infoRows = [
     { icon: Building2, label: "Đơn vị", value: co.name },
     { icon: ScrollText, label: "Mã số thuế", value: co.taxCode },

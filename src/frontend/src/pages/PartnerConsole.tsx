@@ -1,5 +1,5 @@
 // PartnerConsole — trang quản lý của đối tác: /<slug>/quan-ly (hoặc
-// <slug>.toidatmon.vn/quan-ly). Thiết kế cho hộ kinh doanh: ít chức năng,
+// toidatmon.vn/<slug>/quan-ly). Thiết kế cho hộ kinh doanh: ít chức năng,
 // nút to, làm trên điện thoại.
 //
 // Đăng nhập bằng mã kích hoạt 6 ký tự (thiết bị gắn vai trò):
@@ -1373,7 +1373,7 @@ export default function PartnerConsole() {
       <div className="mx-auto max-w-md p-6 text-center">
         <p className="text-lg font-bold">Mở trang này từ địa chỉ của quán</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Ví dụ: ten-quan.toidatmon.vn/quan-ly
+          Ví dụ: toidatmon.vn/ten-quan/quan-ly
         </p>
       </div>
     );

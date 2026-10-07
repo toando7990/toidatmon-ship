@@ -25,7 +25,7 @@ const CHANNELS = ['hotline', 'zalo', 'email', 'other'];
 
 async function tenantNames() {
   try {
-    return new Map((await canister.listActiveTenants()).map((t) => [t.tenantId, t.name]));
+    return new Map((await canister.listActiveTenants()).map((t) => [t.tenantId, t]));
   } catch {
     return new Map();
   }
@@ -53,7 +53,8 @@ function toApi(r, names, items, complaints) {
   return {
     orderId: r.order_id,
     tenantId: r.tenant_id,
-    tenantName: names.get(r.tenant_id) || r.tenant_id,
+    tenantName: names.get(r.tenant_id)?.partnerName || r.tenant_id,
+    brandName: names.get(r.tenant_id)?.name || '',
     cusName: r.cus_name,
     cusPhone: r.cus_phone,
     cusAddress: r.cus_address,

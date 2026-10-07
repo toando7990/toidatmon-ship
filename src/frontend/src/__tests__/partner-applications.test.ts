@@ -18,6 +18,7 @@ const ok = {
   legalName: "Hộ kinh doanh Nguyễn Văn A",
   taxCode: "0312345678",
   representativeName: "Nguyễn Văn A",
+  headOfficeAddress: "12 Nguyễn Huệ, TP. Huế",
   bankName: "Vietcombank",
   bankAccountNumber: "0123456789",
   bankAccountHolder: "HO KINH DOANH NGUYEN VAN A",
@@ -43,6 +44,20 @@ describe("validateStep", () => {
       validateStep(0, { ...ok, desiredSlug: "Bun Bo" }, RESERVED_SLUGS)
         .desiredSlug,
     ).toBeTruthy();
+  });
+  it("bước 2 (đối tác) cần địa chỉ trụ sở và liên hệ của đối tác", () => {
+    const e = validateStep(
+      1,
+      { ...ok, headOfficeAddress: " ", contactEmail: "x" },
+      RESERVED_SLUGS,
+    );
+    expect(e.headOfficeAddress).toBeTruthy();
+    expect(e.contactEmail).toBeTruthy();
+    // Bước 1 (thương hiệu & nhà hàng) không còn hỏi liên hệ.
+    expect(
+      validateStep(0, { ...ok, contactEmail: "x" }, RESERVED_SLUGS),
+    ).toEqual({});
+    expect(draftToInput(ok).headOfficeAddress).toBe("12 Nguyễn Huệ, TP. Huế");
   });
   it("mã số thuế phải 10 hoặc 13 số", () => {
     expect(

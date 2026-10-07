@@ -2,8 +2,9 @@
 
 ## User Preferences
 
-- Multi-partner platform: each partner has their own subdomain of toidatmon.com and owns their own restaurant chain with its own menu
-- Partner resolution must work from both the hostname subdomain and a fallback path prefix /<slug>
+- Multi-partner platform: a partner (đối tác) is a legal entity (e.g. Công ty Gia Khánh Foods) that owns exactly ONE brand (e.g. Bún Bò Huế 65) with one or more restaurants; the platform deals with the partner's legal info, not restaurant info
+- No per-partner subdomain: the brand page lives at toidatmon.vn/<slug>; old partner subdomains redirect to that path (lib/tenant.ts legacySubdomainRedirect)
+- One bank account per partner (PartnerBank) for both payouts and counter bank-transfer QR at every restaurant of that partner
 - Never render a blank screen for an unknown or hidden partner slug
 - Core data (orders, menus, restaurants, devices, promotions) lives on the canister; customers, addresses, logs, invoices, and analytics live on the VPS
 - Full data isolation between partners
@@ -33,7 +34,7 @@
 - Tenant model: tenantId = normalized slug is the primary key; Tenant = { tenantId, slug, name, logoUrl, companyName, taxCode, address, phone, brandColor, active, createdAt, updatedAt }; default tenant is bunbohue65; reserved slugs include www/admin/api/app/static/assets/cdn/mail/smtp/ftp/ns/ns1/ns2/localhost/toidatmon/dashboard/portal/support/help/status.
 - Backend tenant API: createTenant/updateTenant/setTenantActive are central-admin gated; listTenants(activeOnly)/getTenant/getTenantBySlug are public so the storefront can resolve a partner from a hostname or path slug.
 - In this backend markPickedUp, cleanupExpiredActivations and getItemImage are NOT tenant-scoped; getOrderStatus, listPendingPaymentOrders and verifyEmailCode take tenantId first. Always confirm each method against backend.d.ts rather than assuming.
-- Frontend partner resolution: lib/tenant.ts resolves the slug from the hostname subdomain or the /<slug> path prefix; App.tsx derives the TanStack Router basepath from the path-prefix slug and declares a Vietnamese notFoundComponent; hooks/useTenant.tsx provides the tenant context and useTenantId() returns '' while unresolved, which keeps tenant-scoped queries disabled and prevents cross-partner cache leakage.
+- Frontend partner resolution: lib/tenant.ts resolves the slug from the /<slug> path prefix only (hostname subdomains are redirected in main.tsx); App.tsx derives the TanStack Router basepath from the path-prefix slug and declares a Vietnamese notFoundComponent; hooks/useTenant.tsx provides the tenant context and useTenantId() returns '' while unresolved, which keeps tenant-scoped queries disabled and prevents cross-partner cache leakage.
 - loadEnterpriseActivation(tenantId) returns null when the stored activation belongs to a different partner — that is the mechanism preventing a device activated under one partner from appearing activated on another partner's subdomain.
 - Migration chain subset form: OldActor only needs the fields whose shape CHANGED; unchanged fields carry through automatically. OldActor must match the deployed .most signature (.old/src/backend/dist/backend.most).
 - When adding a variant constructor (e.g. #tenantAdmin) to a type used in a stable Map, the migration must declare the NEW type (with the new constructor) in NewActor and cast old values to it, or M0170 'expected case missing' fires.

@@ -134,13 +134,19 @@ export function ReportConsole({ auth }: { auth: string }) {
           <DayBars series={r.series} />
           <div className="grid gap-3 lg:grid-cols-3">
             <section className="rounded-2xl border bg-card p-3.5">
-              <h3 className="mb-2 font-extrabold">Top quán</h3>
+              <h3 className="mb-2 font-extrabold">Top đối tác</h3>
               <ol className="flex flex-col gap-1.5 text-sm">
                 {r.topTenants.map((t, i) => (
                   <li key={t.tenantId} className="flex gap-2">
                     <span className="w-5 text-muted-foreground">{i + 1}</span>
-                    <span className="min-w-0 flex-1 truncate font-semibold">
-                      {t.name}
+                    <span className="min-w-0 flex-1 truncate">
+                      <b>{t.name}</b>
+                      {t.brandName && t.brandName !== t.name && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {t.brandName}
+                        </span>
+                      )}
                     </span>
                     <span className="tabular-nums">{short(t.revenue)}</span>
                   </li>

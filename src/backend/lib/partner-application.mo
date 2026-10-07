@@ -83,6 +83,9 @@ module {
     if (blank(i.representativeName) or tooLong(i.representativeName, maxShort)) {
       return #err("Tên người đại diện không hợp lệ");
     };
+    if (blank(i.headOfficeAddress) or tooLong(i.headOfficeAddress, 300)) {
+      return #err("Địa chỉ trụ sở không hợp lệ");
+    };
     if (blank(i.bankName) or tooLong(i.bankName, maxShort)) {
       return #err("Tên ngân hàng không hợp lệ");
     };
@@ -179,8 +182,10 @@ module {
 
   public type Decision = { #approve; #reject; #requestInfo };
 
-  /// Admin xử lý đơn. Khi #approve: tạo Tenant (companyName = tên pháp lý,
-  /// taxCode, address, phone từ đơn). Đơn đã duyệt không đổi lại được.
+  /// Admin xử lý đơn. Khi #approve: tạo Tenant với thông tin ĐỐI TÁC
+  /// (companyName = tên pháp lý, taxCode, address = địa chỉ trụ sở, phone =
+  /// SĐT liên hệ của đối tác) — KHÔNG lấy địa chỉ nhà hàng. Đơn cũ chưa có
+  /// địa chỉ trụ sở → để trống, admin bổ sung ở trang Đối tác.
   public func review(
     store : ApplicationStore,
     tenants : TenantTypes.TenantStore,
@@ -205,7 +210,7 @@ module {
       };
       case (#approve) {
         let i = a.input;
-        switch (TenantLib.createTenant(tenants, i.desiredSlug, i.brandName, "", i.legalName, i.taxCode, i.storeAddress, i.contactPhone, "#e11d48")) {
+        switch (TenantLib.createTenant(tenants, i.desiredSlug, i.brandName, "", i.legalName, i.taxCode, i.headOfficeAddress, i.contactPhone, "#e11d48")) {
           case (#err e) { return #err(e) };
           case (#ok t) {
             { a with status = #approved; adminNote = note; tenantId = t.tenantId; updatedAt = now };

@@ -52,7 +52,7 @@ function ApplicationCard({
         note.trim(),
       ),
     onSuccess: () => {
-      toast.success("Đã gửi yêu cầu bổ sung cho quán");
+      toast.success("Đã gửi yêu cầu bổ sung cho đối tác");
       setNote("");
       qc.invalidateQueries({ queryKey: ["san", "applications"] });
     },
@@ -60,13 +60,14 @@ function ApplicationCard({
   });
   const i = a.input;
   const rows: Array<[string, string]> = [
-    ["Món chính", i.cuisine],
-    ["Số chi nhánh", String(i.branchCount)],
-    ["Địa chỉ", i.storeAddress],
-    ["Liên hệ", `${i.contactName} · ${i.contactPhone} · ${i.contactEmail}`],
-    ["Pháp nhân", `${i.legalName} · MST ${i.taxCode || "—"}`],
+    ["Đối tác", `${i.legalName} · MST ${i.taxCode || "—"}`],
     ["Người đại diện", i.representativeName],
+    ["Địa chỉ trụ sở", i.headOfficeAddress || "— (đơn cũ)"],
+    ["Liên hệ", `${i.contactName} · ${i.contactPhone} · ${i.contactEmail}`],
     ["Hoá đơn điện tử", i.usesEInvoice ? "Có" : "Chưa"],
+    ["Món chính", i.cuisine],
+    ["Số nhà hàng", String(i.branchCount)],
+    ["Nhà hàng chính", i.storeAddress],
   ];
   return (
     <article
@@ -82,7 +83,7 @@ function ApplicationCard({
         <b className="min-w-0 flex-1 truncate text-[14.5px]">
           {i.brandName}{" "}
           <span className="font-normal text-muted-foreground">
-            · {i.desiredSlug}.toidatmon.vn
+            · toidatmon.vn/{i.desiredSlug}
           </span>
         </b>
         <span

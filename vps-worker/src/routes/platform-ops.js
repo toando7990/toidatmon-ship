@@ -40,7 +40,7 @@ async function restaurantsOf(tenantId) {
 }
 async function tenantNames() {
   try {
-    return new Map((await canister.listActiveTenants()).map((t) => [t.tenantId, t.name]));
+    return new Map((await canister.listActiveTenants()).map((t) => [t.tenantId, t]));
   } catch {
     return new Map();
   }
@@ -84,7 +84,8 @@ router.get('/platform/ops/overview', requireOps, async (req, res, next) => {
       out.push({
         orderId: r.order_id,
         tenantId: r.tenant_id,
-        tenantName: names.get(r.tenant_id) || r.tenant_id,
+        tenantName: names.get(r.tenant_id)?.partnerName || r.tenant_id,
+        brandName: names.get(r.tenant_id)?.name || '',
         restaurantName: rest?.name || '',
         restaurantPhone: rest?.phone || '',
         cusName: r.cus_name,
