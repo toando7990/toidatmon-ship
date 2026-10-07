@@ -44,7 +44,7 @@ const PROD_FALLBACK_URL = "https://api.toidatmon.vn";
 // the URL is unavailable in every form (runtime config not yet loaded AND no
 // fallback applies — a state that should not occur in practice). Callers can
 // let it propagate to the ErrorBoundary; the normal path always returns a URL.
-function getVpsUrl(): string {
+export function getVpsUrl(): string {
   const env = getEnv();
   if (env?.vps_url && env.vps_url.trim() !== "") {
     return env.vps_url.trim();
@@ -82,7 +82,7 @@ function extractErrorMessage(body: unknown): string | null {
   return null;
 }
 
-interface FetchOptions {
+export interface FetchOptions {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   body?: unknown;
@@ -92,7 +92,7 @@ interface FetchOptions {
 }
 
 // Thin fetch wrapper with timeout, JSON handling, and analytics X-API-Key injection.
-async function vpsFetch<T>(options: FetchOptions): Promise<T> {
+export async function vpsFetch<T>(options: FetchOptions): Promise<T> {
   const {
     method,
     path,
@@ -565,8 +565,16 @@ export async function emailInvoice(orderId: string): Promise<InvoiceResponse> {
 // trong môi trường Caffeine. Nếu VPS admin tự set ANALYTICS_API_KEY trong
 // .env cho mục đích khác (gọi API trực tiếp từ nơi khác), route này sẽ đòi
 // hỏi header đó và app web sẽ luôn bị 401 — xem middleware/auth.js (VPS).
+/**
+ * Báo cáo bán hàng. auth (bắt buộc — VPS từ chối nếu thiếu):
+ *   - vé admin (lib/payouts.ts getAdminTicket): toàn sàn, hoặc 1 đối tác nếu
+ *     truyền tenantId;
+ *   - "partner:<deviceId~khoá>": máy Chủ đối tác / Kế toán / Báo cáo — VPS
+ *     chỉ trả số liệu của đối tác của máy.
+ */
 export async function getAnalytics(
   range: "7d" | "30d" | "90d" = "30d",
+  auth = "",
   tenantId = "",
 ): Promise<AnalyticsResponse> {
   const tenantQuery = tenantId
@@ -575,7 +583,19 @@ export async function getAnalytics(
   return vpsFetch<AnalyticsResponse>({
     method: "GET",
     path: `/analytics?range=${encodeURIComponent(range)}${tenantQuery}`,
+    headers: partnerAuthHeaders(auth),
   });
+}
+
+/**
+ * Header quyền cho API trang đối tác: "partner:<thẻ máy>" → X-Device; còn
+ * lại coi là vé admin (chế độ Hỗ trợ đối tác) → X-Admin-Ticket.
+ */
+export function partnerAuthHeaders(auth: string): Record<string, string> {
+  if (!auth) return {};
+  return auth.startsWith("partner:")
+    ? { "X-Device": auth.slice("partner:".length) }
+    : { "X-Admin-Ticket": auth };
 }
 
 // Exported base URL as a string. Resolved lazily via getVpsUrl() so the same

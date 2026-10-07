@@ -209,13 +209,21 @@ module {
       .map(func((_id : Text, r : Types.Restaurant)) : Types.Restaurant = r);
   };
 
-  // Set a price override for a (restaurantId, itemId) pair.
+  // Set a price override for a (restaurantId, itemId) pair. price = 0 →
+  // BỎ giá riêng (dùng lại giá chung) — trước đây lưu 0 làm món thành 0đ.
   public func setRestaurantPriceOverride(
     overrides : Overrides,
     restaurantId : Text,
     itemId : Text,
     price : Nat,
   ) : Result.Result<(), Text> {
+    if (price == 0) {
+      switch (overrides.get(restaurantId)) {
+        case (?inner) { inner.remove(itemId) };
+        case null {};
+      };
+      return #ok;
+    };
     switch (overrides.get(restaurantId)) {
       case null {
         let inner = Map.empty<Text, Nat>();

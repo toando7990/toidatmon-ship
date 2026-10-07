@@ -80,14 +80,14 @@ mixin (
     #ok(());
   };
 
-  /// Tạm nghỉ / nhận đơn lại. Chủ quán hoặc Nhân viên.
+  /// Tạm nghỉ / nhận đơn lại (mọi nhà hàng của đối tác). CHỈ Chủ đối tác.
   public shared ({ caller }) func setPartnerPaused(
     tenantId : Common.TenantId,
     deviceId : Common.DeviceId,
     paused : Bool,
   ) : async Result.Result<Types.PartnerSettings, Text> {
-    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceAuth, deviceId, tenantId))) {
-      return #err("Máy này không có quyền");
+    if (not (isAdmin(caller) or Lib.isOwner(devices, deviceAuth, deviceId, tenantId))) {
+      return #err("Chỉ Chủ đối tác được tạm nghỉ / mở lại nhận đơn");
     };
     #ok(Lib.update(partnerSettings, tenantId, func(s) = { s with paused }));
   };

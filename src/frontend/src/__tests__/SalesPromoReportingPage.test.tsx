@@ -24,6 +24,14 @@ vi.mock("@/lib/vps-client", () => ({
   getAnalytics: (...args: unknown[]) => mockGetAnalytics(...args),
 }));
 
+// Báo cáo cần quyền (vé admin hoặc thẻ máy) — giả lập admin.
+vi.mock("@/lib/canister", () => ({
+  useCanister: () => ({ actor: {}, isFetching: false }),
+}));
+vi.mock("@/lib/payouts", () => ({
+  getAdminTicket: async () => "admin-ticket",
+}));
+
 vi.mock("@/hooks/useQueries", () => ({
   useTenantId: () => "t1",
   usePromotions: () => ({ data: [], isLoading: false }),

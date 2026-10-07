@@ -3,19 +3,35 @@
 // nút to, làm trên điện thoại.
 //
 // Đăng nhập bằng mã kích hoạt 6 ký tự (thiết bị gắn vai trò):
-//   - Chủ quán  (#tenantAdmin): Đơn · Bán quầy · Món · Quán
-//   - Nhân viên (#cashier):     Đơn · Bán quầy · Món (chỉ gạt Còn/Hết)
+//   - Chủ đối tác (#tenantAdmin): Đơn · Bán quầy · Món · Báo cáo · Cài đặt
+//   - Nhân viên  (#cashier):      Đơn · Bán quầy · Món (chỉ gạt Còn/Hết),
+//     chỉ đơn của nhà hàng mình, không tạm nghỉ được.
+// Admin Tôi Đặt Món mở cùng giao diện ở chế độ Hỗ trợ đối tác
+// (PartnerConsoleSupport, /admin/ho-tro-doi-tac).
 // Bán quầy là gói trả phí tháng — admin Tôi Đặt Món bật (counterPlan).
 
 import type { Device, MenuItem, Restaurant, StoreHours } from "@/backend";
 import { DeviceRole } from "@/backend";
 import { CounterSell } from "@/components/CounterSell";
-import {
-  AnasystemCard,
-  CounterAccountCard,
-  PayoutsCard,
-} from "@/components/PartnerConnections";
 import { TdmIcon, TdmLogo, useTdmTheme } from "@/components/TdmLogo";
+import { OrdersTab } from "@/components/console/OrdersTab";
+import { ReportTab } from "@/components/console/ReportTab";
+import {
+  type SettingsSection,
+  SettingsTab,
+  StartChecklist,
+  useStartSteps,
+} from "@/components/console/SettingsTab";
+import {
+  BigButton,
+  Card,
+  ContactLinks,
+  type Ctx,
+  Switch,
+  deviceAuth,
+  logSupport,
+  useConsoleRestaurants,
+} from "@/components/console/shared";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import { usePageTitle } from "@/lib/page-title";
@@ -51,6 +67,7 @@ import {
   toConsoleOrders,
   updateMenuItem,
 } from "@/lib/partner-console";
+import { getAdminTicket } from "@/lib/payouts";
 import {
   type EffectiveParam,
   PARAM_BY_KEY,
@@ -64,61 +81,17 @@ import { cn, imageBytesToDataUrl } from "@/lib/utils";
 import { confirmCashPaymentCounter } from "@/lib/vps-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart3,
   Loader2,
   MonitorSmartphone,
   ReceiptText,
-  Store,
+  Settings,
   UtensilsCrossed,
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-type Tab = "orders" | "counter" | "menu" | "store";
-
-interface Ctx {
-  tenantId: string;
-  tenantName: string;
-  device: ConsoleDevice;
-  role: ConsoleRole;
-  settings: PartnerSettings | undefined;
-  /** Tham số Tôi Đặt Món áp dụng cho quán (phí, liên hệ…). */
-  params: EffectiveParam[];
-  /** Hạn gói bán quầy (ns), 0 = không hạn / chưa có. */
-  counterPlanUntil: bigint;
-}
-
 // ---------- Tham số từ Tôi Đặt Món ----------
-
-function ContactLinks({ params }: { params: EffectiveParam[] }) {
-  const phone = currentValue(params, "contact_phone");
-  const zalo = currentValue(params, "contact_zalo");
-  if (!phone && !zalo) return null;
-  const zaloHref = zalo.startsWith("http")
-    ? zalo
-    : `https://zalo.me/${zalo.replace(/[^\d]/g, "")}`;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {phone && (
-        <a
-          href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-          className="flex min-h-[44px] items-center rounded-xl bg-primary px-4 text-sm font-extrabold text-primary-foreground"
-        >
-          Gọi {phone}
-        </a>
-      )}
-      {zalo && (
-        <a
-          href={zaloHref}
-          target="_blank"
-          rel="noreferrer"
-          className="flex min-h-[44px] items-center rounded-xl border px-4 text-sm font-extrabold"
-        >
-          Nhắn Zalo
-        </a>
-      )}
-    </div>
-  );
-}
 
 /** Thông báo thay đổi sắp tới (phí, lịch trả tiền…) — chỉ máy Chủ quán. */
 function ParamNotices({ params }: { params: EffectiveParam[] }) {
@@ -153,86 +126,6 @@ function ParamNotices({ params }: { params: EffectiveParam[] }) {
 }
 
 // ---------- Khung chung ----------
-
-function BigButton({
-  children,
-  onClick,
-  variant = "primary",
-  disabled,
-  type = "button",
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  variant?: "primary" | "outline" | "dark";
-  disabled?: boolean;
-  type?: "button" | "submit";
-}) {
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "flex h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-extrabold transition-opacity disabled:opacity-50",
-        variant === "primary" && "bg-primary text-primary-foreground",
-        variant === "dark" && "bg-foreground text-background",
-        variant === "outline" && "border bg-card",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Switch({
-  on,
-  onToggle,
-  label,
-  disabled,
-}: {
-  on: boolean;
-  onToggle: () => void;
-  label: string;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled}
-      onClick={onToggle}
-      className={cn(
-        "relative h-9 w-[60px] shrink-0 rounded-full transition-colors disabled:opacity-50",
-        on ? "bg-green-700" : "bg-stone-300",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-1 h-7 w-7 rounded-full bg-white transition-all",
-          on ? "left-7" : "left-1",
-        )}
-      />
-    </button>
-  );
-}
-
-function Card({
-  children,
-  className,
-}: { children: ReactNode; className?: string }) {
-  return (
-    <section
-      className={cn(
-        "flex flex-col gap-3 rounded-2xl border bg-card p-4",
-        className,
-      )}
-    >
-      {children}
-    </section>
-  );
-}
 
 // ---------- Đăng nhập ----------
 
@@ -343,233 +236,6 @@ function LoginView({
         </BigButton>
       </form>
     </div>
-  );
-}
-
-// ---------- Đơn ----------
-
-const STAGES: { key: ConsoleStage; label: string }[] = [
-  { key: "todo", label: "Cần làm" },
-  { key: "wait", label: "Chờ giao" },
-  { key: "done", label: "Xong" },
-];
-
-function OrdersTab({ ctx }: { ctx: Ctx }) {
-  const { actor, isFetching } = useCanister();
-  const qc = useQueryClient();
-  const [stage, setStage] = useState<ConsoleStage>("todo");
-  const ready = !!actor && !isFetching;
-  const branch = ctx.role === "staff" ? ctx.device.restaurantId || null : null;
-
-  const ordersQ = useQuery({
-    queryKey: ["console", "orders", ctx.tenantId],
-    queryFn: () => listTenantOrders(actor!, ctx.tenantId, ctx.device.deviceId),
-    enabled: ready,
-    refetchInterval: 10_000,
-  });
-  const prepQ = useQuery({
-    queryKey: ["console", "prep", ctx.tenantId],
-    queryFn: () => listPrep(actor!, ctx.tenantId),
-    enabled: ready,
-    refetchInterval: 10_000,
-  });
-  const notesQ = useQuery({
-    queryKey: ["console", "kitchenNotes", ctx.tenantId],
-    queryFn: () => listKitchenNotes(actor!, ctx.tenantId),
-    enabled: ready,
-    refetchInterval: 10_000,
-  });
-  const notes = useMemo(
-    () => new Map((notesQ.data ?? []).map((n) => [n.orderId, n])),
-    [notesQ.data],
-  );
-  const cash = useMutation({
-    mutationFn: async (orderId: string) => {
-      const r = await confirmCashPaymentCounter(orderId, ctx.device.deviceId);
-      if (!r.ok) throw new Error(r.message);
-    },
-    onSuccess: () => {
-      toast.success("Đã ghi nhận thu tiền mặt");
-      qc.invalidateQueries({ queryKey: ["console", "orders"] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
-  const list = useMemo(
-    () => toConsoleOrders(ordersQ.data ?? [], prepQ.data ?? [], branch),
-    [ordersQ.data, prepQ.data, branch],
-  );
-  const act = useMutation({
-    mutationFn: (v: { orderId: string; stage: "ready" | "handed" }) =>
-      markPrep(actor!, ctx.tenantId, ctx.device.deviceId, v.orderId, v.stage),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["console", "prep"] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
-
-  const shown = list.filter((o) => o.stage === stage);
-  const done = list.filter((o) => o.stage === "done");
-  const doneAmount = done.reduce((s, o) => s + Number(o.order.amount), 0);
-
-  return (
-    <div className="flex flex-col gap-3">
-      {ctx.role === "owner" && (
-        <p className="text-sm text-muted-foreground">
-          Hôm nay{" "}
-          <strong className="text-foreground">{done.length} đơn xong</strong> ·
-          tiền món{" "}
-          <strong className="text-foreground">{formatVnd(doneAmount)}</strong>
-        </p>
-      )}
-      <div role="tablist" className="grid grid-cols-3 gap-1.5">
-        {STAGES.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            role="tab"
-            aria-selected={stage === s.key}
-            onClick={() => setStage(s.key)}
-            className={cn(
-              "h-11 rounded-xl border text-sm font-extrabold",
-              stage === s.key
-                ? "border-foreground bg-foreground text-background"
-                : "bg-card",
-            )}
-          >
-            {s.label} · {list.filter((o) => o.stage === s.key).length}
-          </button>
-        ))}
-      </div>
-      {ordersQ.isLoading && (
-        <p className="py-6 text-center text-muted-foreground">Đang tải đơn…</p>
-      )}
-      {!ordersQ.isLoading && shown.length === 0 && (
-        <p className="py-8 text-center text-[15px] text-muted-foreground">
-          Chưa có đơn nào ở đây.
-        </p>
-      )}
-      {shown.map(({ order: o, stage: st, isCounter }) => {
-        const paid = o.paymentStatus === "paid";
-        const info = isCounter
-          ? paid
-            ? `Tại quầy · khách đã trả ${formatVnd(o.amount)}`
-            : `Tại quầy · chờ khách trả ${formatVnd(o.amount)}`
-          : st === "done"
-            ? `Đã giao · ${formatVnd(o.amount)}`
-            : paid
-              ? `Đã thanh toán ${formatVnd(o.amount)} · Tôi Đặt Món gọi tài xế`
-              : `Tài xế trả tiền khi lấy món · ${formatVnd(o.amount)}`;
-        const next: "ready" | "handed" | null =
-          st === "done"
-            ? null
-            : isCounter || st === "wait"
-              ? "handed"
-              : "ready";
-        const nextLabel =
-          next === "ready"
-            ? "Làm xong món"
-            : isCounter
-              ? "Đã đưa món cho khách"
-              : "Đã đưa cho tài xế";
-        return (
-          <article
-            key={o.orderId}
-            className="flex flex-col gap-2.5 rounded-2xl border bg-card p-3.5"
-            data-ocid="console.order_card"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xl font-extrabold tracking-wide">
-                #{shortCode(o.orderId)}
-              </span>
-              <span className="text-[13px] text-muted-foreground">
-                {timeOf(o.createdAt)}
-                {isCounter && " · Tại quầy"}
-              </span>
-            </div>
-            <ul className="flex flex-col gap-1">
-              {o.items.map((it) => (
-                <li key={it.itemId} className="flex gap-2.5 text-base">
-                  <strong className="min-w-[28px]">
-                    {Number(it.quantity)}×
-                  </strong>
-                  <span>{it.name}</span>
-                </li>
-              ))}
-            </ul>
-            {notes.get(o.orderId) && (
-              <p className="text-[15px]">
-                <span className="mr-1.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-extrabold text-amber-900">
-                  {notes.get(o.orderId)?.dineIn ? "Ăn tại quán" : "Mang về"}
-                </span>
-                {notes.get(o.orderId)?.note}
-              </p>
-            )}
-            <p className="text-[13px] text-muted-foreground">{info}</p>
-            {isCounter && !paid && (
-              <BigButton
-                variant="outline"
-                disabled={cash.isPending}
-                onClick={() => cash.mutate(o.orderId)}
-              >
-                Đã thu tiền mặt {formatVnd(o.amount)}
-              </BigButton>
-            )}
-            {next && (
-              <BigButton
-                disabled={act.isPending}
-                onClick={() => act.mutate({ orderId: o.orderId, stage: next })}
-              >
-                {nextLabel}
-              </BigButton>
-            )}
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Phí và lịch trả tiền đang áp dụng cho quán (do Tôi Đặt Món đặt). */
-function FeesCard({ params }: { params: EffectiveParam[] }) {
-  const rows = params
-    .filter(
-      (p) =>
-        PARAM_BY_KEY[p.key]?.showPartner &&
-        !p.key.startsWith("contact_") &&
-        p.current?.value,
-    )
-    .sort(
-      (a, b) =>
-        Object.keys(PARAM_BY_KEY).indexOf(a.key) -
-        Object.keys(PARAM_BY_KEY).indexOf(b.key),
-    );
-  const hasContact =
-    !!currentValue(params, "contact_phone") ||
-    !!currentValue(params, "contact_zalo");
-  if (rows.length === 0 && !hasContact) return null;
-  return (
-    <Card>
-      <h2 className="text-base font-extrabold">Phí và thanh toán</h2>
-      {rows.map((p) => (
-        <div
-          key={p.key}
-          className="flex items-baseline justify-between gap-3 text-[15px]"
-        >
-          <span className="text-muted-foreground">
-            {PARAM_BY_KEY[p.key].label}
-          </span>
-          <span className="text-right font-bold">
-            {formatParam(p.key, p.current?.value ?? "")}
-          </span>
-        </div>
-      ))}
-      {hasContact && (
-        <>
-          <p className="text-sm text-muted-foreground">
-            Cần hỗ trợ? Liên hệ Tôi Đặt Món:
-          </p>
-          <ContactLinks params={params} />
-        </>
-      )}
-    </Card>
   );
 }
 
@@ -957,345 +623,246 @@ function MenuTab({ ctx }: { ctx: Ctx }) {
   );
 }
 
-// ---------- Quán (chủ quán) ----------
+// ---------- Trang chính ----------
 
-function pad(n: bigint | number) {
-  return String(n).padStart(2, "0");
-}
+type Tab = "orders" | "counter" | "menu" | "report" | "settings";
 
-function StoreTab({ ctx, onLogout }: { ctx: Ctx; onLogout: () => void }) {
-  const { actor, isFetching } = useCanister();
+/** Khung trang quản lý: header, các tab, thanh tab dưới. Dùng chung cho máy
+ * của đối tác và admin chế độ Hỗ trợ đối tác. */
+function ConsoleShell({
+  ctx,
+  onLogout,
+  banner,
+}: {
+  ctx: Ctx;
+  onLogout: () => void;
+  banner?: ReactNode;
+}) {
+  const { actor } = useCanister();
   const qc = useQueryClient();
-  const ready = !!actor && !isFetching;
-  const hoursQ = useQuery({
-    queryKey: ["console", "hours", ctx.tenantId],
-    queryFn: () => actor!.getStoreHours(ctx.tenantId),
-    enabled: ready,
-  });
-  const devicesQ = useQuery({
-    queryKey: ["console", "devices", ctx.tenantId],
-    queryFn: () =>
-      listConsoleDevices(actor!, ctx.tenantId, ctx.device.deviceId),
-    enabled: ready,
-  });
-  const restQ = useQuery({
-    queryKey: ["console", "restaurants", ctx.tenantId],
-    queryFn: () => actor!.listRestaurants(ctx.tenantId),
-    enabled: ready,
-  });
-  const [open, setOpen] = useState("");
-  const [close, setClose] = useState("");
-  useEffect(() => {
-    if (hoursQ.data) {
-      setOpen(`${pad(hoursQ.data.openHour)}:${pad(hoursQ.data.openMinute)}`);
-      setClose(`${pad(hoursQ.data.closeHour)}:${pad(hoursQ.data.closeMinute)}`);
-    }
-  }, [hoursQ.data]);
-
-  const saveHours = useMutation({
-    mutationFn: () => {
-      const [oh, om] = open.split(":").map(Number);
-      const [ch, cm] = close.split(":").map(Number);
-      const h: StoreHours = {
-        openHour: BigInt(oh),
-        openMinute: BigInt(om),
-        closeHour: BigInt(ch),
-        closeMinute: BigInt(cm),
-      };
-      return setHours(actor!, ctx.tenantId, ctx.device.deviceId, h);
+  const [tab, setTab] = useState<Tab>("orders");
+  const [section, setSection] = useState<SettingsSection>("restaurants");
+  const role = ctx.role;
+  const paused = !!ctx.settings?.paused;
+  const pause = useMutation({
+    mutationFn: async (v: boolean) => {
+      await setPaused(
+        actor as NonNullable<typeof actor>,
+        ctx.tenantId,
+        ctx.device.deviceId,
+        v,
+      );
+      await logSupport(ctx, "pause", v ? "Tạm nghỉ" : "Mở lại nhận đơn");
     },
-    onSuccess: () => {
-      toast.success("Đã lưu giờ");
-      qc.invalidateQueries({ queryKey: ["console", "hours"] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
-  const promo = useMutation({
-    mutationFn: (join: boolean) =>
-      setJoinPromo(actor!, ctx.tenantId, ctx.device.deviceId, join),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["console", "settings"] }),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
   });
+  const steps = useStartSteps(ctx);
 
-  // Thêm máy
-  const [adding, setAdding] = useState(false);
-  const [role, setRole] = useState<ConsoleRole>("staff");
-  const [branch, setBranch] = useState("");
-  const [code, setCode] = useState<string | null>(null);
-  const rests: Restaurant[] = (restQ.data ?? []).filter((r) => r.visible);
-  useEffect(() => {
-    if (!branch && rests[0]) setBranch(rests[0].restaurantId);
-  }, [branch, rests]);
-  const makeCode = useMutation({
-    mutationFn: () =>
-      createStaffCode(
-        actor!,
-        ctx.tenantId,
-        ctx.device.deviceId,
-        role === "staff" ? branch : ctx.device.restaurantId || branch,
-        role,
-      ),
-    onSuccess: (p) => setCode(p.code),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
-  const revoke = useMutation({
-    mutationFn: (d: Device) =>
-      removeDevice(actor!, ctx.tenantId, ctx.device.deviceId, d.deviceId),
-    onSuccess: () => {
-      toast.success("Đã gỡ máy");
-      qc.invalidateQueries({ queryKey: ["console", "devices"] });
+  const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
+    { key: "orders", label: "Đơn", icon: <ReceiptText className="h-6 w-6" /> },
+    {
+      key: "counter",
+      label: "Bán quầy",
+      icon: <MonitorSmartphone className="h-6 w-6" />,
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
-  const restName = (id: string) =>
-    rests.find((r) => r.restaurantId === id)?.name ?? "";
+    {
+      key: "menu",
+      label: "Món",
+      icon: <UtensilsCrossed className="h-6 w-6" />,
+    },
+    ...(role === "owner"
+      ? [
+          {
+            key: "report" as Tab,
+            label: "Báo cáo",
+            icon: <BarChart3 className="h-6 w-6" />,
+          },
+          {
+            key: "settings" as Tab,
+            label: "Cài đặt",
+            icon: <Settings className="h-6 w-6" />,
+          },
+        ]
+      : []),
+  ];
+
+  function go(to: SettingsSection | "menu" | "pause") {
+    if (to === "menu") setTab("menu");
+    else if (to === "pause") pause.mutate(false);
+    else {
+      setSection(to);
+      setTab("settings");
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-3">
-      <Card>
-        <h2 className="text-base font-extrabold">Giờ nhận đơn</h2>
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className="flex flex-col gap-1.5 text-[13px] font-bold">
-            Mở lúc
-            <input
-              type="time"
-              value={open}
-              onChange={(e) => setOpen(e.target.value)}
-              className="h-12 rounded-xl border px-3 text-[17px] font-bold"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-[13px] font-bold">
-            Đóng lúc
-            <input
-              type="time"
-              value={close}
-              onChange={(e) => setClose(e.target.value)}
-              className="h-12 rounded-xl border px-3 text-[17px] font-bold"
-            />
-          </label>
-        </div>
-        <BigButton
-          variant="dark"
-          disabled={!open || !close || saveHours.isPending}
-          onClick={() => saveHours.mutate()}
-        >
-          Lưu giờ
-        </BigButton>
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex flex-col gap-0.5">
-            <span className="text-base font-extrabold">
-              Tham gia khuyến mại chung
+    <div className="min-h-screen bg-background pb-24" data-ocid="console.page">
+      {banner}
+      <header className="sticky top-0 z-30 border-b bg-card">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
+          <TdmIcon className="h-9 w-9" />
+          <span className="mr-auto flex min-w-0 flex-col">
+            <span className="truncate text-lg font-extrabold">
+              {ctx.tenantName}
             </span>
-            <span className="text-[13px] leading-snug text-muted-foreground">
-              Tôi Đặt Món tự chạy giảm giá, giờ vàng, phiếu khách mới để kéo
-              khách về quán. Quán chịu một phần tiền giảm theo quy định của Tôi
-              Đặt Món.
-            </span>
-          </span>
-          <Switch
-            on={!!ctx.settings?.joinPlatformPromo}
-            label="Tham gia khuyến mại chung"
-            disabled={promo.isPending}
-            onToggle={() => promo.mutate(!ctx.settings?.joinPlatformPromo)}
-          />
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex flex-col gap-0.5">
-            <span className="text-base font-extrabold">Gói bán tại quầy</span>
-            <span className="text-[13px] text-muted-foreground">
-              {ctx.settings?.counterPlan
-                ? ctx.counterPlanUntil > 0n
-                  ? `Đang dùng · đến hết ${formatVnDate(ctx.counterPlanUntil - 1n)}`
-                  : "Đang dùng · phí theo tháng"
-                : ctx.counterPlanUntil > 0n
-                  ? `Hết hạn ngày ${formatVnDate(ctx.counterPlanUntil - 1n)} · liên hệ Tôi Đặt Món`
-                  : "Chưa đăng ký · liên hệ Tôi Đặt Món"}
-            </span>
-          </span>
-          <span
-            className={cn(
-              "rounded-full px-2.5 py-1 text-xs font-extrabold",
-              ctx.settings?.counterPlan
-                ? "bg-green-100 text-green-800"
-                : "bg-stone-200 text-stone-600",
-            )}
-          >
-            {ctx.settings?.counterPlan ? "Đang dùng" : "Chưa đăng ký"}
-          </span>
-        </div>
-      </Card>
-
-      <FeesCard params={ctx.params} />
-      <CounterAccountCard
-        tenantId={ctx.tenantId}
-        deviceId={ctx.device.deviceId}
-      />
-      <PayoutsCard deviceId={ctx.device.deviceId} tenantId={ctx.tenantId} />
-      <AnasystemCard deviceId={ctx.device.deviceId} />
-
-      <Card>
-        <h2 className="text-base font-extrabold">Máy dùng trang quản lý</h2>
-        {(devicesQ.data ?? []).map((d) => (
-          <div key={d.deviceId} className="flex items-center gap-2.5">
-            <span className="flex flex-1 flex-col gap-0.5">
-              <span className="text-[15px] font-bold">
-                {d.name || "Máy chưa đặt tên"}
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span
-                  className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[11px] font-extrabold",
-                    d.role === DeviceRole.tenantAdmin
+            <span className="text-xs text-muted-foreground">
+              <span
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[11px] font-extrabold",
+                  ctx.support
+                    ? "bg-amber-400 text-amber-950"
+                    : role === "owner"
                       ? "bg-foreground text-background"
                       : "bg-blue-100 text-blue-800",
-                  )}
-                >
-                  {d.role === DeviceRole.tenantAdmin ? "Chủ quán" : "Nhân viên"}
-                </span>
-                {restName(d.restaurantId)}
-                {d.deviceId === ctx.device.deviceId && " · máy này"}
-              </span>
-            </span>
-            {d.deviceId !== ctx.device.deviceId && (
-              <button
-                type="button"
-                onClick={() => revoke.mutate(d)}
-                disabled={revoke.isPending}
-                className="h-10 rounded-xl border px-3.5 text-sm font-bold"
-              >
-                Gỡ
-              </button>
-            )}
-          </div>
-        ))}
-        {!adding ? (
-          <button
-            type="button"
-            onClick={() => {
-              setAdding(true);
-              setCode(null);
-              setRole("staff");
-            }}
-            className="h-12 rounded-xl border border-dashed bg-muted/40 text-[15px] font-bold"
-            data-ocid="console.add_device"
-          >
-            + Thêm máy cho nhân viên
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2.5 rounded-2xl border bg-muted/40 p-3">
-            <span className="text-sm font-extrabold">Máy mới dùng cho ai?</span>
-            {(["staff", "owner"] as ConsoleRole[]).map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => {
-                  setRole(r);
-                  setCode(null);
-                }}
-                className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left",
-                  role === r
-                    ? "border-2 border-primary bg-primary/10"
-                    : "bg-card",
                 )}
               >
-                <span className="text-[15px] font-extrabold">
-                  {ROLE_LABEL[r]}
-                </span>
-                <span className="text-[13px] text-muted-foreground">
-                  {r === "staff"
-                    ? "Đơn, bán quầy, gạt Còn/Hết. Không thấy tiền, không sửa giá"
-                    : "Toàn quyền: món, giá, giờ, thêm/gỡ máy"}
-                </span>
-              </button>
-            ))}
-            {role === "staff" && rests.length > 1 && (
-              <div className="grid grid-cols-2 gap-2">
-                {rests.map((r) => (
-                  <button
-                    key={r.restaurantId}
-                    type="button"
-                    onClick={() => {
-                      setBranch(r.restaurantId);
-                      setCode(null);
-                    }}
-                    className={cn(
-                      "h-11 rounded-xl border text-sm font-extrabold",
-                      branch === r.restaurantId
-                        ? "border-2 border-primary bg-primary/10"
-                        : "bg-card",
-                    )}
-                  >
-                    {r.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            {code ? (
-              <>
-                <p className="rounded-xl bg-blue-50 p-3 text-sm leading-relaxed text-blue-900">
-                  Trên máy mới, mở trang quản lý và nhập mã
-                  <br />
-                  <strong className="text-2xl tracking-[4px]">{code}</strong>
-                  <br />
-                  {ROLE_LABEL[role]}
-                  {role === "staff" &&
-                    restName(branch) &&
-                    ` · ${restName(branch)}`}{" "}
-                  · dùng trong 15 phút
-                </p>
-                <BigButton
-                  variant="outline"
-                  onClick={() => {
-                    setAdding(false);
-                    qc.invalidateQueries({ queryKey: ["console", "devices"] });
-                  }}
-                >
-                  Xong
-                </BigButton>
-              </>
-            ) : (
-              <BigButton
-                disabled={makeCode.isPending || (role === "staff" && !branch)}
-                onClick={() => makeCode.mutate()}
-              >
-                Tạo mã kích hoạt
-              </BigButton>
-            )}
-          </div>
+                {ctx.support ? "Sàn hỗ trợ" : ROLE_LABEL[role]}
+              </span>{" "}
+              {ctx.device.name}
+            </span>
+          </span>
+          {role === "owner" && (
+            <button
+              type="button"
+              onClick={() => pause.mutate(!paused)}
+              disabled={pause.isPending || !ctx.settings}
+              className={cn(
+                "flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-extrabold",
+                paused
+                  ? "border-stone-300 bg-stone-100 text-stone-600"
+                  : "border-green-300 bg-green-50 text-green-800",
+              )}
+              data-ocid="console.pause_toggle"
+            >
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full",
+                  paused ? "bg-stone-500" : "bg-green-700",
+                )}
+              />
+              {paused ? "Tạm nghỉ" : "Đang nhận đơn"}
+            </button>
+          )}
+          {role === "staff" && paused && (
+            <span className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-extrabold text-stone-600">
+              Đối tác đang tạm nghỉ
+            </span>
+          )}
+        </div>
+      </header>
+
+      <main
+        className={cn(
+          "mx-auto px-4 pt-3",
+          tab === "counter" && ctx.settings?.counterPlan
+            ? "max-w-none"
+            : "max-w-3xl",
         )}
-      </Card>
-
-      <Card>
-        <h2 className="text-base font-extrabold">Thông tin quán</h2>
-        <p className="text-sm leading-relaxed">
-          {ctx.tenantName} · {rests.length} chi nhánh
-        </p>
-        <p className="text-[13px] text-muted-foreground">
-          Đổi tên, ảnh, địa chỉ, chi nhánh hay tài khoản nhận tiền: nhắn Tôi Đặt
-          Món, bên mình sửa giúp.
-        </p>
-      </Card>
-
-      <button
-        type="button"
-        onClick={onLogout}
-        className="py-2.5 text-center text-sm text-muted-foreground"
       >
-        Đăng xuất máy này
-      </button>
+        {role === "owner" && tab !== "counter" && (
+          <ParamNotices params={ctx.params} />
+        )}
+        {tab === "orders" && (
+          <OrdersTab
+            ctx={ctx}
+            top={
+              role === "owner" && steps ? (
+                <StartChecklist steps={steps} onGo={go} />
+              ) : null
+            }
+          />
+        )}
+        {tab === "counter" && <CounterTab ctx={ctx} />}
+        {tab === "menu" && <MenuTab ctx={ctx} />}
+        {tab === "report" && role === "owner" && <ReportTab ctx={ctx} />}
+        {tab === "settings" && role === "owner" && (
+          <SettingsTab
+            ctx={ctx}
+            section={section}
+            onSection={setSection}
+            onLogout={onLogout}
+          />
+        )}
+        {role === "staff" && tab === "menu" && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-6 w-full py-2.5 text-center text-sm text-muted-foreground"
+          >
+            Đăng xuất máy này
+          </button>
+        )}
+      </main>
+
+      <nav
+        aria-label="Quản lý đối tác"
+        className={cn(
+          "inset-x-0 bottom-0 z-30 border-t bg-card",
+          ctx.support ? "sticky" : "fixed",
+        )}
+      >
+        <div
+          className="mx-auto grid max-w-3xl"
+          style={{
+            gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+          }}
+        >
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              aria-current={tab === t.key ? "page" : undefined}
+              className={cn(
+                "flex h-[72px] flex-col items-center justify-center gap-1 text-[13px]",
+                tab === t.key
+                  ? "font-extrabold text-primary"
+                  : "font-semibold text-muted-foreground",
+              )}
+              data-ocid={`console.tab_${t.key}`}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
 
-// ---------- Trang chính ----------
+/** Dữ liệu chung của 1 đối tác cho trang quản lý (cài đặt, tham số, gói). */
+function useConsoleData(tenantId: string, deviceId: string, enabled: boolean) {
+  const { actor, isFetching } = useCanister();
+  const ready = !!actor && !isFetching && enabled && !!tenantId;
+  const settingsQ = useQuery({
+    queryKey: ["console", "settings", tenantId],
+    queryFn: () =>
+      getPartnerSettings(actor as NonNullable<typeof actor>, tenantId),
+    enabled: ready,
+    refetchInterval: 60_000,
+  });
+  const paramsQ = useQuery({
+    queryKey: ["console", "params", tenantId, deviceId],
+    queryFn: () =>
+      getPartnerParams(actor as NonNullable<typeof actor>, tenantId, deviceId),
+    enabled: ready,
+    staleTime: 5 * 60_000,
+  });
+  const planQ = useQuery({
+    queryKey: ["console", "counterPlan", tenantId],
+    queryFn: () => getCounterPlan(actor as NonNullable<typeof actor>, tenantId),
+    enabled: ready,
+    refetchInterval: 5 * 60_000,
+  });
+  return {
+    settings: settingsQ.data,
+    params: paramsQ.data ?? [],
+    counterPlanUntil: planQ.data?.enabled ? planQ.data.until : 0n,
+  };
+}
 
 export default function PartnerConsole() {
   useTdmTheme();
@@ -1303,15 +870,13 @@ export default function PartnerConsole() {
   usePageTitle(
     tenant
       ? `Quản lý ${tenant.name} · Tôi Đặt Món`
-      : "Quản lý quán · Tôi Đặt Món",
+      : "Quản lý đối tác · Tôi Đặt Món",
   );
   const { actor, isFetching } = useCanister();
-  const qc = useQueryClient();
   const tenantId = tenant?.tenantId ?? "";
   const [device, setDevice] = useState<ConsoleDevice | null>(() =>
     tenantId ? loadConsoleDevice(tenantId) : null,
   );
-  const [tab, setTab] = useState<Tab>("orders");
   const [notice, setNotice] = useState("");
   const ready = !!actor && !isFetching;
 
@@ -1321,35 +886,15 @@ export default function PartnerConsole() {
 
   const meQ = useQuery({
     queryKey: ["console", "me", device?.deviceId],
-    queryFn: () => getPartnerDevice(actor!, device!.deviceId),
+    queryFn: () =>
+      getPartnerDevice(
+        actor as NonNullable<typeof actor>,
+        (device as ConsoleDevice).deviceId,
+      ),
     enabled: ready && !!device,
     refetchInterval: 60_000,
   });
-  const settingsQ = useQuery({
-    queryKey: ["console", "settings", tenantId],
-    queryFn: () => getPartnerSettings(actor!, tenantId),
-    enabled: ready && !!tenantId && !!device,
-    refetchInterval: 60_000,
-  });
-  const paramsQ = useQuery({
-    queryKey: ["console", "params", tenantId, device?.deviceId],
-    queryFn: () => getPartnerParams(actor!, tenantId, device!.deviceId),
-    enabled: ready && !!tenantId && !!device,
-    staleTime: 5 * 60_000,
-  });
-  const planQ = useQuery({
-    queryKey: ["console", "counterPlan", tenantId],
-    queryFn: () => getCounterPlan(actor!, tenantId),
-    enabled: ready && !!tenantId && !!device,
-    refetchInterval: 5 * 60_000,
-  });
-  const pause = useMutation({
-    mutationFn: (paused: boolean) =>
-      setPaused(actor!, tenantId, device!.deviceId, paused),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["console", "settings"] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
+  const data = useConsoleData(tenantId, device?.deviceId ?? "", !!device);
 
   const role = roleOf(meQ.data ?? null);
   // Máy bị gỡ hoặc đổi vai trò → về màn đăng nhập.
@@ -1361,7 +906,7 @@ export default function PartnerConsole() {
     ) {
       clearConsoleDevice();
       setDevice(null);
-      setNotice("Máy này đã bị gỡ khỏi quán. Nhập mã mới để vào lại.");
+      setNotice("Máy này đã bị gỡ khỏi đối tác. Nhập mã mới để vào lại.");
     }
   }, [device, meQ.isSuccess, meQ.data, role, tenantId]);
 
@@ -1371,9 +916,11 @@ export default function PartnerConsole() {
   if (!tenant) {
     return (
       <div className="mx-auto max-w-md p-6 text-center">
-        <p className="text-lg font-bold">Mở trang này từ địa chỉ của quán</p>
+        <p className="text-lg font-bold">
+          Mở trang này từ đường dẫn của thương hiệu
+        </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Ví dụ: toidatmon.vn/ten-quan/quan-ly
+          Ví dụ: toidatmon.vn/ten-thuong-hieu/quan-ly
         </p>
       </div>
     );
@@ -1404,147 +951,49 @@ export default function PartnerConsole() {
     tenantName: tenant.name,
     device,
     role,
-    settings: settingsQ.data,
-    params: paramsQ.data ?? [],
-    counterPlanUntil: planQ.data?.enabled ? planQ.data.until : 0n,
+    ...data,
+    support: false,
+    partnerAuth: deviceAuth(device.deviceId),
   };
-  const paused = !!settingsQ.data?.paused;
-  const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
-    { key: "orders", label: "Đơn", icon: <ReceiptText className="h-6 w-6" /> },
-    {
-      key: "counter",
-      label: "Bán quầy",
-      icon: <MonitorSmartphone className="h-6 w-6" />,
-    },
-    {
-      key: "menu",
-      label: "Món",
-      icon: <UtensilsCrossed className="h-6 w-6" />,
-    },
-    ...(role === "owner"
-      ? [
-          {
-            key: "store" as Tab,
-            label: "Quán",
-            icon: <Store className="h-6 w-6" />,
-          },
-        ]
-      : []),
-  ];
-
   return (
-    <div className="min-h-screen bg-background pb-24" data-ocid="console.page">
-      <header className="sticky top-0 z-30 border-b bg-card">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
-          <TdmIcon className="h-9 w-9" />
-          <span className="mr-auto flex min-w-0 flex-col">
-            <span className="truncate text-lg font-extrabold">
-              {tenant.name}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[11px] font-extrabold",
-                  role === "owner"
-                    ? "bg-foreground text-background"
-                    : "bg-blue-100 text-blue-800",
-                )}
-              >
-                {ROLE_LABEL[role]}
-              </span>{" "}
-              {device.name}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => pause.mutate(!paused)}
-            disabled={pause.isPending || !settingsQ.data}
-            className={cn(
-              "flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-extrabold",
-              paused
-                ? "border-stone-300 bg-stone-100 text-stone-600"
-                : "border-green-300 bg-green-50 text-green-800",
-            )}
-            data-ocid="console.pause_toggle"
-          >
-            <span
-              className={cn(
-                "h-2.5 w-2.5 rounded-full",
-                paused ? "bg-stone-500" : "bg-green-700",
-              )}
-            />
-            {paused ? "Tạm nghỉ" : "Đang nhận đơn"}
-          </button>
-        </div>
-      </header>
-
-      <main
-        className={cn(
-          "mx-auto px-4 pt-3",
-          tab === "counter" && settingsQ.data?.counterPlan
-            ? "max-w-none"
-            : "max-w-3xl",
-        )}
-      >
-        {role === "owner" && tab !== "counter" && (
-          <ParamNotices params={ctx.params} />
-        )}
-        {tab === "orders" && <OrdersTab ctx={ctx} />}
-        {tab === "counter" && <CounterTab ctx={ctx} />}
-        {tab === "menu" && <MenuTab ctx={ctx} />}
-        {tab === "store" && role === "owner" && (
-          <StoreTab
-            ctx={ctx}
-            onLogout={() => {
-              clearConsoleDevice();
-              setDevice(null);
-            }}
-          />
-        )}
-        {tab !== "store" && role === "staff" && tab === "menu" && (
-          <button
-            type="button"
-            onClick={() => {
-              clearConsoleDevice();
-              setDevice(null);
-            }}
-            className="mt-6 w-full py-2.5 text-center text-sm text-muted-foreground"
-          >
-            Đăng xuất máy này
-          </button>
-        )}
-      </main>
-
-      <nav
-        aria-label="Quản lý quán"
-        className="fixed inset-x-0 bottom-0 z-30 border-t bg-card"
-      >
-        <div
-          className="mx-auto grid max-w-3xl"
-          style={{
-            gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
-          }}
-        >
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              aria-current={tab === t.key ? "page" : undefined}
-              className={cn(
-                "flex h-[72px] flex-col items-center justify-center gap-1 text-[13px]",
-                tab === t.key
-                  ? "font-extrabold text-primary"
-                  : "font-semibold text-muted-foreground",
-              )}
-              data-ocid={`console.tab_${t.key}`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </nav>
-    </div>
+    <ConsoleShell
+      ctx={ctx}
+      onLogout={() => {
+        clearConsoleDevice();
+        setDevice(null);
+      }}
+    />
   );
+}
+
+/**
+ * Chế độ Hỗ trợ đối tác (admin Tôi Đặt Món, /admin/ho-tro-doi-tac): mở đúng
+ * trang quản lý của đối tác đang chọn, quyền như Chủ đối tác. Canister nhận
+ * admin qua Internet Identity (thẻ máy rỗng); VPS nhận vé admin + tenantId.
+ * Mọi thao tác làm thay được ghi nhật ký (đối tác xem được).
+ */
+export function PartnerConsoleSupport({ banner }: { banner?: ReactNode }) {
+  const { tenant } = useTenant();
+  const { actor } = useCanister();
+  const tenantId = tenant?.tenantId ?? "";
+  const data = useConsoleData(tenantId, "", true);
+  if (!tenant) return null;
+  const ctx: Ctx = {
+    tenantId,
+    tenantName: tenant.name,
+    device: {
+      deviceId: "",
+      tenantId,
+      restaurantId: "",
+      name: "Tôi Đặt Món",
+    },
+    role: "owner",
+    ...data,
+    support: true,
+    partnerAuth: async () => ({
+      auth: await getAdminTicket(actor as NonNullable<typeof actor>),
+      tenantId,
+    }),
+  };
+  return <ConsoleShell ctx={ctx} onLogout={() => {}} banner={banner} />;
 }

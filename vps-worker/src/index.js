@@ -31,6 +31,7 @@ const salesBonusCron = require('./routes/sales-bonus-cron');
 const kmNotifyCron = require('./routes/km-notify-cron');
 const promoExpiryCron = require('./routes/promo-expiry-cron');
 const analyticsRoutes = require('./routes/analytics');
+const partnerConsoleRoutes = require('./routes/partner-console');
 const uploadRoutes = require('./routes/upload');
 const manualPaymentPhotoRoutes = require('./routes/manual-payment-photo');
 const customersRoutes = require('./routes/customers');
@@ -128,6 +129,7 @@ app.use('/', geocodeRoutes);
 app.use('/', orderLalamoveStatusRoutes);
 app.use('/', enterpriseActionsRoutes);
 app.use('/', orderPromoInfoRoutes);
+app.use('/', partnerConsoleRoutes);
 app.use('/', analyticsRoutes);
 
 // Error handler

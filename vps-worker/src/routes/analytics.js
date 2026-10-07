@@ -16,11 +16,25 @@
 
 const express = require('express');
 const { verifyApiKey, verifyHmac } = require('../middleware/auth');
+const { requirePartner } = require('../lib/partner-guard');
+const { verifyTicket } = require('../lib/admin-ticket');
 
 const router = express.Router();
 
 router.use(verifyApiKey);
 router.use(verifyHmac);
+
+// BẢO MẬT: báo cáo chứa tên/SĐT khách. /analytics: admin (vé, xem toàn sàn
+// hoặc 1 đối tác qua ?tenantId=) hoặc máy Chủ đối tác/Kế toán/Báo cáo —
+// LUÔN chỉ thấy số liệu của đối tác mình. Các route cũ bên dưới: chỉ admin.
+const analyticsGuard = requirePartner(['tenantAdmin', 'accounting', 'salesPromoReporting'], { allowAllTenants: true });
+
+// Route cũ (không còn dùng ở giao diện): chỉ admin. Không phải admin thì
+// next('router') để không chặn các route cùng đường dẫn mount trước đó.
+function legacyAdminOnly(req, res, next) {
+  if (verifyTicket(req.get('X-Admin-Ticket'))) return next();
+  return res.status(401).json({ ok: false, error: 'Cần đăng nhập admin Tôi Đặt Món.' });
+}
 
 const UTC7_OFFSET_MS = 7 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,37 +78,41 @@ const DAY_MS_VN_SQL_EXPR =
 //     byDay:[{date,orders,revenue}],
 //     topItems:[{itemId,name,quantity,revenue}] (top 10, bán chạy nhất trong range),
 //     customers:{total,new,returning,top:[{phone,name,orderCount,totalSpent}]} }
-router.get('/analytics', (req, res, next) => {
+router.get('/analytics', analyticsGuard, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const range = req.query.range || '30d';
     const fromMs = rangeToFromMs(range);
+    // Lọc theo đối tác ("" = admin xem toàn sàn).
+    const tid = req.partner.tenantId;
+    const TF = tid ? ' AND tenant_id = ?' : '';
+    const TP = tid ? [tid] : [];
 
     // Total orders trong range
     const totalOrders = db.prepare(
-      `SELECT COUNT(*) c FROM orders WHERE created_at >= ?`,
-    ).get(fromMs).c;
+      `SELECT COUNT(*) c FROM orders WHERE created_at >= ?${TF}`,
+    ).get(fromMs, ...TP).c;
 
     // Revenue = SUM(amount) WHERE payment_status='paid' trong range
     const totalRevenue = db.prepare(
-      `SELECT COALESCE(SUM(amount),0) s FROM orders WHERE payment_status='paid' AND created_at >= ?`,
-    ).get(fromMs).s;
+      `SELECT COALESCE(SUM(amount),0) s FROM orders WHERE payment_status='paid' AND created_at >= ?${TF}`,
+    ).get(fromMs, ...TP).s;
 
     const paidOrders = db.prepare(
-      `SELECT COUNT(*) c FROM orders WHERE payment_status='paid' AND created_at >= ?`,
-    ).get(fromMs).c;
+      `SELECT COUNT(*) c FROM orders WHERE payment_status='paid' AND created_at >= ?${TF}`,
+    ).get(fromMs, ...TP).c;
 
     const pendingOrders = db.prepare(
-      `SELECT COUNT(*) c FROM orders WHERE payment_status='unpaid' AND booking_status != 'cancelled' AND created_at >= ?`,
-    ).get(fromMs).c;
+      `SELECT COUNT(*) c FROM orders WHERE payment_status='unpaid' AND booking_status != 'cancelled' AND created_at >= ?${TF}`,
+    ).get(fromMs, ...TP).c;
 
     const shippingOrders = db.prepare(
-      `SELECT COUNT(*) c FROM orders WHERE booking_status='shipping' AND created_at >= ?`,
-    ).get(fromMs).c;
+      `SELECT COUNT(*) c FROM orders WHERE booking_status='shipping' AND created_at >= ?${TF}`,
+    ).get(fromMs, ...TP).c;
 
     const cancelledOrders = db.prepare(
-      `SELECT COUNT(*) c FROM orders WHERE booking_status='cancelled' AND created_at >= ?`,
-    ).get(fromMs).c;
+      `SELECT COUNT(*) c FROM orders WHERE booking_status='cancelled' AND created_at >= ?${TF}`,
+    ).get(fromMs, ...TP).c;
 
     const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
@@ -104,9 +122,9 @@ router.get('/analytics', (req, res, next) => {
     const byRestaurantRows = db.prepare(
       `SELECT restaurant_id, COALESCE(NULLIF(restaurant_id,''),'unknown') AS rid,
               COUNT(*) AS orders, COALESCE(SUM(amount),0) AS revenue
-       FROM orders WHERE payment_status='paid' AND created_at >= ?
+       FROM orders WHERE payment_status='paid' AND created_at >= ?${TF}
        GROUP BY restaurant_id ORDER BY revenue DESC`,
-    ).all(fromMs);
+    ).all(fromMs, ...TP);
     const byRestaurant = byRestaurantRows.map((r) => ({
       restaurantId: r.rid,
       name: r.rid, // TODO: join restaurant name khi có bảng restaurants
@@ -119,9 +137,9 @@ router.get('/analytics', (req, res, next) => {
     const byDayRows = db.prepare(
       `SELECT ${DAY_MS_VN_SQL_EXPR} AS day_ms,
               COUNT(*) AS orders, COALESCE(SUM(amount),0) AS revenue
-       FROM orders WHERE payment_status='paid' AND created_at >= ?
+       FROM orders WHERE payment_status='paid' AND created_at >= ?${TF}
        GROUP BY day_ms ORDER BY day_ms ASC`,
-    ).all(fromMs);
+    ).all(fromMs, ...TP);
     const byDay = byDayRows.map((r) => ({
       date: dayKey(r.day_ms),
       orders: r.orders,
@@ -138,11 +156,11 @@ router.get('/analytics', (req, res, next) => {
               COALESCE(SUM(oi.quantity * oi.price), 0) AS revenue
        FROM order_items oi
        JOIN orders o ON o.order_id = oi.order_id
-       WHERE o.created_at >= ? AND o.payment_status='paid'
+       WHERE o.created_at >= ? AND o.payment_status='paid'${tid ? ' AND o.tenant_id = ?' : ''}
        GROUP BY oi.item_id, oi.name
        ORDER BY quantity DESC
        LIMIT 10`,
-    ).all(fromMs);
+    ).all(fromMs, ...TP);
     const topItems = topItemRows.map((r) => ({
       itemId: r.itemId,
       name: r.name,
@@ -158,8 +176,8 @@ router.get('/analytics', (req, res, next) => {
     // range này; khách quay lại = đã từng đặt (đã thanh toán) trước range.
     // topCustomers: top 10 theo tổng chi (đã thanh toán) trong range.
     const rangeCustomerRows = db.prepare(
-      `SELECT DISTINCT cus_phone FROM orders WHERE payment_status='paid' AND created_at >= ? AND cus_phone != ''`,
-    ).all(fromMs);
+      `SELECT DISTINCT cus_phone FROM orders WHERE payment_status='paid' AND created_at >= ? AND cus_phone != ''${TF}`,
+    ).all(fromMs, ...TP);
     const rangePhones = rangeCustomerRows.map((r) => r.cus_phone);
     let newCustomers = 0;
     let returningCustomers = 0;
@@ -167,9 +185,9 @@ router.get('/analytics', (req, res, next) => {
       const placeholders = rangePhones.map(() => '?').join(',');
       const firstOrderRows = db.prepare(
         `SELECT cus_phone, MIN(created_at) AS first_created_at
-         FROM orders WHERE payment_status='paid' AND cus_phone IN (${placeholders})
+         FROM orders WHERE payment_status='paid' AND cus_phone IN (${placeholders})${TF}
          GROUP BY cus_phone`,
-      ).all(...rangePhones);
+      ).all(...rangePhones, ...TP);
       for (const row of firstOrderRows) {
         if (row.first_created_at >= fromMs) newCustomers++;
         else returningCustomers++;
@@ -181,11 +199,11 @@ router.get('/analytics', (req, res, next) => {
       `SELECT cus_phone AS phone, MAX(cus_name) AS name,
               COUNT(*) AS orderCount, COALESCE(SUM(amount),0) AS totalSpent
        FROM orders
-       WHERE payment_status='paid' AND created_at >= ? AND cus_phone != ''
+       WHERE payment_status='paid' AND created_at >= ? AND cus_phone != ''${TF}
        GROUP BY cus_phone
        ORDER BY totalSpent DESC
        LIMIT 10`,
-    ).all(fromMs);
+    ).all(fromMs, ...TP);
     const topCustomers = topCustomerRows.map((r) => ({
       phone: r.phone,
       name: r.name || '',
@@ -215,7 +233,7 @@ router.get('/analytics', (req, res, next) => {
 });
 
 // GET /analytics/summary — legacy
-router.get('/analytics/summary', (req, res, next) => {
+router.get('/analytics/summary', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const totalOrders = db.prepare(`SELECT COUNT(*) c FROM orders`).get().c;
@@ -228,7 +246,7 @@ router.get('/analytics/summary', (req, res, next) => {
 });
 
 // GET /analytics/revenue?from=&to= (ms timestamps) — legacy
-router.get('/analytics/revenue', (req, res, next) => {
+router.get('/analytics/revenue', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const from = Number(req.query.from) || 0;
@@ -242,7 +260,7 @@ router.get('/analytics/revenue', (req, res, next) => {
 });
 
 // GET /analytics/orders?status=&from=&to= — legacy
-router.get('/analytics/orders', (req, res, next) => {
+router.get('/analytics/orders', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const { status, from, to } = req.query;
@@ -257,7 +275,7 @@ router.get('/analytics/orders', (req, res, next) => {
 });
 
 // GET /analytics/customers — legacy. CHỈ tính đơn đã thanh toán.
-router.get('/analytics/customers', (req, res, next) => {
+router.get('/analytics/customers', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const rows = db.prepare(
@@ -269,7 +287,7 @@ router.get('/analytics/customers', (req, res, next) => {
 });
 
 // GET /orders — legacy
-router.get('/orders', (req, res, next) => {
+router.get('/orders', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const limit = Math.min(Number(req.query.limit) || 50, 200);
@@ -282,7 +300,7 @@ router.get('/orders', (req, res, next) => {
 });
 
 // GET /orders/:id — legacy
-router.get('/orders/:id', (req, res, next) => {
+router.get('/orders/:id', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const order = db.prepare(`SELECT * FROM orders WHERE order_id = ?`).get(req.params.id);
@@ -293,7 +311,7 @@ router.get('/orders/:id', (req, res, next) => {
 });
 
 // GET /orders/:id/status — legacy
-router.get('/orders/:id/status', (req, res, next) => {
+router.get('/orders/:id/status', legacyAdminOnly, (req, res, next) => {
   try {
     const db = req.app.locals.db;
     const row = db.prepare(

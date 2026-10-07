@@ -80,7 +80,10 @@ import type {
   RegistrationPromoInput,
   SalesPromoInput,
 } from "@/lib/canister";
+import { useCanister } from "@/lib/canister";
+import { credentialFor } from "@/lib/device-credential";
 import { loadEnterpriseActivation } from "@/lib/enterprise-activation";
+import { getAdminTicket } from "@/lib/payouts";
 import { getAnalytics } from "@/lib/vps-client";
 import type { AnalyticsResponse } from "@/types";
 import { useQuery } from "@tanstack/react-query";
@@ -1695,9 +1698,21 @@ const RANGE_LABELS: Record<Range, string> = {
 
 function SalesAnalytics() {
   const [range, setRange] = useState<Range>("30d");
+  const tenantId = useTenantId();
+  const { actor } = useCanister();
+  const deviceId = getEnterpriseDeviceId(tenantId);
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["analytics", range],
-    queryFn: () => getAnalytics(range),
+    queryKey: ["analytics", range, tenantId, deviceId],
+    queryFn: async () =>
+      getAnalytics(
+        range,
+        // Máy Báo cáo của đối tác → chỉ số liệu của đối tác; admin → vé admin.
+        deviceId
+          ? `partner:${credentialFor(deviceId)}`
+          : await getAdminTicket(actor as NonNullable<typeof actor>),
+        tenantId,
+      ),
+    enabled: !!tenantId && (!!deviceId || !!actor),
     retry: 1,
   });
   const { data: restaurants } = useRestaurants();

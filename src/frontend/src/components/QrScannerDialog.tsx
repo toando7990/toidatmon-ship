@@ -35,7 +35,17 @@ interface QrScannerDialogProps {
 // Parse nội dung QR quét được — trả về null nếu không đúng định dạng "QR
 // nhận hàng" (VD khách quét nhầm QR khác) thay vì throw, để gọi nơi này
 // im lặng bỏ qua và tiếp tục quét thay vì báo lỗi giữa chừng.
-function parsePickupQr(decodedText: string): ScannedPickupQr | null {
+export function parsePickupQr(decodedText: string): ScannedPickupQr | null {
+  // QR nhận hàng dạng ĐƯỜNG LINK (…/<đối tác>/driver?scan_order=&scan_code=
+  // — OrderTracker.tsx, VPS pickup-qr-image.js).
+  try {
+    const u = new URL(decodedText);
+    const orderId = u.searchParams.get("scan_order") ?? "";
+    const pickupCode = u.searchParams.get("scan_code") ?? "";
+    if (orderId && pickupCode) return { orderId, pickupCode };
+  } catch {
+    /* không phải link — thử dạng JSON bên dưới */
+  }
   try {
     const parsed = JSON.parse(decodedText);
     if (

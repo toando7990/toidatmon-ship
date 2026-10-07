@@ -30,6 +30,7 @@ import PartnerApplications from "@/pages/PartnerApplications";
 import PartnerApply from "@/pages/PartnerApply";
 import PartnerConsole from "@/pages/PartnerConsole";
 import PartnerManager from "@/pages/PartnerManager";
+import PartnerSupportAdmin from "@/pages/PartnerSupportAdmin";
 import { PartnerUnavailable } from "@/pages/PartnerUnavailable";
 import PayoutsAdmin from "@/pages/PayoutsAdmin";
 import PlatformDevicesAdmin from "@/pages/PlatformDevicesAdmin";
@@ -560,6 +561,17 @@ const adminPromoManagerRoute = createRoute({
   ),
 });
 
+// Hỗ trợ đối tác: admin mở trang /quan-ly của đối tác ở chế độ hỗ trợ.
+const adminPartnerSupportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/ho-tro-doi-tac",
+  component: () => (
+    <AdminGate>
+      <PartnerSupportAdmin />
+    </AdminGate>
+  ),
+});
+
 // Thiết bị cấp sàn: admin tạo mã / thu hồi; nhân viên dùng /san.
 const adminPlatformDevicesRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -700,6 +712,7 @@ const router = createRouter({
     adminDishGroupsRoute,
     adminDeliveryRoute,
     adminPlatformDevicesRoute,
+    adminPartnerSupportRoute,
     platformStaffRoute,
     adminPromoManagerRoute,
     partnerUnavailableRoute,

@@ -12,7 +12,7 @@ import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DeliveryTrackingPanel } from "@/components/delivery/DeliveryTrackingPanel";
 import { useOrderStatus } from "@/hooks/useOrderStatus";
-import { useGetOrder, useRestaurants } from "@/hooks/useQueries";
+import { useGetOrder, useRestaurants, useTenantId } from "@/hooks/useQueries";
 import { cn } from "@/lib/utils";
 import { getDeliveryStatus, getInvoice } from "@/lib/vps-client";
 import type { DeliveryInfo } from "@/lib/vps-client";
@@ -376,6 +376,8 @@ export function OrderStatusView({
   deliveryInfo,
 }: OrderStatusViewProps) {
   const [changeRestaurantOpen, setChangeRestaurantOpen] = useState(false);
+  // tenantId = đường dẫn của thương hiệu (toidatmon.vn/<tenantId>).
+  const tenantSlug = useTenantId();
   const booking = status.bookingStatus as BookingStatus;
   const payment = status.paymentStatus as PaymentStatus;
   const invoice = status.invoiceStatus as InvoiceStatus;
@@ -478,7 +480,7 @@ export function OrderStatusView({
                 </p>
                 <div className="rounded-lg bg-white p-2">
                   <QRCodeCanvas
-                    value={`${window.location.origin}/driver?scan_order=${encodeURIComponent(order.orderId)}&scan_code=${encodeURIComponent(order.pickupCode)}`}
+                    value={`${window.location.origin}/${tenantSlug}/driver?scan_order=${encodeURIComponent(order.orderId)}&scan_code=${encodeURIComponent(order.pickupCode)}`}
                     size={160}
                   />
                 </div>

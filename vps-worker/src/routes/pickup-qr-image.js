@@ -8,7 +8,7 @@
 // duyệt — hay bị từ chối quyền trên 1 số thiết bị Android, xem
 // QrScannerDialog.tsx) quét trực tiếp ảnh trên màn hình tài xế.
 //
-// Mã hoá 1 ĐƯỜNG LINK trỏ về FRONTEND_PUBLIC_URL/driver kèm orderId +
+// Mã hoá 1 ĐƯỜNG LINK trỏ về FRONTEND_PUBLIC_URL/<đối tác>/driver kèm orderId +
 // pickupCode (KHÔNG còn là JSON thuần như trước) — điện thoại tự nhận
 // diện đây là link, mở thẳng /driver và tự động hiện đúng đơn + điền
 // sẵn mã nhận hàng. Nếu FRONTEND_PUBLIC_URL CHƯA cấu hình, fallback về
@@ -45,7 +45,7 @@ router.get(['/order/:id/pickup-qr.png', '/q/:id'], async (req, res, next) => {
     const db = req.app.locals.db;
     const orderId = req.params.id;
     const order = db.prepare(
-      `SELECT order_id, pickup_code, payment_status, booking_status FROM orders WHERE order_id = ?`,
+      `SELECT order_id, tenant_id, pickup_code, payment_status, booking_status FROM orders WHERE order_id = ?`,
     ).get(orderId);
 
     if (!order || !order.pickup_code) {
@@ -59,7 +59,7 @@ router.get(['/order/:id/pickup-qr.png', '/q/:id'], async (req, res, next) => {
     }
 
     const qrValue = process.env.FRONTEND_PUBLIC_URL
-      ? `${process.env.FRONTEND_PUBLIC_URL}/driver?scan_order=${encodeURIComponent(order.order_id)}&scan_code=${encodeURIComponent(order.pickup_code)}`
+      ? `${process.env.FRONTEND_PUBLIC_URL}/${encodeURIComponent(order.tenant_id || '')}/driver?scan_order=${encodeURIComponent(order.order_id)}&scan_code=${encodeURIComponent(order.pickup_code)}`
       : JSON.stringify({ orderId: order.order_id, pickupCode: order.pickup_code });
     const png = await QRCode.toBuffer(qrValue, { type: 'png', width: 400, margin: 2 });
 
