@@ -13,11 +13,7 @@ import { useTenants } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import { listPartnerApplications } from "@/lib/partner-applications";
-import {
-  PARTNER_ROOT_DOMAIN,
-  resolveTenant,
-  stripPartnerPrefix,
-} from "@/lib/tenant";
+import { partnerPath, resolveTenant, stripPartnerPrefix } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
@@ -148,18 +144,13 @@ function norm(s: string): string {
 }
 
 /** Mở cùng trang quản trị dưới quán khác. */
-function switchStore(slug: string, routerPath: string, source: string) {
-  const { protocol, host } = window.location;
-  if (source === "hostname") {
-    const root = host.split(".").slice(1).join(".") || PARTNER_ROOT_DOMAIN;
-    window.location.assign(`${protocol}//${slug}.${root}${routerPath}`);
-  } else {
-    window.location.assign(`/${slug}${routerPath}`);
-  }
+function switchStore(slug: string, routerPath: string) {
+  // 1 tên miền duy nhất: trang của thương hiệu là /<slug>/...
+  window.location.assign(`/${slug}${routerPath}`);
 }
 
 function StoreSwitcher({ compact }: { compact?: boolean }) {
-  const { tenant, source } = useTenant();
+  const { tenant } = useTenant();
   const { data: tenants } = useTenants(false);
   const router = useRouterState();
   const [open, setOpen] = useState(false);
@@ -190,11 +181,7 @@ function StoreSwitcher({ compact }: { compact?: boolean }) {
               onClick={() => {
                 setOpen(false);
                 if (t.tenantId !== tenant?.tenantId) {
-                  switchStore(
-                    t.slug,
-                    appPath(router.location.pathname),
-                    source,
-                  );
+                  switchStore(t.slug, appPath(router.location.pathname));
                 }
               }}
               className={cn(
@@ -211,7 +198,7 @@ function StoreSwitcher({ compact }: { compact?: boolean }) {
                 )}
               </span>
               <span className="text-xs text-muted-foreground">
-                {t.slug}.{PARTNER_ROOT_DOMAIN}
+                {partnerPath(t.slug)}
               </span>
             </button>
           ))}

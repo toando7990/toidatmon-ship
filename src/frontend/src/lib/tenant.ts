@@ -1,22 +1,24 @@
 // Partner (tenant) resolution — multi-partner platform.
 //
-// A partner is identified by a slug. The slug is resolved from TWO sources,
-// in priority order:
-//   1. The hostname subdomain of toidatmon.com — e.g. phoba.toidatmon.com
-//      resolves to "phoba". The apex (toidatmon.com / www.toidatmon.com) and
-//      the Caffeine draft/preview domains have NO partner subdomain.
-//   2. A fallback path prefix — e.g. /phoba/... resolves to "phoba". This is
-//      what makes the app usable on the draft/preview domain where no partner
-//      subdomain exists.
+// A partner (đối tác) owns ONE brand; the brand's page lives at a path on the
+// single platform domain: toidatmon.vn/<slug> (e.g. toidatmon.vn/bunbohue65).
+// Partners have NO subdomain. Old links on a partner subdomain
+// (phoba.toidatmon.vn/...) are redirected to toidatmon.vn/phoba/... by
+// legacySubdomainRedirect() before the app renders.
 //
 // This module MUST NOT throw and MUST NOT leave the app blank: an unknown or
 // hidden slug resolves to a not-found state that the app renders as a notice
 // page, never as an empty screen.
 
-/** Tên miền chính (hiển thị, đường dẫn gửi quán): ten-quan.toidatmon.vn */
+/** Tên miền duy nhất của nền tảng. */
 export const PARTNER_ROOT_DOMAIN = "toidatmon.vn";
-/** Tên miền được nhận diện quán từ tên miền con (giữ .com cho đường cũ). */
+/** Tên miền cũ có tên miền con của quán — chỉ để chuyển hướng link cũ. */
 export const PARTNER_ROOT_DOMAINS = ["toidatmon.vn", "toidatmon.com"];
+
+/** Địa chỉ trang của thương hiệu để hiển thị: "toidatmon.vn/bunbohue65". */
+export function partnerPath(slug: string, path = ""): string {
+  return `${PARTNER_ROOT_DOMAIN}/${slug}${path}`;
+}
 
 // Slug shape: lowercase letters, digits and single hyphens. Kept deliberately
 // strict so a path segment like "admin" or "assets" is never mistaken for a
@@ -64,7 +66,8 @@ export function normalizeSlug(raw: string | null | undefined): string | null {
   return slug;
 }
 
-// Extract the partner slug from a hostname. Returns null for the apex domain,
+// Extract the partner slug from a LEGACY partner subdomain (only used to
+// redirect old links). Returns null for the apex domain,
 // the www host, Caffeine domains, localhost, and any non-toidatmon host.
 export function slugFromHostname(hostname: string): string | null {
   if (typeof hostname !== "string") return null;
@@ -101,16 +104,12 @@ export function resolveTenant(
     : "/",
 ): TenantResolution {
   try {
-    const fromHost = slugFromHostname(hostname);
-    if (fromHost) {
-      return { slug: fromHost, source: "hostname", status: "resolved" };
-    }
+    void hostname; // tên miền con không còn dùng — xem legacySubdomainRedirect
     const fromPath = slugFromPath(pathname);
     if (fromPath) {
       return { slug: fromPath, source: "path", status: "resolved" };
     }
-    // No partner subdomain and no path prefix — the draft/preview domain.
-    // Fall back to the default partner so the app still renders.
+    // No path prefix — platform home / draft domain. Fall back to the default partner so the app still renders.
     return { slug: null, source: "none", status: "default" };
   } catch {
     return { slug: null, source: "none", status: "default" };
@@ -130,4 +129,25 @@ export function stripPartnerPrefix(
     return pathname.slice(prefix.length);
   }
   return pathname;
+}
+
+/**
+ * Link cũ trên tên miền con của quán (phoba.toidatmon.vn/track) → địa chỉ mới
+ * trên tên miền chính (https://toidatmon.vn/phoba/track). null = không cần
+ * chuyển hướng.
+ */
+export function legacySubdomainRedirect(
+  hostname: string,
+  pathname: string,
+  search = "",
+  hash = "",
+): string | null {
+  const slug = slugFromHostname(hostname);
+  if (!slug) return null;
+  const host = hostname.trim().toLowerCase().split(":")[0];
+  const root =
+    PARTNER_ROOT_DOMAINS.find((d) => host.endsWith(`.${d}`)) ??
+    PARTNER_ROOT_DOMAIN;
+  const rest = pathname === "/" ? "" : pathname;
+  return `https://${root}/${slug}${rest}${search}${hash}`;
 }

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { loadEnv } from "./lib/env";
+import { legacySubdomainRedirect } from "./lib/tenant";
 import "./index.css";
 
 BigInt.prototype.toJSON = function () {
@@ -17,6 +18,16 @@ declare global {
 }
 
 const queryClient = new QueryClient();
+
+// Không còn tên miền con cho từng đối tác: link cũ (phoba.toidatmon.vn/...)
+// chuyển sang toidatmon.vn/phoba/... trước khi app chạy.
+const legacy = legacySubdomainRedirect(
+  window.location.hostname,
+  window.location.pathname,
+  window.location.search,
+  window.location.hash,
+);
+if (legacy) window.location.replace(legacy);
 
 // Friendly Vietnamese error screen shown when env.json cannot be loaded or
 // validated. Rendered into #root before React mounts so the user never sees a

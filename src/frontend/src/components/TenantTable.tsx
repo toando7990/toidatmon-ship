@@ -6,7 +6,7 @@
 
 import type { PartnerEntry } from "@/hooks/usePartnerDirectory";
 import { BUSINESS_TYPE_LABEL } from "@/lib/partner-applications";
-import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
+import { partnerPath } from "@/lib/tenant";
 import { tenantMonogram } from "@/lib/tenant-branding";
 import { cn } from "@/lib/utils";
 import type { Tenant } from "@/types";
@@ -56,7 +56,7 @@ function BrandCell({ tenant }: { tenant: Tenant }) {
       <div className="min-w-0">
         <p className="truncate font-medium text-foreground">{tenant.name}</p>
         <p className="truncate font-mono text-xs text-muted-foreground">
-          {tenant.slug}.{PARTNER_ROOT_DOMAIN}
+          {partnerPath(tenant.slug)}
         </p>
       </div>
     </div>
@@ -154,7 +154,8 @@ export function TenantTable({
             Chưa có đối tác
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Thêm đối tác đầu tiên để cấp subdomain và không gian dữ liệu riêng.
+            Thêm đối tác đầu tiên để cấp trang đặt món và không gian dữ liệu
+            riêng.
           </p>
         </div>
       </div>

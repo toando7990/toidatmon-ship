@@ -1,5 +1,6 @@
 // Thẻ trong tab "Quán" (/quan-ly, máy Chủ quán):
-//   - Tiền chuyển khoản tại quầy: Tingee riêng của quán (tự xác nhận) hoặc
+//   - Tiền chuyển khoản tại quầy (về tài khoản ĐỐI TÁC): Tingee của đối tác
+//     (tự xác nhận) hoặc
 //     tài khoản ngân hàng do Tôi Đặt Món cài (xác nhận bằng ảnh chuyển khoản).
 //   - Kết nối AnaSystem: tạo khoá để AnaSystem tại quán kéo đơn đã thanh toán
 //     về và tự xuất hoá đơn điện tử bằng tài khoản hoá đơn của quán.
@@ -90,7 +91,7 @@ export function CounterAccountCard({
       qc.setQueryData(["partner-tingee", deviceId], r);
       qc.invalidateQueries({ queryKey: ["counter-payment-mode"] });
       setForm(null);
-      toast.success("Đã lưu Tingee của quán");
+      toast.success("Đã lưu Tingee của đối tác");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
   });
@@ -114,13 +115,13 @@ export function CounterAccountCard({
       <h2 className="text-base font-extrabold">Tiền chuyển khoản tại quầy</h2>
       {hasTingee ? (
         <p className="text-[15px]">
-          <b className="text-green-700">Tingee của quán</b> · VA{" "}
+          <b className="text-green-700">Tingee của đối tác</b> · VA{" "}
           {maskAccount(tg?.vaAccountNumber ?? "")} · {BIN_NAME(tg?.bankBin)} —
-          tiền về thẳng quán, <b>tự xác nhận</b>.
+          tiền về tài khoản đối tác, <b>tự xác nhận</b>.
         </p>
       ) : acc?.enabled ? (
         <p className="text-[15px]">
-          QR ngân hàng:{" "}
+          Khách quét QR ở mọi nhà hàng → tiền về tài khoản đối tác:{" "}
           <b>
             {acc.bankName || acc.bankBin} · {maskAccount(acc.vaAccountNumber)}
           </b>{" "}
@@ -129,8 +130,9 @@ export function CounterAccountCard({
         </p>
       ) : (
         <p className="text-[15px] text-muted-foreground">
-          Chưa có tài khoản nhận tiền — máy quầy chỉ thu tiền mặt. Đăng ký
-          Tingee bên dưới, hoặc nhắn Tôi Đặt Món cài tài khoản ngân hàng.
+          Chưa bật chuyển khoản tại quầy — máy quầy chỉ thu tiền mặt. Đăng ký
+          Tingee bên dưới, hoặc nhắn Tôi Đặt Món bật QR cho tài khoản nhận tiền
+          của đối tác.
         </p>
       )}
 
@@ -227,8 +229,9 @@ export function CounterAccountCard({
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Lấy Client ID, Secret và tài khoản ảo trong trang quản trị Tingee
-            của quán. Sau khi lưu, dán địa chỉ Webhook hiện ở đây vào Tingee.
+            Lấy Client ID, Secret và tài khoản ảo (gắn với tài khoản ngân hàng
+            của đối tác) trong trang quản trị Tingee. Sau khi lưu, dán địa chỉ
+            Webhook hiện ở đây vào Tingee.
           </p>
         </form>
       ) : (
@@ -247,7 +250,7 @@ export function CounterAccountCard({
               }
               className="min-h-[44px] rounded-xl border px-4 text-sm font-extrabold"
             >
-              {tg?.configured ? "Sửa Tingee" : "Cài Tingee của quán"}
+              {tg?.configured ? "Sửa Tingee" : "Cài Tingee của đối tác"}
             </button>
             {tg?.configured && (
               <button
@@ -263,7 +266,8 @@ export function CounterAccountCard({
         )
       )}
       <p className="text-[13px] text-muted-foreground">
-        Đơn khách đặt online vẫn do Tôi Đặt Món thu hộ và trả về quán theo lịch.
+        Đơn khách đặt online vẫn do Tôi Đặt Món thu hộ và trả về đối tác theo
+        lịch.
       </p>
     </Card>
   );

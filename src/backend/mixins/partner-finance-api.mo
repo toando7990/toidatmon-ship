@@ -8,6 +8,7 @@ import DevicesLib "../lib/devices";
 import PartnerConsoleLib "../lib/partner-console";
 import PlatformLib "../lib/platform-devices";
 import PlatformTypes "../types/platform-devices";
+import ParamsTypes "../types/platform-params";
 import Types "../types/partner-finance";
 import VoucherTypes "../types/voucher";
 
@@ -24,18 +25,24 @@ mixin (
   devices : DevicesLib.DevicesStore,
   deviceAuth : DeviceAuthTypes.DeviceAuthState,
   vouchers : VoucherTypes.VoucherStore,
+  counterPayments : ParamsTypes.CounterPaymentStore,
 ) {
   func financeIsAdmin(caller : Principal) : Bool {
     AccessControl.isAdmin(accessControlState, caller);
   };
 
-  /// Admin: nhập / sửa tài khoản nhận tiền của đối tác.
+  /// Admin: nhập / sửa tài khoản nhận tiền của đối tác. 1 tài khoản dùng cho
+  /// CẢ đối soát (sàn chuyển tiền) VÀ chuyển khoản tại quầy (khách quét QR ở
+  /// bất kỳ nhà hàng nào của đối tác → tiền về tài khoản đối tác).
+  /// bankBin: mã BIN VietQR của ngân hàng; counterQr: dùng cho QR tại quầy.
   public shared ({ caller }) func setPartnerBank(
     tenantId : Common.TenantId,
+    bankBin : Text,
     bankName : Text,
     accountNumber : Text,
     accountHolder : Text,
     branch : Text,
+    counterQr : Bool,
   ) : async Result.Result<Types.PartnerBank, Text> {
     if (not financeIsAdmin(caller)) return #err("Admin only");
     let num = accountNumber.trim(#char ' ');
@@ -48,6 +55,11 @@ mixin (
     };
     if (holder.size() == 0 or holder.size() > 120) return #err("Nhập tên chủ tài khoản");
     if (branch.size() > 120) return #err("Chi nhánh tối đa 120 ký tự");
+    if (bankBin.size() > 10) return #err("Mã ngân hàng không hợp lệ");
+    for (c in bankBin.chars()) {
+      if (c < '0' or c > '9') return #err("Mã ngân hàng (BIN) chỉ gồm chữ số");
+    };
+    if (counterQr and bankBin.size() == 0) return #err("Chọn ngân hàng trong danh sách để tạo QR tại quầy");
     let b : Types.PartnerBank = {
       bankName = bank;
       accountNumber = num;
@@ -57,6 +69,23 @@ mixin (
       updatedBy = "admin";
     };
     partnerBanks.add(tenantId, b);
+    // QR chuyển khoản tại quầy dùng CÙNG tài khoản của đối tác (VPS đọc
+    // getCounterPaymentAccount). Giữ merchantId Tingee nếu đã có.
+    let merchantId = switch (counterPayments.get(tenantId)) {
+      case (?old) old.merchantId;
+      case null "";
+    };
+    if (counterQr or counterPayments.get(tenantId) != null) {
+      counterPayments.add(tenantId, {
+        bankBin;
+        bankName = bank;
+        vaAccountNumber = num;
+        accountName = holder;
+        merchantId;
+        enabled = counterQr;
+        updatedAt = Time.now().toNat();
+      });
+    };
     #ok(b);
   };
 

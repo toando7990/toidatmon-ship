@@ -5,7 +5,8 @@
 //   2. THƯƠNG HIỆU — tên, tên miền, logo, màu (khách thấy). Ví dụ: Bún Bò Huế 65.
 //   3. NHÀ HÀNG / CHI NHÁNH — đối tác tự quản lý ở trang Chi nhánh; sàn
 //      không dùng địa chỉ / SĐT nhà hàng làm thông tin đối tác.
-// Slug được validate client-side theo ĐÚNG quy tắc backend (validateSlug):
+// Slug = đường dẫn trang thương hiệu (toidatmon.vn/<slug>), validate theo
+// ĐÚNG quy tắc backend (validateSlug):
 // chữ thường [a-z0-9-], không bắt đầu/kết thúc bằng '-', không nằm trong
 // reservedSlugs. UI tiếng Việt.
 
@@ -16,7 +17,7 @@ import {
   type BusinessType,
 } from "@/lib/partner-applications";
 import type { PartnerProfile } from "@/lib/partner-profile";
-import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
+import { partnerPath } from "@/lib/tenant";
 import { isValidBrandColor, tenantMonogram } from "@/lib/tenant-branding";
 import { cn } from "@/lib/utils";
 import type { Tenant } from "@/types";
@@ -77,6 +78,19 @@ export const RESERVED_SLUGS = new Set([
   "support",
   "help",
   "status",
+  // Đường dẫn của ứng dụng — trang thương hiệu nằm ở toidatmon.vn/<slug>.
+  "san",
+  "quan-ly",
+  "track",
+  "history",
+  "profile",
+  "counter",
+  "driver",
+  "enterprise",
+  "claim",
+  "gioi-thieu",
+  "dang-ky-doi-tac",
+  "ordering-partners",
 ]);
 
 const EMPTY: TenantFormValues = {
@@ -426,7 +440,7 @@ export function TenantForm({
       <Section
         icon={Palette}
         title="Thương hiệu"
-        desc="Khách hàng thấy thương hiệu khi đặt món — VD: Bún Bò Huế 65. Mỗi đối tác có 1 thương hiệu, 1 tên miền."
+        desc="Khách hàng thấy thương hiệu khi đặt món — VD: Bún Bò Huế 65. Mỗi đối tác có 1 thương hiệu, 1 đường dẫn."
         ocid="tenant.form.brand_section"
       >
         <div
@@ -461,7 +475,7 @@ export function TenantForm({
                 {previewName}
               </p>
               <p className="truncate font-mono text-xs text-muted-foreground">
-                {slugPreview}.{PARTNER_ROOT_DOMAIN}
+                {partnerPath(slugPreview)}
               </p>
             </div>
           </div>
@@ -480,7 +494,7 @@ export function TenantForm({
           />
           <div className="space-y-1.5">
             <Label htmlFor="tenant-slug" className="text-sm font-medium">
-              Tên miền con <span className="text-destructive">*</span>
+              Đường dẫn <span className="text-destructive">*</span>
             </Label>
             <Input
               id="tenant-slug"
@@ -504,8 +518,8 @@ export function TenantForm({
               data-ocid="tenant.form.slug_preview"
             >
               {isEdit
-                ? "Tên miền không thể thay đổi sau khi tạo."
-                : `Địa chỉ: ${slugPreview}.${PARTNER_ROOT_DOMAIN}`}
+                ? "Đường dẫn không thể thay đổi sau khi tạo."
+                : `Trang đặt món: ${partnerPath(slugPreview)}`}
             </p>
             {errors.slug && (
               <p

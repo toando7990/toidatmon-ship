@@ -1,5 +1,6 @@
-// Tài khoản nhận tiền của ĐỐI TÁC — 1 tài khoản dùng chung cho mọi quán /
-// chi nhánh của đối tác; Tôi Đặt Món chuyển tiền đối soát vào đây.
+// Tài khoản nhận tiền của ĐỐI TÁC — 1 tài khoản dùng chung cho mọi nhà hàng
+// của đối tác: Tôi Đặt Món chuyển tiền đối soát vào đây, và khách chuyển
+// khoản tại quầy (QR) cũng vào đây.
 //   - PartnerBankDialog: admin nhập / sửa.
 //   - PartnerBankPanel: bảng mọi đối tác ở /admin/partners (đã có / lấy tạm
 //     từ đơn đăng ký / chưa có).
@@ -27,9 +28,14 @@ import {
 } from "@/lib/partner-finance";
 import { holderMatchesPartner } from "@/lib/partner-profile";
 import { type BankInfo, bankByTenant } from "@/lib/payouts";
+import {
+  BANKS,
+  getCounterPaymentAccount,
+  hasPaymentAccountApi,
+} from "@/lib/platform-params";
 import type { Tenant } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Landmark, Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, Landmark, Loader2, Pencil, QrCode } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -60,6 +66,20 @@ export function usePartnerBanks(credential = "") {
   return { banks, saved, loading: savedQ.isLoading };
 }
 
+/** Tài khoản QR tại quầy hiện tại của đối tác (VPS đọc khi tạo QR). */
+export function useCounterAccount(tenantId: string) {
+  const { actor, isFetching } = useCanister();
+  return useQuery({
+    queryKey: ["counter-payment", tenantId],
+    queryFn: () =>
+      getCounterPaymentAccount(actor as NonNullable<typeof actor>, tenantId),
+    enabled:
+      !!actor && !isFetching && !!tenantId && hasPaymentAccountApi(actor),
+  });
+}
+
+const OTHER_BANK = "__other";
+
 export function PartnerBankDialog({
   tenantId,
   partnerName,
@@ -75,63 +95,67 @@ export function PartnerBankDialog({
 }) {
   const { actor } = useCanister();
   const qc = useQueryClient();
+  const counterQ = useCounterAccount(open ? tenantId : "");
+  const [bankBin, setBankBin] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [branch, setBranch] = useState("");
+  const [counterQr, setCounterQr] = useState(true);
 
   useEffect(() => {
     if (!open) return;
-    setBankName(current?.bankName ?? "");
+    const name = current?.bankName ?? "";
+    const known = BANKS.find(
+      (b) => b.name.toLowerCase() === name.trim().toLowerCase(),
+    );
+    setBankBin(known?.bin ?? (name ? OTHER_BANK : ""));
+    setBankName(known?.name ?? name);
     setAccountNumber(current?.accountNumber ?? "");
     setAccountHolder(current?.holder ?? "");
     setBranch(current?.branch ?? "");
   }, [open, current]);
+  useEffect(() => {
+    if (!open || counterQ.data === undefined) return;
+    // Mặc định BẬT: khách chuyển khoản tại quầy → tiền về tài khoản đối tác.
+    setCounterQr(counterQ.data ? counterQ.data.enabled : true);
+  }, [open, counterQ.data]);
 
+  const isOther = bankBin === OTHER_BANK;
   const save = useMutation({
     mutationFn: () =>
       setPartnerBank(actor as NonNullable<typeof actor>, tenantId, {
+        bankBin: isOther ? "" : bankBin,
         bankName,
         accountNumber,
         accountHolder,
         branch,
+        counterQr: counterQr && !isOther,
       }),
     onSuccess: () => {
       toast.success(`Đã lưu tài khoản nhận tiền của ${partnerName}`);
       qc.invalidateQueries({ queryKey: PARTNER_BANK_QK });
+      qc.invalidateQueries({ queryKey: ["counter-payment"] });
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const fields: Array<[string, string, (v: string) => void, string, string]> = [
-    ["pb-bank", bankName, setBankName, "Ngân hàng", "VD: Vietcombank"],
-    [
-      "pb-number",
-      accountNumber,
-      (v) => setAccountNumber(v.replace(/[^\d\s]/g, "")),
-      "Số tài khoản",
-      "Chỉ gồm chữ số",
-    ],
-    [
-      "pb-holder",
-      accountHolder,
-      (v) => setAccountHolder(v.toUpperCase()),
-      "Chủ tài khoản",
-      "Tên pháp nhân / chủ đối tác, viết hoa không dấu",
-    ],
-    ["pb-branch", branch, setBranch, "Chi nhánh ngân hàng (tuỳ chọn)", ""],
-  ];
+  const old = counterQ.data;
+  const oldDiffers =
+    !!old?.enabled &&
+    !!old.vaAccountNumber &&
+    old.vaAccountNumber !== accountNumber.replace(/\s/g, "");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Tài khoản nhận tiền — {partnerName}</DialogTitle>
           <DialogDescription>
-            Tài khoản đứng tên ĐỐI TÁC (pháp nhân, hoặc chủ hộ với hộ kinh
-            doanh), dùng chung cho mọi nhà hàng của đối tác. Tôi Đặt Món chuyển
-            tiền đối soát vào tài khoản này.
+            1 tài khoản đứng tên ĐỐI TÁC (pháp nhân, hoặc chủ hộ với hộ kinh
+            doanh), dùng chung cho mọi nhà hàng: nhận tiền đối soát từ Tôi Đặt
+            Món và tiền khách chuyển khoản tại quầy.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
@@ -141,7 +165,66 @@ export function PartnerBankDialog({
               nhận.
             </p>
           )}
-          {fields.map(([id, v, set, label, ph]) => (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="pb-bank" className="text-sm font-semibold">
+              Ngân hàng
+            </label>
+            <select
+              id="pb-bank"
+              value={bankBin}
+              onChange={(e) => {
+                const v = e.target.value;
+                setBankBin(v);
+                const b = BANKS.find((x) => x.bin === v);
+                if (b) setBankName(b.name);
+                else if (v === OTHER_BANK) setBankName("");
+              }}
+              className="h-11 rounded-md border border-input bg-background px-3 text-sm"
+              data-ocid="partner_bank.bank_select"
+            >
+              <option value="">— Chọn ngân hàng —</option>
+              {BANKS.map((b) => (
+                <option key={b.bin} value={b.bin}>
+                  {b.name}
+                </option>
+              ))}
+              <option value={OTHER_BANK}>Ngân hàng khác…</option>
+            </select>
+            {isOther && (
+              <Input
+                aria-label="Tên ngân hàng khác"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                placeholder="Tên ngân hàng"
+                className="h-11"
+              />
+            )}
+          </div>
+          {(
+            [
+              [
+                "pb-number",
+                accountNumber,
+                (v: string) => setAccountNumber(v.replace(/[^\d\s]/g, "")),
+                "Số tài khoản",
+                "Chỉ gồm chữ số",
+              ],
+              [
+                "pb-holder",
+                accountHolder,
+                (v: string) => setAccountHolder(v.toUpperCase()),
+                "Chủ tài khoản",
+                "Tên pháp nhân / chủ hộ, viết hoa không dấu",
+              ],
+              [
+                "pb-branch",
+                branch,
+                setBranch,
+                "Chi nhánh ngân hàng (tuỳ chọn)",
+                "",
+              ],
+            ] as Array<[string, string, (v: string) => void, string, string]>
+          ).map(([id, v, set, label, ph]) => (
             <div key={id} className="flex flex-col gap-1.5">
               <label htmlFor={id} className="text-sm font-semibold">
                 {label}
@@ -155,6 +238,37 @@ export function PartnerBankDialog({
               />
             </div>
           ))}
+          <label
+            htmlFor="pb-counter"
+            className="flex items-start gap-2.5 rounded-lg border p-3 text-sm"
+          >
+            <input
+              id="pb-counter"
+              type="checkbox"
+              checked={counterQr && !isOther}
+              disabled={isOther}
+              onChange={(e) => setCounterQr(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-primary"
+              data-ocid="partner_bank.counter_qr"
+            />
+            <span>
+              <b className="flex items-center gap-1.5">
+                <QrCode className="h-4 w-4" aria-hidden="true" />
+                Nhận chuyển khoản tại quầy
+              </b>
+              <span className="text-xs text-muted-foreground">
+                Khách quét QR ở bất kỳ nhà hàng nào của đối tác → tiền về tài
+                khoản này.
+                {isOther && " Cần chọn ngân hàng trong danh sách để tạo QR."}
+              </span>
+            </span>
+          </label>
+          {oldDiffers && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              QR tại quầy đang dùng tài khoản khác ({old?.bankName} ·{" "}
+              {old?.vaAccountNumber}). Lưu để chuyển sang tài khoản này.
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -178,6 +292,41 @@ export function PartnerBankDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Nhãn "QR tại quầy" cạnh tài khoản (bật / tắt / đang dùng TK khác). */
+export function CounterQrBadge({
+  tenantId,
+  accountNumber,
+}: {
+  tenantId: string;
+  accountNumber: string | undefined;
+}) {
+  const q = useCounterAccount(tenantId);
+  const c = q.data;
+  if (!c?.enabled) {
+    return (
+      <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+        QR tại quầy: tắt
+      </span>
+    );
+  }
+  if (accountNumber && c.vaAccountNumber !== accountNumber) {
+    return (
+      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900">
+        QR tại quầy dùng TK khác
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded bg-success/10 px-1.5 py-0.5 text-[11px] font-semibold text-success"
+      data-ocid="partner_bank.counter_qr_on"
+    >
+      <QrCode className="h-3 w-3" aria-hidden="true" />
+      QR tại quầy
+    </span>
   );
 }
 
@@ -248,8 +397,8 @@ export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Mỗi đối tác 1 tài khoản đứng tên đối tác (pháp nhân, hoặc chủ hộ với hộ
-        kinh doanh), dùng chung cho mọi nhà hàng của đối tác. Đối soát chuyển
-        tiền vào tài khoản này.
+        kinh doanh), dùng chung cho mọi nhà hàng: nhận tiền đối soát từ Tôi Đặt
+        Món và tiền khách chuyển khoản tại quầy (QR).
         {missing > 0 && (
           <b className="text-destructive"> {missing} đối tác chưa có.</b>
         )}
@@ -285,6 +434,14 @@ export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
                     dir.byId.get(t.tenantId)?.profile?.representativeName
                   }
                 />
+                {banks.get(t.tenantId) && (
+                  <span className="ml-1.5">
+                    <CounterQrBadge
+                      tenantId={t.tenantId}
+                      accountNumber={banks.get(t.tenantId)?.accountNumber}
+                    />
+                  </span>
+                )}
               </span>
               <Button
                 size="sm"

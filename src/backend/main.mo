@@ -341,7 +341,7 @@ actor Main {
   include VpsAdminApi(accessControlState, secretState, platformParams);
   include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments, platformDevices);
   include PartnerProfileApi(accessControlState, partnerProfiles, restaurants, platformDevices);
-  include PartnerFinanceApi(accessControlState, partnerBanks, fundedPromos, platformDevices, devices, deviceAuth, vouchers);
+  include PartnerFinanceApi(accessControlState, partnerBanks, fundedPromos, platformDevices, devices, deviceAuth, vouchers, counterPayments);
   include PlatformDevicesApi(accessControlState, platformDevices, platformActivations, homeHidden, partnerApplications, tenants, devices);
 
   /// Returns the canister's own id as text, so the VPS knows which canister

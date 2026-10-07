@@ -83,7 +83,7 @@ function ApplicationCard({
         <b className="min-w-0 flex-1 truncate text-[14.5px]">
           {i.brandName}{" "}
           <span className="font-normal text-muted-foreground">
-            · {i.desiredSlug}.toidatmon.vn
+            · toidatmon.vn/{i.desiredSlug}
           </span>
         </b>
         <span

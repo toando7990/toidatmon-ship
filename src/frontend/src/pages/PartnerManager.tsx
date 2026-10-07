@@ -5,7 +5,6 @@
 // LƯU Ý: route và nav link đã được đăng ký sẵn ở App.tsx/Layout.tsx — file này
 // chỉ dựng phần thân trang.
 
-import { CounterPaymentPanel } from "@/components/CounterPaymentPanel";
 import { CounterPlanPanel } from "@/components/CounterPlanPanel";
 import { PartnerBankPanel } from "@/components/PartnerBank";
 import { TenantForm, type TenantFormValues } from "@/components/TenantForm";
@@ -287,13 +286,12 @@ export default function PartnerManager() {
 
       {mode.kind === "list" && <PartnerBankPanel tenants={tenants} />}
       {mode.kind === "list" && <CounterPlanPanel tenants={tenants} />}
-      {mode.kind === "list" && <CounterPaymentPanel tenants={tenants} />}
 
       {mode.kind === "list" && tenants.length > 0 && (
         <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
           <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
-          Mỗi đối tác có subdomain riêng và không gian dữ liệu tách biệt hoàn
-          toàn.
+          Mỗi đối tác có trang đặt món riêng (toidatmon.vn/đường-dẫn) và không
+          gian dữ liệu tách biệt hoàn toàn.
         </p>
       )}
     </section>

@@ -23,7 +23,7 @@ import {
   submitPartnerApplication,
   validateStep,
 } from "@/lib/partner-applications";
-import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
+import { PARTNER_ROOT_DOMAIN, partnerPath } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import {
   AlertCircle,
@@ -173,7 +173,7 @@ function StatusLookup() {
           <p>
             <span className="font-semibold">{result.brandName}</span>{" "}
             <span className="text-muted-foreground">
-              ({result.desiredSlug}.{PARTNER_ROOT_DOMAIN})
+              ({partnerPath(result.desiredSlug)})
             </span>
           </p>
           <p className="mt-1">
@@ -273,9 +273,10 @@ export default function PartnerApply() {
               Đăng ký đối tác
             </h1>
             <p className="mt-1 mb-6 text-sm text-muted-foreground">
-              Mất khoảng 5 phút. Thương hiệu của bạn được cấp trang đặt món riêng tại{" "}
+              Mất khoảng 5 phút. Thương hiệu của bạn được cấp trang đặt món
+              riêng tại{" "}
               <span className="font-medium text-foreground">
-                {d.desiredSlug || "ten-quan"}.{PARTNER_ROOT_DOMAIN}
+                {partnerPath(d.desiredSlug || "ten-thuong-hieu")}
               </span>
               .
             </p>
@@ -310,11 +311,14 @@ export default function PartnerApply() {
                     />
                   </Field>
                   <Field
-                    label="Tên miền con của thương hiệu"
+                    label="Đường dẫn trang đặt món"
                     hint="Chữ thường không dấu, số, dấu gạch ngang. Khách vào trang đặt món bằng địa chỉ này."
                     error={errors.desiredSlug}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <span className="shrink-0 text-sm text-muted-foreground">
+                        {PARTNER_ROOT_DOMAIN}/
+                      </span>
                       <Input
                         value={d.desiredSlug}
                         className={inputCls("desiredSlug")}
@@ -323,9 +327,6 @@ export default function PartnerApply() {
                           set("desiredSlug", e.target.value.toLowerCase());
                         }}
                       />
-                      <span className="shrink-0 text-sm text-muted-foreground">
-                        .{PARTNER_ROOT_DOMAIN}
-                      </span>
                     </div>
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">

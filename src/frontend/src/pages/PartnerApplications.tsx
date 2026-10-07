@@ -15,7 +15,7 @@ import {
   listPartnerApplications,
   reviewPartnerApplication,
 } from "@/lib/partner-applications";
-import { PARTNER_ROOT_DOMAIN } from "@/lib/tenant";
+import { partnerPath } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Loader2 } from "lucide-react";
@@ -53,8 +53,8 @@ function OwnerCodeBox({ tenantId, slug }: { tenantId: string; slug: string }) {
             {gen.data.code}
           </p>
           <p className="text-xs text-muted-foreground">
-            Gửi cho quán: mở {slug}.{PARTNER_ROOT_DOMAIN}/quan-ly và nhập mã.
-            Hết hạn lúc {expires}.
+            Gửi cho quán: mở {partnerPath(slug, "/quan-ly")} và nhập mã. Hết hạn
+            lúc {expires}.
           </p>
         </>
       ) : (
@@ -148,7 +148,7 @@ function ApplicationCard({ app }: { app: PartnerApplication }) {
         <span className="min-w-0">
           <span className="block truncate font-semibold">{i.brandName}</span>
           <span className="block truncate text-xs text-muted-foreground">
-            {i.desiredSlug}.{PARTNER_ROOT_DOMAIN} · {fmtDate(app.createdAt)}
+            {partnerPath(i.desiredSlug)} · {fmtDate(app.createdAt)}
           </span>
         </span>
         <span
