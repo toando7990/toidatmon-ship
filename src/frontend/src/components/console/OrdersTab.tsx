@@ -43,6 +43,7 @@ import {
 import {
   type ConsoleStage,
   formatVnd,
+  isBranchRole,
   listKitchenNotes,
   listPrep,
   listTenantOrders,
@@ -180,8 +181,9 @@ export function OrdersTab({
   const qc = useQueryClient();
   const ready = !!actor && !isFetching;
   const [stage, setStage] = useState<ConsoleStage>("todo");
-  const staffBranch =
-    ctx.role === "staff" ? ctx.device.restaurantId || null : null;
+  const staffBranch = isBranchRole(ctx.role)
+    ? ctx.device.restaurantId || null
+    : null;
   const [branchPick, setBranchPick] = useState<string | null>(null);
   const branch = staffBranch ?? branchPick;
   const restQ = useConsoleRestaurants(ctx);
@@ -378,7 +380,7 @@ export function OrdersTab({
       {top}
 
       <div className="flex items-center gap-2">
-        {ctx.role === "owner" ? (
+        {ctx.role === "owner" || ctx.role === "manager" ? (
           <p className="flex-1 text-sm text-muted-foreground">
             Hôm nay{" "}
             <strong className="text-foreground">{done.length} đơn xong</strong>{" "}

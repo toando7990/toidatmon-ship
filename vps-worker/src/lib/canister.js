@@ -82,7 +82,7 @@ const IDL_FACTORY = ({ IDL }) => {
   const DeviceRole = IDL.Variant({
     accounting: IDL.Null, paymentQueue: IDL.Null, admin: IDL.Null,
     salesPromoReporting: IDL.Null, cashier: IDL.Null, driver: IDL.Null,
-    tenantAdmin: IDL.Null,
+    tenantAdmin: IDL.Null, restaurantManager: IDL.Null,
   });
   const Device = IDL.Record({
     tenantId: IDL.Text,
@@ -208,6 +208,8 @@ const IDL_FACTORY = ({ IDL }) => {
     changeOrderRestaurant: IDL.Func([IDL.Text, IDL.Text, IDL.Text], [ResultOrder], []),
     getOrderStatus: IDL.Func([IDL.Text, IDL.Text], [ResultOrderStatus], ['query']),
     isStoreOpen: IDL.Func([IDL.Text], [IDL.Bool], ['query']),
+    // Giai đoạn 3: giờ nhận đơn + tạm nghỉ TỪNG nhà hàng.
+    isRestaurantOpen: IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
     // Tra thiết bị theo thẻ xác thực "deviceId~khoá" (giai đoạn 1 bảo mật thiết bị).
     getPartnerDevice: IDL.Func([IDL.Text], [IDL.Opt(Device)], ['query']),
     // Máy cấp sàn (nhân viên Tôi Đặt Món) — lib/platform-guard.js.
@@ -403,6 +405,14 @@ async function getOrderStatus(tenantId, orderId) {
 async function isStoreOpen(tenantId) {
   const actor = getActor();
   return await actor.isStoreOpen(tenantOr(tenantId));
+}
+
+// isRestaurantOpen — nhà hàng có đang nhận đơn không (giờ riêng theo ngày,
+// tạm nghỉ từng nhà hàng, tạm nghỉ toàn đối tác). Canister cũ chưa có hàm
+// này → ném lỗi, nơi gọi rơi về isStoreOpen.
+async function isRestaurantOpen(tenantId, restaurantId) {
+  const actor = getActor();
+  return await actor.isRestaurantOpen(tenantOr(tenantId), String(restaurantId || ''));
 }
 
 // getDeviceByCredential — tra thiết bị theo thẻ "deviceId~khoá" mà trình
@@ -694,6 +704,7 @@ module.exports = {
   getCurrentPromotion,
   getPromotionByCode,
   isStoreOpen,
+  isRestaurantOpen,
   getDeviceByCredential,
   getCounterPlanActive,
   getCounterPaymentAccount,

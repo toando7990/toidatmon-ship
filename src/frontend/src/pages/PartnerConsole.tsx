@@ -16,6 +16,17 @@ import { MenuTab } from "@/components/console/MenuTab";
 import { OrdersTab } from "@/components/console/OrdersTab";
 import { ReportTab } from "@/components/console/ReportTab";
 import {
+  ManagerRestaurantTab,
+  PausePill,
+  PauseSheet,
+} from "@/components/console/RestaurantOps";
+import {
+  DriverHistoryTab,
+  DriverTab,
+  InvoicesTab,
+  MoneyTab,
+} from "@/components/console/RoleTabs";
+import {
   type SettingsSection,
   SettingsTab,
   StartChecklist,
@@ -27,22 +38,24 @@ import {
   ContactLinks,
   type Ctx,
   deviceAuth,
-  logSupport,
+  useConsoleRestaurants,
 } from "@/components/console/shared";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
+import { saveEnterpriseActivation } from "@/lib/enterprise-activation";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type ConsoleDevice,
+  type ConsoleRole,
   ROLE_LABEL,
   activateConsoleDevice,
   clearConsoleDevice,
   getPartnerDevice,
   getPartnerSettings,
+  isBranchRole,
   loadConsoleDevice,
   roleOf,
   saveConsoleDevice,
-  setPaused,
 } from "@/lib/partner-console";
 import { normalizeRecoveryCode, recoverOwner } from "@/lib/partner-self";
 import { getAdminTicket } from "@/lib/payouts";
@@ -57,18 +70,22 @@ import {
 } from "@/lib/platform-params";
 import { cn } from "@/lib/utils";
 import { PromoManagerPage } from "@/pages/PromoManagerPage";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
+  FileText,
+  History,
   Loader2,
   MonitorSmartphone,
   Percent,
   ReceiptText,
   Settings,
+  Store,
+  Truck,
   UtensilsCrossed,
+  Wallet,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { toast } from "sonner";
 
 // ---------- Tham số từ Tôi Đặt Món ----------
 
@@ -139,7 +156,7 @@ function LoginView({
       }
       if (!roleOf(d)) {
         throw new Error(
-          "Mã này dành cho màn khác (tài xế, kế toán…), không dùng cho trang quản lý",
+          "Mã này không dùng được cho trang quản lý — nhờ Chủ đối tác tạo mã mới",
         );
       }
       const cd: ConsoleDevice = {
@@ -377,7 +394,54 @@ function CounterBranch({ ctx }: { ctx: Ctx }) {
 
 // ---------- Trang chính ----------
 
-type Tab = "orders" | "counter" | "menu" | "promo" | "report" | "settings";
+type Tab =
+  | "orders"
+  | "counter"
+  | "menu"
+  | "promo"
+  | "report"
+  | "settings"
+  | "restaurant"
+  | "driver"
+  | "history"
+  | "invoices"
+  | "money";
+
+const TAB_DEF: Record<Tab, { label: string; icon: ReactNode }> = {
+  orders: { label: "Đơn", icon: <ReceiptText className="h-6 w-6" /> },
+  counter: {
+    label: "Bán quầy",
+    icon: <MonitorSmartphone className="h-6 w-6" />,
+  },
+  menu: { label: "Món", icon: <UtensilsCrossed className="h-6 w-6" /> },
+  promo: { label: "Khuyến mại", icon: <Percent className="h-6 w-6" /> },
+  report: { label: "Báo cáo", icon: <BarChart3 className="h-6 w-6" /> },
+  settings: { label: "Cài đặt", icon: <Settings className="h-6 w-6" /> },
+  restaurant: { label: "Nhà hàng", icon: <Store className="h-6 w-6" /> },
+  driver: { label: "Tài xế", icon: <Truck className="h-6 w-6" /> },
+  history: { label: "Lịch sử", icon: <History className="h-6 w-6" /> },
+  invoices: { label: "Hoá đơn", icon: <FileText className="h-6 w-6" /> },
+  money: { label: "Tiền", icon: <Wallet className="h-6 w-6" /> },
+};
+
+/** Tab của từng vai trò (mọi máy của đối tác dùng chung trang /quan-ly). */
+const ROLE_TABS: Record<ConsoleRole, Tab[]> = {
+  owner: ["orders", "counter", "menu", "promo", "report", "settings"],
+  manager: ["orders", "counter", "menu", "report", "restaurant"],
+  staff: ["orders", "counter", "menu"],
+  driver: ["driver", "history"],
+  accounting: ["report", "invoices", "money"],
+  promo: ["promo", "report"],
+};
+
+const ROLE_CHIP: Record<ConsoleRole, string> = {
+  owner: "bg-foreground text-background",
+  manager: "bg-pink-100 text-pink-800",
+  staff: "bg-blue-100 text-blue-800",
+  driver: "bg-cyan-100 text-cyan-800",
+  accounting: "bg-violet-100 text-violet-800",
+  promo: "bg-orange-100 text-orange-800",
+};
 
 /** Khung trang quản lý: header, các tab, thanh tab dưới. Dùng chung cho máy
  * của đối tác và admin chế độ Hỗ trợ đối tác. */
@@ -390,69 +454,34 @@ function ConsoleShell({
   onLogout: () => void;
   banner?: ReactNode;
 }) {
-  const { actor } = useCanister();
-  const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>("orders");
-  const [section, setSection] = useState<SettingsSection>("restaurants");
   const role = ctx.role;
-  const paused = !!ctx.settings?.paused;
-  const pause = useMutation({
-    mutationFn: async (v: boolean) => {
-      await setPaused(
-        actor as NonNullable<typeof actor>,
-        ctx.tenantId,
-        ctx.device.deviceId,
-        v,
-      );
-      await logSupport(ctx, "pause", v ? "Tạm nghỉ" : "Mở lại nhận đơn");
-    },
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ["console", "settings"] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
+  const keys = ROLE_TABS[role];
+  const [tab, setTab] = useState<Tab>(keys[0]);
+  const [section, setSection] = useState<SettingsSection>("restaurants");
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const restQ = useConsoleRestaurants(ctx);
   const steps = useStartSteps(ctx);
-
-  const tabs: { key: Tab; label: string; icon: ReactNode }[] = [
-    { key: "orders", label: "Đơn", icon: <ReceiptText className="h-6 w-6" /> },
-    {
-      key: "counter",
-      label: "Bán quầy",
-      icon: <MonitorSmartphone className="h-6 w-6" />,
-    },
-    {
-      key: "menu",
-      label: "Món",
-      icon: <UtensilsCrossed className="h-6 w-6" />,
-    },
-    ...(role === "owner"
-      ? [
-          {
-            key: "promo" as Tab,
-            label: "Khuyến mại",
-            icon: <Percent className="h-6 w-6" />,
-          },
-          {
-            key: "report" as Tab,
-            label: "Báo cáo",
-            icon: <BarChart3 className="h-6 w-6" />,
-          },
-          {
-            key: "settings" as Tab,
-            label: "Cài đặt",
-            icon: <Settings className="h-6 w-6" />,
-          },
-        ]
-      : []),
-  ];
+  const branchName =
+    (restQ.data ?? []).find((r) => r.restaurantId === ctx.device.restaurantId)
+      ?.name ?? "";
 
   function go(to: SettingsSection | "menu" | "pause") {
     if (to === "menu") setTab("menu");
-    else if (to === "pause") pause.mutate(false);
+    else if (to === "pause") setPauseOpen(true);
     else {
       setSection(to);
       setTab("settings");
     }
   }
+  const logoutLink = role !== "owner" && role !== "manager" && (
+    <button
+      type="button"
+      onClick={onLogout}
+      className="mt-6 w-full py-2.5 text-center text-sm text-muted-foreground"
+    >
+      Đăng xuất máy này
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-background pb-24" data-ocid="console.page">
@@ -464,45 +493,21 @@ function ConsoleShell({
             <span className="truncate text-lg font-extrabold">
               {ctx.tenantName}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="truncate text-xs text-muted-foreground">
               <span
                 className={cn(
                   "rounded-md px-1.5 py-0.5 text-[11px] font-extrabold",
-                  ctx.support
-                    ? "bg-amber-400 text-amber-950"
-                    : role === "owner"
-                      ? "bg-foreground text-background"
-                      : "bg-blue-100 text-blue-800",
+                  ctx.support ? "bg-amber-400 text-amber-950" : ROLE_CHIP[role],
                 )}
               >
                 {ctx.support ? "Sàn hỗ trợ" : ROLE_LABEL[role]}
               </span>{" "}
               {ctx.device.name}
+              {isBranchRole(role) && branchName ? ` · ${branchName}` : ""}
             </span>
           </span>
-          {role === "owner" && (
-            <button
-              type="button"
-              onClick={() => pause.mutate(!paused)}
-              disabled={pause.isPending || !ctx.settings}
-              className={cn(
-                "flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-extrabold",
-                paused
-                  ? "border-stone-300 bg-stone-100 text-stone-600"
-                  : "border-green-300 bg-green-50 text-green-800",
-              )}
-              data-ocid="console.pause_toggle"
-            >
-              <span
-                className={cn(
-                  "h-2.5 w-2.5 rounded-full",
-                  paused ? "bg-stone-500" : "bg-green-700",
-                )}
-              />
-              {paused ? "Tạm nghỉ" : "Đang nhận đơn"}
-            </button>
-          )}
-          {role === "staff" && paused && (
+          {(role === "owner" || role === "manager") && <PausePill ctx={ctx} />}
+          {role === "staff" && ctx.settings?.paused && (
             <span className="shrink-0 rounded-full bg-stone-100 px-3 py-2 text-xs font-extrabold text-stone-600">
               Đối tác đang tạm nghỉ
             </span>
@@ -533,10 +538,10 @@ function ConsoleShell({
         )}
         {tab === "counter" && <CounterTab ctx={ctx} />}
         {tab === "menu" && <MenuTab ctx={ctx} />}
-        {tab === "promo" && role === "owner" && (
+        {tab === "promo" && (
           <PromoManagerPage deviceId={ctx.device.deviceId} embedded />
         )}
-        {tab === "report" && role === "owner" && <ReportTab ctx={ctx} />}
+        {tab === "report" && <ReportTab ctx={ctx} />}
         {tab === "settings" && role === "owner" && (
           <SettingsTab
             ctx={ctx}
@@ -545,15 +550,14 @@ function ConsoleShell({
             onLogout={onLogout}
           />
         )}
-        {role === "staff" && tab === "menu" && (
-          <button
-            type="button"
-            onClick={onLogout}
-            className="mt-6 w-full py-2.5 text-center text-sm text-muted-foreground"
-          >
-            Đăng xuất máy này
-          </button>
+        {tab === "restaurant" && (
+          <ManagerRestaurantTab ctx={ctx} onLogout={onLogout} />
         )}
+        {tab === "driver" && <DriverTab ctx={ctx} />}
+        {tab === "history" && <DriverHistoryTab ctx={ctx} />}
+        {tab === "invoices" && <InvoicesTab />}
+        {tab === "money" && <MoneyTab ctx={ctx} />}
+        {tab === keys[keys.length - 1] && logoutLink}
       </main>
 
       <nav
@@ -566,29 +570,32 @@ function ConsoleShell({
         <div
           className="mx-auto grid max-w-3xl"
           style={{
-            gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))`,
           }}
         >
-          {tabs.map((t) => (
+          {keys.map((k) => (
             <button
-              key={t.key}
+              key={k}
               type="button"
-              onClick={() => setTab(t.key)}
-              aria-current={tab === t.key ? "page" : undefined}
+              onClick={() => setTab(k)}
+              aria-current={tab === k ? "page" : undefined}
               className={cn(
                 "flex h-[72px] flex-col items-center justify-center gap-1 text-[12px] leading-tight sm:text-[13px]",
-                tab === t.key
+                tab === k
                   ? "font-extrabold text-primary"
                   : "font-semibold text-muted-foreground",
               )}
-              data-ocid={`console.tab_${t.key}`}
+              data-ocid={`console.tab_${k}`}
             >
-              {t.icon}
-              {t.label}
+              {TAB_DEF[k].icon}
+              {TAB_DEF[k].label}
             </button>
           ))}
         </div>
       </nav>
+      {pauseOpen && (
+        <PauseSheet ctx={ctx} onClose={() => setPauseOpen(false)} />
+      )}
     </div>
   );
 }
@@ -657,6 +664,18 @@ export default function PartnerConsole() {
   const data = useConsoleData(tenantId, device?.deviceId ?? "", !!device);
 
   const role = roleOf(meQ.data ?? null);
+  // Máy Kế toán / Khuyến mại: màn Hoá đơn (AccountingPage) đọc máy từ khoá
+  // của trang /enterprise cũ.
+  useEffect(() => {
+    if (device && (role === "accounting" || role === "promo")) {
+      saveEnterpriseActivation({
+        restaurantId: "",
+        deviceId: device.deviceId,
+        name: device.name,
+        tenantId,
+      });
+    }
+  }, [device, role, tenantId]);
   // Máy bị gỡ hoặc đổi vai trò → về màn đăng nhập.
   useEffect(() => {
     if (

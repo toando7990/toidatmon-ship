@@ -22,7 +22,13 @@ import {
   saveDeviceToken,
 } from "@/lib/device-credential";
 
-export type ConsoleRole = "owner" | "staff";
+export type ConsoleRole =
+  | "owner"
+  | "manager"
+  | "staff"
+  | "driver"
+  | "accounting"
+  | "promo";
 
 export interface PartnerSettings {
   paused: boolean;
@@ -175,17 +181,43 @@ export function clearConsoleDevice() {
   }
 }
 
+/** Vai trò máy trong trang /quan-ly (mọi máy của đối tác dùng chung trang). */
 export function roleOf(d: Device | null): ConsoleRole | null {
   if (!d || !d.active) return null;
-  if (d.role === DeviceRole.tenantAdmin) return "owner";
-  if (d.role === DeviceRole.cashier) return "staff";
-  return null;
+  switch (String(d.role)) {
+    case DeviceRole.tenantAdmin:
+      return "owner";
+    case "restaurantManager":
+      return "manager";
+    case DeviceRole.cashier:
+      return "staff";
+    case DeviceRole.driver:
+      return "driver";
+    case DeviceRole.accounting:
+      return "accounting";
+    case DeviceRole.salesPromoReporting:
+      return "promo";
+    default:
+      return null;
+  }
 }
 
 export const ROLE_LABEL: Record<ConsoleRole, string> = {
   owner: "Chủ đối tác",
+  manager: "Quản lý nhà hàng",
   staff: "Nhân viên",
+  driver: "Giao nhận",
+  accounting: "Kế toán",
+  promo: "Khuyến mại",
 };
+
+/** Vai trò chỉ thấy 1 nhà hàng (máy gắn nhà hàng). */
+export function isBranchRole(r: ConsoleRole): boolean {
+  return r === "manager" || r === "staff" || r === "driver";
+}
+
+/** DeviceRole canister của vai trò quản lý "Quản lý nhà hàng" (bindings cũ chưa có). */
+export const MANAGER_ROLE = "restaurantManager" as DeviceRole;
 
 // ---- Gọi canister ----
 
@@ -494,23 +526,6 @@ export async function deleteMenuItem(
       credentialFor(deviceId),
       itemId,
     )) as Result<null>,
-  );
-}
-
-export async function createStaffCode(
-  actor: Backend,
-  tenantId: string,
-  deviceId: string,
-  restaurantId: string,
-  role: ConsoleRole,
-) {
-  return unwrap(
-    (await actor.generateActivationCode(
-      tenantId,
-      restaurantId,
-      role === "owner" ? DeviceRole.tenantAdmin : DeviceRole.cashier,
-      credentialFor(deviceId),
-    )) as Result<{ code: string; expiresAt: bigint }>,
   );
 }
 

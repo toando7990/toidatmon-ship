@@ -58,6 +58,9 @@ module {
     #accounting;
     #salesPromoReporting;
     #tenantAdmin;
+    // Quản lý 1 nhà hàng (giai đoạn 3): đơn, bán quầy, món, báo cáo, giờ /
+    // tạm nghỉ, máy Nhân viên / Giao nhận — CHỈ của nhà hàng gắn với máy.
+    #restaurantManager;
   };
 
   // Single line item inside an order

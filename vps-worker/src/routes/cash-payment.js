@@ -138,7 +138,7 @@ router.post('/order/:id/confirm-cash-counter', async (req, res, next) => {
     const allowed =
       device &&
       device.tenantId === order.tenant_id &&
-      ['cashier', 'tenantAdmin'].includes(device.role) &&
+      ['cashier', 'tenantAdmin', 'restaurantManager'].includes(device.role) &&
       (device.restaurantId === '' || device.restaurantId === order.restaurant_id);
     if (!allowed) {
       return res.status(403).json({

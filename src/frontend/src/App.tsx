@@ -4,23 +4,25 @@ import { type DeviceRole, EnterpriseRole } from "@/backend";
 import { EnterpriseActivationForm } from "@/components/EnterpriseActivationForm";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Layout } from "@/components/Layout";
+import { MovedToConsole, readStoredDevice } from "@/components/MovedToConsole";
 import { PlatformFrame } from "@/components/PlatformFrame";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth, useEnterpriseRole } from "@/hooks/useAuth";
 import { useTenantId } from "@/hooks/useQueries";
 import { TenantProvider, useTenant } from "@/hooks/useTenant";
-import { loadEnterpriseActivation } from "@/lib/enterprise-activation";
+import {
+  ENTERPRISE_STORAGE_KEY,
+  loadEnterpriseActivation,
+} from "@/lib/enterprise-activation";
 import { resolveTenant, stripPartnerPrefix } from "@/lib/tenant";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { AnalyticsDashboard } from "@/pages/AnalyticsDashboard";
 import ChangeRequestsAdmin from "@/pages/ChangeRequestsAdmin";
 import { ClaimOrder } from "@/pages/ClaimOrder";
-import CounterOrder from "@/pages/CounterOrder";
 import CreateOrder from "@/pages/CreateOrder";
 import DeliveryAdmin from "@/pages/DeliveryAdmin";
 import { DeviceManager } from "@/pages/DeviceManager";
 import DishGroupsAdmin from "@/pages/DishGroupsAdmin";
-import { DriverPaymentScreen } from "@/pages/DriverPaymentScreen";
 import { EnterpriseManagementPage } from "@/pages/EnterpriseManagementPage";
 import GioiThieu from "@/pages/GioiThieu";
 import { MenuManager } from "@/pages/MenuManager";
@@ -389,13 +391,28 @@ const gioiThieuRoute = createRoute({
 const driverRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/driver",
-  component: () => <DriverPaymentScreen />,
+  // Giai đoạn 3: gộp vào /quan-ly (tab Tài xế của máy Giao nhận).
+  component: () => (
+    <MovedToConsole
+      kind="driver"
+      stored={
+        readStoredDevice("bbh_driver_activation") ??
+        readStoredDevice("tdm_console_device")
+      }
+    />
+  ),
 });
 
 const counterRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/counter",
-  component: () => <CounterOrder />,
+  // Giai đoạn 3: gộp vào /quan-ly (tab Bán quầy).
+  component: () => (
+    <MovedToConsole
+      kind="counter"
+      stored={readStoredDevice("bbh_counter_activation")}
+    />
+  ),
 });
 
 const adminRoute = createRoute({
@@ -633,7 +650,23 @@ const partnerUnavailableRoute = createRoute({
 const enterpriseManagementRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/enterprise/management",
-  component: () => (
+  component: () => <EnterpriseRoute />,
+});
+
+// Giai đoạn 3: máy Kế toán / Khuyến mại dùng /quan-ly. Admin đã đăng nhập
+// Internet Identity vẫn mở được trang cũ.
+function EnterpriseRoute() {
+  const { isAuthenticated, isInitializing } = useAuth();
+  if (isInitializing) return null;
+  if (!isAuthenticated) {
+    return (
+      <MovedToConsole
+        kind="enterprise"
+        stored={readStoredDevice(ENTERPRISE_STORAGE_KEY)}
+      />
+    );
+  }
+  return (
     <EnterpriseGate
       requiredRole={[
         EnterpriseRole.accounting,
@@ -646,8 +679,8 @@ const enterpriseManagementRoute = createRoute({
         <EnterpriseManagementPage role={role} isAdmin={isAdmin} />
       )}
     </EnterpriseGate>
-  ),
-});
+  );
+}
 
 // Not-found notice — rendered for any unmatched route instead of a blank
 // screen. Vietnamese copy with a way back to the storefront.

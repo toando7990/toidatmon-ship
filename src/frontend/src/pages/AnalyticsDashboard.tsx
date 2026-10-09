@@ -22,8 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRestaurants, useTenantId } from "@/hooks/useQueries";
+import { useRestaurants, useTenantId, useTenants } from "@/hooks/useQueries";
 import { useCanister } from "@/lib/canister";
+import { partnerName } from "@/lib/partner-profile";
 import { getAdminTicket } from "@/lib/payouts";
 import { getAnalytics } from "@/lib/vps-client";
 import type { AnalyticsResponse } from "@/types";
@@ -66,7 +67,11 @@ export function AnalyticsDashboard() {
   const [range, setRange] = useState<Range>("30d");
 
   const { actor, isFetching } = useCanister();
-  const tenantId = useTenantId();
+  const currentTenantId = useTenantId();
+  // Báo cáo toàn sàn: "" = mọi đối tác (bảng theo đối tác), hoặc 1 đối tác.
+  const [scope, setScope] = useState("");
+  const tenantId = scope;
+  const tenantsQ = useTenants(false);
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["analytics", range, tenantId],
     queryFn: async () =>
@@ -75,9 +80,15 @@ export function AnalyticsDashboard() {
         await getAdminTicket(actor as NonNullable<typeof actor>),
         tenantId,
       ),
-    enabled: !!actor && !isFetching && !!tenantId,
+    enabled: !!actor && !isFetching,
     retry: 1,
   });
+  const tenantName = (id: string) => {
+    const t = (tenantsQ.data ?? []).find((x) => x.tenantId === id);
+    return t
+      ? { partner: partnerName(t), brand: t.name }
+      : { partner: id, brand: "" };
+  };
   // Danh sách nhà hàng thật (canister getRestaurants) — dùng để đối chiếu
   // tên + địa chỉ chi nhánh thật, vì AnalyticsResponse.byRestaurant.name của
   // VPS chỉ là restaurantId lặp lại (VPS SQLite không có bảng restaurants).
@@ -99,9 +110,10 @@ export function AnalyticsDashboard() {
   // (chuỗi Bún Bò Huế 65 có nhiều cửa hàng, KHÔNG phải dữ liệu khách hàng).
   const revenueData = a?.byDay ?? [];
   const branchData = (a?.byRestaurant ?? []).map((r) => {
-    const restaurant = restaurants?.find(
-      (x) => x.restaurantId === r.restaurantId,
-    );
+    const restaurant =
+      scope === currentTenantId
+        ? restaurants?.find((x) => x.restaurantId === r.restaurantId)
+        : undefined;
     return {
       restaurantId: r.restaurantId,
       name: restaurant?.name || r.name,
@@ -123,13 +135,28 @@ export function AnalyticsDashboard() {
             className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl"
             data-ocid="analytics.title"
           >
-            Báo cáo
+            Báo cáo toàn sàn
           </h1>
           <p className="text-sm text-muted-foreground">
-            Tổng quan doanh thu, đơn hàng và khách hàng theo thời gian thực.
+            Doanh thu, đơn hàng của mọi đối tác hoặc từng đối tác. Báo cáo chi
+            tiết của 1 thương hiệu: Hỗ trợ đối tác › Báo cáo.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            aria-label="Đối tác"
+            className="h-10 min-w-[220px] rounded-md border bg-card px-3 text-sm font-semibold"
+            data-ocid="analytics.partner_select"
+          >
+            <option value="">Mọi đối tác</option>
+            {(tenantsQ.data ?? []).map((t) => (
+              <option key={t.tenantId} value={t.tenantId}>
+                {partnerName(t)} · {t.name}
+              </option>
+            ))}
+          </select>
           <label
             htmlFor="analytics-range"
             className="text-sm font-medium text-muted-foreground"
@@ -277,6 +304,70 @@ export function AnalyticsDashboard() {
           </div>
 
           {/* Bảng doanh thu theo chi nhánh */}
+          {!scope && (a?.byTenant?.length ?? 0) > 0 && (
+            <Card data-ocid="analytics.tenants_card">
+              <CardHeader>
+                <CardTitle className="font-display">Theo đối tác</CardTitle>
+                <CardDescription>
+                  Đơn đã thanh toán, doanh thu và tỉ lệ huỷ của từng đối tác.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <table
+                  className="w-full text-sm"
+                  data-ocid="analytics.tenant_table"
+                >
+                  <thead>
+                    <tr className="border-b text-left text-xs text-muted-foreground">
+                      <th className="py-2">Đối tác</th>
+                      <th className="py-2">Thương hiệu</th>
+                      <th className="py-2 text-right">Nhà hàng</th>
+                      <th className="py-2 text-right">Đơn</th>
+                      <th className="py-2 text-right">Doanh thu</th>
+                      <th className="py-2 text-right">Huỷ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(a?.byTenant ?? []).map((t) => {
+                      const n = tenantName(t.tenantId);
+                      return (
+                        <tr
+                          key={t.tenantId}
+                          className="border-b last:border-0 hover:bg-muted/50"
+                        >
+                          <td className="py-2 font-medium">
+                            <button
+                              type="button"
+                              onClick={() => setScope(t.tenantId)}
+                              className="text-left font-medium text-primary hover:underline"
+                            >
+                              {n.partner}
+                            </button>
+                          </td>
+                          <td className="py-2">{n.brand}</td>
+                          <td className="py-2 text-right tabular-nums">
+                            {formatNumber(t.restaurants)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {formatNumber(t.orders)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {formatVnd(t.revenue)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {t.allOrders
+                              ? `${((t.cancelled / t.allOrders) * 100).toFixed(1)}%`
+                              : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
+
           <Card data-ocid="analytics.branches_card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display">

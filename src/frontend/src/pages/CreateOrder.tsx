@@ -43,6 +43,7 @@ import {
   useIsStoreOpen,
   useItemImage,
   useMenus,
+  useRestaurantStatusMap,
   useRestaurants,
   useSoldOutToday,
   useTenantId,
@@ -52,6 +53,7 @@ import { findNearest } from "@/lib/geo";
 import { getOrCreateGuestEmail } from "@/lib/guest-identity";
 import { recordMyOrder } from "@/lib/my-orders";
 import { takeCartHandoff } from "@/lib/platform-feed";
+import { statusText } from "@/lib/restaurant-ops";
 import { imageBytesToDataUrl } from "@/lib/utils";
 import { getVerifiedEmail } from "@/lib/verification-storage";
 import {
@@ -379,17 +381,41 @@ export default function CreateOrder() {
   // App tự chọn nhà hàng gần nhất theo địa chỉ nhận hàng khách đã chọn —
   // khách KHÔNG còn tự chọn nhà hàng (bỏ handleRestaurantChange cũ, vốn
   // chỉ dùng khi RestaurantSelect còn là dropdown cho khách chọn tay).
+  // Giai đoạn 3: bỏ qua nhà hàng đang tạm nghỉ / ngoài giờ khi tự chọn.
+  const { data: statusMap } = useRestaurantStatusMap();
+  const acceptsOrders = (r: Restaurant) => {
+    const st = statusMap?.get(r.restaurantId);
+    return !st || st.state === "open";
+  };
+  const openRestaurants = visibleRestaurants.filter(acceptsOrders);
   const nearestRestaurant = selectedAddress
+    ? findNearest(openRestaurants, selectedAddress.lat, selectedAddress.lng)
+    : null;
+  const nearestAny = selectedAddress
     ? findNearest(visibleRestaurants, selectedAddress.lat, selectedAddress.lng)
     : null;
   // Nhà hàng yêu thích ƯU TIÊN hơn nhà hàng gần nhất — chỉ áp dụng khi
   // nhà hàng đó vẫn đang hiển thị (không bị ẩn/xoá sau khi khách chọn
   // làm yêu thích). Không hợp lệ (đã ẩn, hoặc chưa chọn) → dùng lại nhà
   // hàng gần nhất như hành vi cũ.
-  const favoriteRestaurant = favoriteRestaurantId
+  const favoriteAny = favoriteRestaurantId
     ? (visibleRestaurants.find(
         (r) => r.restaurantId === favoriteRestaurantId,
       ) ?? null)
+    : null;
+  const favoriteRestaurant =
+    favoriteAny && acceptsOrders(favoriteAny) ? favoriteAny : null;
+  // Nhà hàng khách thường đặt (yêu thích / gần nhất) đang không nhận đơn.
+  const skipped =
+    favoriteAny && !favoriteRestaurant
+      ? favoriteAny
+      : !favoriteAny && nearestAny && !acceptsOrders(nearestAny)
+        ? nearestAny
+        : null;
+  const closedNotice = skipped
+    ? `${skipped.name}: ${statusText(statusMap?.get(skipped.restaurantId)).toLowerCase()}${
+        nearestRestaurant ? " — đơn này do nhà hàng đang mở gần nhất làm" : ""
+      }`
     : null;
   const orderRestaurant = favoriteRestaurant ?? nearestRestaurant;
   // Nhà hàng gần nhất khác nhà hàng yêu thích đang chọn — hiển thị gợi ý
@@ -708,6 +734,7 @@ export default function CreateOrder() {
                 isQuoteLoading={shipQuoteLoading}
                 isFavorite={!!favoriteRestaurant}
                 nearestIsDifferentFromFavorite={nearestIsDifferentFromFavorite}
+                notice={closedNotice}
               />
             </div>
             <MenuPicker

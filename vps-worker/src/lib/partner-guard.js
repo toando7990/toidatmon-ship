@@ -10,7 +10,8 @@
 //     nhật ký (platform_audit, action "support.*", target = tenantId) và đối
 //     tác xem được.
 // req.partner = { tenantId, role, restaurantId, actor, support }
-//   role: tenantAdmin | cashier | driver | accounting | salesPromoReporting
+//   role: tenantAdmin | restaurantManager | cashier | driver | accounting
+//         | salesPromoReporting
 //         | support (admin làm thay — quyền như Chủ đối tác)
 //   restaurantId: "" = mọi nhà hàng của đối tác.
 // ============================================================

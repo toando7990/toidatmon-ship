@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/table";
 import { Loader2, ShieldOff } from "lucide-react";
 
-const ROLE_LABELS: Record<DeviceRole, string> = {
+// Record<string,…> (không phải Record<DeviceRole,…>) để bindings có thêm vai
+// trò mới vẫn biên dịch được.
+const ROLE_LABELS: Record<string, string> = {
   [DeviceRole.admin]: "Quản trị",
   [DeviceRole.cashier]: "Thu ngân",
   [DeviceRole.driver]: "Tài xế",
@@ -21,6 +23,7 @@ const ROLE_LABELS: Record<DeviceRole, string> = {
   [DeviceRole.accounting]: "Kế toán",
   [DeviceRole.salesPromoReporting]: "Báo cáo bán hàng & KM",
   [DeviceRole.tenantAdmin]: "Quản trị đối tác",
+  restaurantManager: "Quản lý nhà hàng",
 };
 
 function formatTimestamp(ns: bigint): string {

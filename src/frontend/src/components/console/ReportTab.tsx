@@ -187,7 +187,7 @@ export function ReportTab({ ctx }: { ctx: Ctx }) {
           </label>
         </div>
       )}
-      {rests.length > 1 && (
+      {rests.length > 1 && !ctx.device.restaurantId && (
         <label className="flex items-center gap-2 rounded-xl border bg-card px-3">
           <Store
             className="h-4 w-4 shrink-0 text-muted-foreground"

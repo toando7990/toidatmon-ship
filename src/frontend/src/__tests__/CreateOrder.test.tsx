@@ -24,6 +24,7 @@ vi.mock("@/hooks/useQueries", () => ({
   useRestaurants: () => mockUseRestaurants(),
   useMenus: () => mockUseMenus(),
   useSoldOutToday: () => ({ data: [] }),
+  useRestaurantStatusMap: () => ({ data: undefined }),
   useIsStoreOpen: () => mockUseIsStoreOpen(),
   useGetStoreHours: () => mockUseGetStoreHours(),
   useItemImage: () => ({ data: undefined }),

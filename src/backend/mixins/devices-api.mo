@@ -12,6 +12,7 @@ import TenantLib "../lib/tenant";
 
 import DeviceAuthTypes "../types/device-auth";
 import DeviceAuth "../lib/device-auth";
+import PartnerConsoleLib "../lib/partner-console";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   tenants : TenantTypes.TenantStore,
@@ -27,6 +28,11 @@ mixin (
     AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceIsTenantAdmin(devices, deviceAuth, deviceId, tenantId);
   };
 
+  // Quản lý nhà hàng: chỉ máy Nhân viên / Giao nhận của nhà hàng mình.
+  func managerCanHandle(credential : Text, tenantId : Common.TenantId, restaurantId : Common.RestaurantId, role : Devices.DeviceRole) : Bool {
+    (role == #cashier or role == #driver) and PartnerConsoleLib.isManagerOf(devices, deviceAuth, credential, tenantId, restaurantId);
+  };
+
   // Issue a 6-char activation code bound to a tenant + restaurant + role.
   // Central admin, or a #tenantAdmin device of the same tenant. `role` may be
   // any DeviceRole including the 3 enterprise roles, so an admin can issue an
@@ -37,7 +43,7 @@ mixin (
     role : Devices.DeviceRole,
     deviceId : Common.DeviceId,
   ) : async Result.Result<Devices.PendingActivation, Text> {
-    if (not canAdminTenantDevices(caller, tenantId, deviceId)) {
+    if (not (canAdminTenantDevices(caller, tenantId, deviceId) or managerCanHandle(deviceId, tenantId, restaurantId, role))) {
       return #err("Admin only");
     };
     if (not TenantLib.isActiveTenant(tenants, tenantId)) {
@@ -108,14 +114,14 @@ mixin (
     deviceId : Common.DeviceId,
     adminDeviceId : Common.DeviceId,
   ) : async Result.Result<Devices.Device, Text> {
-    if (not canAdminTenantDevices(caller, tenantId, adminDeviceId)) {
-      return #err("Admin only");
-    };
-    switch (DevicesLib.deviceTenant(devices, deviceId)) {
+    switch (devices.get(deviceId)) {
       case null { return #err("Not found") };
-      case (?owner) {
-        if (owner != tenantId) {
+      case (?d) {
+        if (d.tenantId != tenantId) {
           return #err("Not found");
+        };
+        if (not (canAdminTenantDevices(caller, tenantId, adminDeviceId) or managerCanHandle(adminDeviceId, tenantId, d.restaurantId, d.role))) {
+          return #err("Admin only");
         };
       };
     };
@@ -138,7 +144,9 @@ mixin (
     restaurantId : Common.RestaurantId,
     credential : Text,
   ) : async [Devices.Device] {
-    if (not canAdminTenantDevices(caller, tenantId, credential)) { return [] };
+    if (not (canAdminTenantDevices(caller, tenantId, credential) or PartnerConsoleLib.isManagerOf(devices, deviceAuth, credential, tenantId, restaurantId))) {
+      return [];
+    };
     DevicesLib.listDevicesByRestaurant(devices, tenantId, restaurantId);
   };
 

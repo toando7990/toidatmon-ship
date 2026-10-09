@@ -97,9 +97,9 @@ mixin (
     #ok(partnerBanks.entries().toArray());
   };
 
-  /// Tài khoản của 1 đối tác: admin, Kế toán sàn, hoặc máy Chủ quán của đối tác đó.
+  /// Tài khoản của 1 đối tác: admin, Kế toán sàn, máy Chủ quán hoặc Kế toán của đối tác đó.
   public query ({ caller }) func getPartnerBank(tenantId : Common.TenantId, credential : Text) : async ?Types.PartnerBank {
-    let ok = financeIsAdmin(caller) or PlatformLib.hasRole(platformDevices, credential, [#accounting]) or PartnerConsoleLib.isOwner(devices, deviceAuth, credential, tenantId);
+    let ok = financeIsAdmin(caller) or PlatformLib.hasRole(platformDevices, credential, [#accounting]) or PartnerConsoleLib.isOwner(devices, deviceAuth, credential, tenantId) or DevicesLib.deviceHasRole(devices, deviceAuth, credential, tenantId, #accounting);
     if (not ok) return null;
     partnerBanks.get(tenantId);
   };

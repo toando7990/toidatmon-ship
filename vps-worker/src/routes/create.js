@@ -54,7 +54,7 @@ async function checkCounterDevice(tenantId, restaurantId, credential) {
     console.error('[create] kiểm tra máy quầy lỗi:', tenantId, e.message);
     return { ok: false, status: 502, error: 'Không kiểm tra được máy quầy, vui lòng thử lại.' };
   }
-  const roleOk = device && ['cashier', 'tenantAdmin'].includes(device.role);
+  const roleOk = device && ['cashier', 'tenantAdmin', 'restaurantManager'].includes(device.role);
   const restOk = device && (device.restaurantId === '' || device.restaurantId === restaurantId);
   if (!roleOk || device.tenantId !== tenantId || !restOk) {
     return { ok: false, status: 403, error: 'Máy này không có quyền bán tại quầy của quán.' };
@@ -106,8 +106,19 @@ router.post('/order/create', async (req, res, next) => {
     // không chặn (nhân viên đang trực tại quầy). Lỗi mạng: cho qua, ghi log.
     if (!isCounterOrder) {
       try {
-        if (!(await canister.isStoreOpen(tenantId))) {
-          return res.status(409).json({ ok: false, code: 'STORE_CLOSED', error: 'Quán đang tạm nghỉ hoặc ngoài giờ nhận đơn. Vui lòng quay lại sau.' });
+        // Giai đoạn 3: kiểm tra đúng nhà hàng khách chọn (giờ riêng, tạm
+        // nghỉ từng nhà hàng). Canister cũ chưa có hàm → kiểm tra chung.
+        let open;
+        try {
+          open = restaurantId
+            ? await canister.isRestaurantOpen(tenantId, restaurantId)
+            : await canister.isStoreOpen(tenantId);
+        } catch (e) {
+          console.error('[create] isRestaurantOpen lỗi, dùng isStoreOpen:', tenantId, e.message);
+          open = await canister.isStoreOpen(tenantId);
+        }
+        if (!open) {
+          return res.status(409).json({ ok: false, code: 'STORE_CLOSED', error: restaurantId ? 'Nhà hàng này đang tạm nghỉ hoặc ngoài giờ nhận đơn. Vui lòng chọn nhà hàng khác hoặc quay lại sau.' : 'Quán đang tạm nghỉ hoặc ngoài giờ nhận đơn. Vui lòng quay lại sau.' });
         }
       } catch (e) {
         console.error('[create] isStoreOpen lỗi:', tenantId, e.message);

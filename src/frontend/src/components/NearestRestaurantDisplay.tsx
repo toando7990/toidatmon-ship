@@ -29,6 +29,9 @@ interface NearestRestaurantDisplayProps {
   // Có nhà hàng gần nhất khác đang dùng (yêu thích) không — gợi ý cho
   // khách biết có lựa chọn khác gần hơn, KHÔNG tự động đổi.
   nearestIsDifferentFromFavorite: boolean;
+  // Giai đoạn 3: nhà hàng yêu thích / gần nhất đang tạm nghỉ hoặc ngoài giờ
+  // → đã tự chuyển sang nhà hàng khác đang nhận đơn.
+  notice?: string | null;
 }
 
 export function NearestRestaurantDisplay({
@@ -41,6 +44,7 @@ export function NearestRestaurantDisplay({
   isQuoteLoading,
   isFavorite,
   nearestIsDifferentFromFavorite,
+  notice,
 }: NearestRestaurantDisplayProps) {
   if (isLoading) {
     return (
@@ -87,6 +91,14 @@ export function NearestRestaurantDisplay({
           </span>
         )}
       </div>
+      {notice && (
+        <span
+          className="ml-6 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900"
+          data-ocid="nearest_restaurant.closed_notice"
+        >
+          {notice}
+        </span>
+      )}
       {restaurantAddress && (
         <span className="flex items-center gap-1 pl-6 text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />

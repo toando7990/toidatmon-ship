@@ -271,7 +271,7 @@ describe("Layout device header (used by /counter, /driver)", () => {
     expect(
       document.querySelector('[data-ocid="admin_shell.nav"]'),
     ).toBeTruthy();
-    for (const g of ["Nền tảng", "Cửa hàng", "Kinh doanh"]) {
+    for (const g of ["Đối tác", "Tiền", "Vận hành sàn", "Hệ thống"]) {
       expect(screen.getAllByText(g).length).toBeGreaterThan(0);
     }
     const promo = document.querySelector(

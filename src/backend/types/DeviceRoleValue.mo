@@ -13,6 +13,7 @@ module {
         case (#accounting) "accounting";
         case (#salesPromoReporting) "salesPromoReporting";
         case (#tenantAdmin) "tenantAdmin";
+        case (#restaurantManager) "restaurantManager";
       }
     );
   };

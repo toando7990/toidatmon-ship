@@ -125,8 +125,9 @@ router.post('/admin/payouts/:id/cancel', requireAccounting, (req, res) => {
 
 router.get('/partner/payouts', async (req, res, next) => {
   try {
-    const device = await authorizeDevice(String(req.query.deviceId || ''), ['tenantAdmin']);
-    if (!device) return res.status(403).json({ ok: false, error: 'Chỉ máy Chủ quán xem được.' });
+    // Chủ đối tác hoặc máy Kế toán của đối tác (giai đoạn 3: Kế toán dùng /quan-ly).
+    const device = await authorizeDevice(String(req.query.deviceId || ''), ['tenantAdmin', 'accounting']);
+    if (!device) return res.status(403).json({ ok: false, error: 'Chỉ máy Chủ đối tác hoặc Kế toán xem được.' });
     const db = req.app.locals.db;
     const rows = db.prepare(
       "SELECT * FROM payouts WHERE tenant_id = ? AND status != 'cancelled' ORDER BY created_at DESC LIMIT 50",

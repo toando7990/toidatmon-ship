@@ -20,7 +20,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
-  BookOpen,
   Building2,
   ChevronRight,
   ChevronsUpDown,
@@ -33,12 +32,10 @@ import {
   type LucideIcon,
   Menu,
   MonitorCog,
-  MonitorSmartphone,
   Percent,
   Search,
   ServerCog,
   Settings2,
-  Smartphone,
   Store,
   Truck,
   Wallet,
@@ -54,20 +51,25 @@ interface AdminItem {
   badgeKey?: "applications" | "changes";
 }
 interface AdminGroup {
-  id: "platform" | "store" | "business";
+  id: "partners" | "money" | "ops" | "system";
   title: string;
   items: AdminItem[];
 }
 
+// Giai đoạn 3: /admin chỉ còn việc của SÀN. Thực đơn, chi nhánh, máy quán,
+// khuyến mại riêng, báo cáo của từng thương hiệu do đối tác tự làm ở
+// /quan-ly; sàn làm thay qua "Hỗ trợ đối tác". Các trang cũ (/admin/menu,
+// /admin/restaurants, /admin/devices, /enterprise/management) vẫn mở được
+// bằng đường dẫn nhưng không còn trong menu.
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
-    id: "platform",
-    title: "Nền tảng",
+    id: "partners",
+    title: "Đối tác",
     items: [
       { to: "/admin/partners", label: "Đối tác", icon: Building2 },
       {
         to: "/admin/partner-applications",
-        label: "Đơn đăng ký đối tác",
+        label: "Đơn đăng ký",
         icon: ClipboardList,
         badgeKey: "applications",
       },
@@ -78,35 +80,16 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         badgeKey: "changes",
       },
       { to: "/admin/ho-tro-doi-tac", label: "Hỗ trợ đối tác", icon: LifeBuoy },
+    ],
+  },
+  {
+    id: "money",
+    title: "Tiền",
+    items: [
       { to: "/admin/doi-soat", label: "Đối soát & trả tiền", icon: Wallet },
-      { to: "/admin/nhom-mon", label: "Nhóm món chung", icon: Layers },
-      { to: "/admin/giao-hang", label: "Giao hàng", icon: Truck },
-      { to: "/admin/thiet-bi-san", label: "Thiết bị sàn", icon: MonitorCog },
-      { to: "/admin/cai-dat", label: "Cài đặt nền tảng", icon: Settings2 },
-      { to: "/admin", label: "Hệ thống & mã kích hoạt", icon: ServerCog },
-    ],
-  },
-  {
-    id: "store",
-    title: "Cửa hàng",
-    items: [
-      { to: "/admin/menu", label: "Thực đơn", icon: BookOpen },
-      { to: "/admin/restaurants", label: "Chi nhánh", icon: Store },
-      { to: "/admin/devices", label: "Thiết bị quán", icon: Smartphone },
-      {
-        to: "/enterprise/management",
-        label: "Thiết bị doanh nghiệp",
-        icon: MonitorSmartphone,
-      },
-    ],
-  },
-  {
-    id: "business",
-    title: "Kinh doanh",
-    items: [
       {
         to: "/admin/khuyen-mai",
-        label: "Khuyến mại",
+        label: "Khuyến mại chung (sàn tài trợ)",
         icon: Percent,
         alias: [
           "/admin/promotions",
@@ -115,7 +98,24 @@ export const ADMIN_GROUPS: AdminGroup[] = [
           "/admin/theo-doi-km",
         ],
       },
-      { to: "/admin/analytics", label: "Báo cáo bán hàng", icon: BarChart3 },
+    ],
+  },
+  {
+    id: "ops",
+    title: "Vận hành sàn",
+    items: [
+      { to: "/admin/analytics", label: "Báo cáo toàn sàn", icon: BarChart3 },
+      { to: "/admin/nhom-mon", label: "Nhóm món chung", icon: Layers },
+      { to: "/admin/giao-hang", label: "Giao hàng", icon: Truck },
+      { to: "/admin/thiet-bi-san", label: "Thiết bị sàn", icon: MonitorCog },
+    ],
+  },
+  {
+    id: "system",
+    title: "Hệ thống",
+    items: [
+      { to: "/admin/cai-dat", label: "Cài đặt nền tảng", icon: Settings2 },
+      { to: "/admin", label: "Canister & VPS", icon: ServerCog },
     ],
   },
 ];
@@ -296,7 +296,7 @@ function AdminNav({
             <span className="text-[11.5px] font-extrabold uppercase tracking-wider text-muted-foreground">
               {g.title}
             </span>
-            {g.id === "store" && <StoreSwitcher compact={!!onNavigate} />}
+            {g.id === "money" && <StoreSwitcher compact={!!onNavigate} />}
           </div>
           {g.items.map((item) => {
             const on = isActive(item, pathname);
