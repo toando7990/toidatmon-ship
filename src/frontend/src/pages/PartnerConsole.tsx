@@ -10,10 +10,9 @@
 // (PartnerConsoleSupport, /admin/ho-tro-doi-tac).
 // Bán quầy là gói trả phí tháng — admin Tôi Đặt Món bật (counterPlan).
 
-import type { Device, MenuItem, Restaurant, StoreHours } from "@/backend";
-import { DeviceRole } from "@/backend";
 import { CounterSell } from "@/components/CounterSell";
 import { TdmIcon, TdmLogo, useTdmTheme } from "@/components/TdmLogo";
+import { MenuTab } from "@/components/console/MenuTab";
 import { OrdersTab } from "@/components/console/OrdersTab";
 import { ReportTab } from "@/components/console/ReportTab";
 import {
@@ -27,46 +26,25 @@ import {
   Card,
   ContactLinks,
   type Ctx,
-  Switch,
   deviceAuth,
   logSupport,
-  useConsoleRestaurants,
 } from "@/components/console/shared";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import { usePageTitle } from "@/lib/page-title";
 import {
   type ConsoleDevice,
-  type ConsoleRole,
-  type ConsoleStage,
-  type PartnerSettings,
   ROLE_LABEL,
   activateConsoleDevice,
-  addMenuItem,
   clearConsoleDevice,
-  createStaffCode,
-  formatVnd,
   getPartnerDevice,
   getPartnerSettings,
-  listConsoleDevices,
-  listKitchenNotes,
-  listPrep,
-  listSoldOut,
-  listTenantOrders,
   loadConsoleDevice,
-  markPrep,
-  removeDevice,
   roleOf,
   saveConsoleDevice,
-  setHours,
-  setJoinPromo,
   setPaused,
-  setSoldOut,
-  shortCode,
-  timeOf,
-  toConsoleOrders,
-  updateMenuItem,
 } from "@/lib/partner-console";
+import { normalizeRecoveryCode, recoverOwner } from "@/lib/partner-self";
 import { getAdminTicket } from "@/lib/payouts";
 import {
   type EffectiveParam,
@@ -77,18 +55,19 @@ import {
   getCounterPlan,
   getPartnerParams,
 } from "@/lib/platform-params";
-import { cn, imageBytesToDataUrl } from "@/lib/utils";
-import { confirmCashPaymentCounter } from "@/lib/vps-client";
+import { cn } from "@/lib/utils";
+import { PromoManagerPage } from "@/pages/PromoManagerPage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
   Loader2,
   MonitorSmartphone,
+  Percent,
   ReceiptText,
   Settings,
   UtensilsCrossed,
 } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 // ---------- Tham số từ Tôi Đặt Món ----------
@@ -145,13 +124,16 @@ function LoginView({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(notice ?? "");
+  const [recover, setRecover] = useState(false);
 
   async function submit() {
     if (!actor) return;
     setBusy(true);
     setErr("");
     try {
-      const d = await activateConsoleDevice(actor, code, name || "Máy quán");
+      const d = recover
+        ? await recoverOwner(actor, tenantId, code, name || "Máy Chủ đối tác")
+        : await activateConsoleDevice(actor, code, name || "Máy quán");
       if (d.tenantId !== tenantId) {
         throw new Error("Mã này thuộc quán khác");
       }
@@ -175,6 +157,10 @@ function LoginView({
     }
   }
 
+  const codeOk = recover
+    ? normalizeRecoveryCode(code).length === 12
+    : code.length === 6;
+
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-6 bg-background px-5 pb-8 pt-12">
       <div className="flex flex-col gap-2">
@@ -184,11 +170,13 @@ function LoginView({
         </p>
       </div>
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-extrabold">Vào trang quản lý quán</h1>
+        <h1 className="text-2xl font-extrabold">
+          {recover ? "Khôi phục máy Chủ đối tác" : "Vào trang quản lý quán"}
+        </h1>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
-          Nhập mã kích hoạt 6 ký tự. Mã do Tôi Đặt Món gửi khi duyệt quán, hoặc
-          chủ quán tạo cho nhân viên ở mục Quán. Mã dùng một lần, hết hạn sau 15
-          phút.
+          {recover
+            ? "Nhập mã khôi phục 12 ký tự đã cất khi tạo. Máy này sẽ thành máy Chủ đối tác mới; mã cũ hết hiệu lực. Nhớ gỡ máy bị mất ở Cài đặt › Máy & nhân viên."
+            : "Nhập mã kích hoạt 6 ký tự. Mã do Tôi Đặt Món gửi khi duyệt quán, hoặc Chủ đối tác tạo ở Cài đặt › Máy & nhân viên. Mã dùng một lần, hết hạn sau 15 phút."}
         </p>
       </div>
       <form
@@ -199,20 +187,25 @@ function LoginView({
         }}
       >
         <label className="flex flex-col gap-2 text-sm font-semibold">
-          Mã kích hoạt
+          {recover ? "Mã khôi phục" : "Mã kích hoạt"}
           <input
             value={code}
-            onChange={(e) =>
+            onChange={(e) => {
+              const raw = e.target.value.toUpperCase();
               setCode(
-                e.target.value
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")
-                  .slice(0, 6),
-              )
-            }
+                recover
+                  ? raw.replace(/[^A-Z0-9-]/g, "").slice(0, 14)
+                  : raw.replace(/[^A-Z0-9]/g, "").slice(0, 6),
+              );
+            }}
             autoComplete="one-time-code"
-            placeholder="K7Q2M9"
-            className="h-[60px] rounded-2xl border-2 border-foreground bg-card px-4 text-[28px] font-extrabold tracking-[10px]"
+            placeholder={recover ? "XXXX-XXXX-XXXX" : "K7Q2M9"}
+            className={cn(
+              "h-[60px] rounded-2xl border-2 border-foreground bg-card px-4 font-extrabold",
+              recover
+                ? "text-[22px] tracking-[3px]"
+                : "text-[28px] tracking-[10px]",
+            )}
             data-ocid="console.code_input"
           />
         </label>
@@ -221,7 +214,9 @@ function LoginView({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="VD: Máy quầy Lê Lợi"
+            placeholder={
+              recover ? "VD: iPad mới — quầy chính" : "VD: Máy quầy Lê Lợi"
+            }
             className="h-12 rounded-xl border bg-card px-3 text-base font-normal"
           />
         </label>
@@ -230,11 +225,30 @@ function LoginView({
             {err}
           </p>
         )}
-        <BigButton type="submit" disabled={busy || code.length !== 6 || !actor}>
+        <BigButton type="submit" disabled={busy || !codeOk || !actor}>
           {busy && <Loader2 className="h-5 w-5 animate-spin" />}
-          Vào quản lý
+          {recover ? "Khôi phục" : "Vào quản lý"}
         </BigButton>
       </form>
+      {recover && (
+        <p className="text-center text-sm text-muted-foreground">
+          Không còn mã? Gọi Tôi Đặt Món để xác minh và cấp lại.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          setRecover((r) => !r);
+          setCode("");
+          setErr("");
+        }}
+        className="text-center text-[15px] font-extrabold text-primary"
+        data-ocid="console.recover_toggle"
+      >
+        {recover
+          ? "‹ Nhập mã kích hoạt 6 ký tự"
+          : "Mất máy Chủ đối tác? Dùng mã khôi phục"}
+      </button>
     </div>
   );
 }
@@ -361,271 +375,9 @@ function CounterBranch({ ctx }: { ctx: Ctx }) {
   );
 }
 
-// ---------- Món ----------
-
-async function fileToJpeg(file: File): Promise<Uint8Array> {
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 800 / Math.max(bmp.width, bmp.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bmp.width * scale);
-  canvas.height = Math.round(bmp.height * scale);
-  canvas.getContext("2d")?.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-  const blob: Blob = await new Promise((res, rej) =>
-    canvas.toBlob(
-      (b) => (b ? res(b) : rej(new Error("Ảnh lỗi"))),
-      "image/jpeg",
-      0.8,
-    ),
-  );
-  return new Uint8Array(await blob.arrayBuffer());
-}
-
-function ItemSheet({
-  ctx,
-  item,
-  onClose,
-}: {
-  ctx: Ctx;
-  item: MenuItem | null;
-  onClose: () => void;
-}) {
-  const { actor } = useCanister();
-  const qc = useQueryClient();
-  const [name, setName] = useState(item?.name ?? "");
-  const [price, setPrice] = useState(item ? String(Number(item.price)) : "");
-  const [image, setImage] = useState<Uint8Array | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  async function save() {
-    if (!actor) return;
-    const p = Number(price);
-    if (!name.trim()) return setErr("Nhập tên món");
-    if (!Number.isInteger(p) || p <= 0)
-      return setErr("Giá phải là số tiền, vd 65000");
-    setBusy(true);
-    setErr("");
-    try {
-      if (item) {
-        await updateMenuItem(actor, ctx.tenantId, ctx.device.deviceId, item, {
-          name,
-          price: p,
-          image: image ?? undefined,
-        });
-      } else {
-        await addMenuItem(actor, ctx.tenantId, ctx.device.deviceId, {
-          name,
-          price: p,
-          image: image ?? new Uint8Array(),
-          category: "Món chính",
-        });
-      }
-      await qc.invalidateQueries({ queryKey: ["console", "menu"] });
-      toast.success(item ? "Đã lưu món" : "Đã thêm món");
-      onClose();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Không lưu được");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45">
-      <section
-        aria-label={item ? "Sửa món" : "Thêm món"}
-        className="flex max-h-[92vh] w-full max-w-md flex-col gap-3.5 overflow-y-auto rounded-t-3xl bg-card p-5"
-      >
-        <h2 className="text-lg font-extrabold">
-          {item ? "Sửa món" : "Thêm món"}
-        </h2>
-        <label className="flex h-32 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed bg-muted text-[15px] font-bold text-muted-foreground">
-          {preview ? (
-            <img
-              src={preview}
-              alt="Ảnh món"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            "Chụp hoặc chọn ảnh món"
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              try {
-                const bytes = await fileToJpeg(f);
-                setImage(bytes);
-                setPreview(imageBytesToDataUrl(bytes));
-              } catch {
-                setErr("Không đọc được ảnh");
-              }
-            }}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-bold">
-          Tên món
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="VD: Bún bò đặc biệt"
-            className="h-12 rounded-xl border px-3 text-base font-normal"
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-bold">
-          Giá bán
-          <input
-            value={price}
-            onChange={(e) => setPrice(e.target.value.replace(/\D/g, ""))}
-            inputMode="numeric"
-            placeholder="VD: 65000"
-            className="h-12 rounded-xl border px-3 text-base font-normal"
-          />
-        </label>
-        {err && <p className="text-sm text-destructive">{err}</p>}
-        <div className="grid grid-cols-2 gap-2.5">
-          <BigButton variant="outline" onClick={onClose} disabled={busy}>
-            Huỷ
-          </BigButton>
-          <BigButton onClick={() => void save()} disabled={busy}>
-            {busy && <Loader2 className="h-5 w-5 animate-spin" />}
-            Lưu món
-          </BigButton>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function MenuTab({ ctx }: { ctx: Ctx }) {
-  const { actor, isFetching } = useCanister();
-  const qc = useQueryClient();
-  const ready = !!actor && !isFetching;
-  const isOwner = ctx.role === "owner";
-  const [editing, setEditing] = useState<MenuItem | "new" | null>(null);
-
-  const menuQ = useQuery({
-    queryKey: ["console", "menu", ctx.tenantId],
-    queryFn: () => actor!.listMenus(ctx.tenantId),
-    enabled: ready,
-  });
-  const soldQ = useQuery({
-    queryKey: ["console", "soldOut", ctx.tenantId],
-    queryFn: () => listSoldOut(actor!, ctx.tenantId),
-    enabled: ready,
-    refetchInterval: 30_000,
-  });
-  const sold = new Set(soldQ.data ?? []);
-  const toggle = useMutation({
-    mutationFn: (v: { itemId: string; soldOut: boolean }) =>
-      setSoldOut(
-        actor!,
-        ctx.tenantId,
-        ctx.device.deviceId,
-        v.itemId,
-        v.soldOut,
-      ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["console", "soldOut"] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Lỗi"),
-  });
-  const items = (menuQ.data ?? [])
-    .filter((m) => m.visible && m.name !== "Dụng cụ đựng đồ ăn")
-    .sort(
-      (a, b) =>
-        a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
-    );
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Hết món thì gạt sang <strong className="text-foreground">Hết</strong>.
-          Sáng mai tự bật lại.
-          {!isOwner && " Thêm món, sửa giá: nhờ chủ quán."}
-        </p>
-        {isOwner && (
-          <button
-            type="button"
-            onClick={() => setEditing("new")}
-            className="h-11 shrink-0 rounded-xl bg-primary px-4 text-[15px] font-extrabold text-primary-foreground"
-            data-ocid="console.add_item"
-          >
-            + Thêm món
-          </button>
-        )}
-      </div>
-      {menuQ.isLoading && (
-        <p className="py-6 text-center text-muted-foreground">Đang tải món…</p>
-      )}
-      {items.map((m) => {
-        const on = !sold.has(m.itemId);
-        return (
-          <div
-            key={m.itemId}
-            className={cn(
-              "flex items-center gap-3 rounded-2xl border bg-card px-3 py-2.5",
-              !on && "opacity-60",
-            )}
-          >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-base font-bold">{m.name}</span>
-              {isOwner ? (
-                <button
-                  type="button"
-                  onClick={() => setEditing(m)}
-                  className="self-start text-[15px] font-bold text-primary"
-                >
-                  {formatVnd(m.price)} ✎
-                </button>
-              ) : (
-                <span className="text-sm text-muted-foreground">
-                  {formatVnd(m.price)}
-                </span>
-              )}
-            </span>
-            <button
-              type="button"
-              aria-pressed={on}
-              aria-label={`${m.name}: ${on ? "Còn" : "Hết"}`}
-              disabled={toggle.isPending}
-              onClick={() => toggle.mutate({ itemId: m.itemId, soldOut: on })}
-              className={cn(
-                "flex h-11 min-w-[88px] items-center gap-2 rounded-full pl-1.5 pr-3 text-[15px] font-extrabold",
-                on
-                  ? "bg-green-100 text-green-800"
-                  : "bg-stone-200 text-stone-600",
-              )}
-              data-ocid="console.soldout_toggle"
-            >
-              <span
-                className={cn(
-                  "h-[30px] w-[30px] rounded-full",
-                  on ? "bg-green-700" : "bg-stone-400",
-                )}
-              />
-              {on ? "Còn" : "Hết"}
-            </button>
-          </div>
-        );
-      })}
-      {editing && (
-        <ItemSheet
-          ctx={ctx}
-          item={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
-    </div>
-  );
-}
-
 // ---------- Trang chính ----------
 
-type Tab = "orders" | "counter" | "menu" | "report" | "settings";
+type Tab = "orders" | "counter" | "menu" | "promo" | "report" | "settings";
 
 /** Khung trang quản lý: header, các tab, thanh tab dưới. Dùng chung cho máy
  * của đối tác và admin chế độ Hỗ trợ đối tác. */
@@ -674,6 +426,11 @@ function ConsoleShell({
     },
     ...(role === "owner"
       ? [
+          {
+            key: "promo" as Tab,
+            label: "Khuyến mại",
+            icon: <Percent className="h-6 w-6" />,
+          },
           {
             key: "report" as Tab,
             label: "Báo cáo",
@@ -776,6 +533,9 @@ function ConsoleShell({
         )}
         {tab === "counter" && <CounterTab ctx={ctx} />}
         {tab === "menu" && <MenuTab ctx={ctx} />}
+        {tab === "promo" && role === "owner" && (
+          <PromoManagerPage deviceId={ctx.device.deviceId} embedded />
+        )}
         {tab === "report" && role === "owner" && <ReportTab ctx={ctx} />}
         {tab === "settings" && role === "owner" && (
           <SettingsTab
@@ -816,7 +576,7 @@ function ConsoleShell({
               onClick={() => setTab(t.key)}
               aria-current={tab === t.key ? "page" : undefined}
               className={cn(
-                "flex h-[72px] flex-col items-center justify-center gap-1 text-[13px]",
+                "flex h-[72px] flex-col items-center justify-center gap-1 text-[12px] leading-tight sm:text-[13px]",
                 tab === t.key
                   ? "font-extrabold text-primary"
                   : "font-semibold text-muted-foreground",

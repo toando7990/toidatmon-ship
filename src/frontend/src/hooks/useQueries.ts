@@ -77,9 +77,13 @@ import {
   updateTenant as updateTenantFn,
 } from "@/lib/canister";
 import { credentialFor } from "@/lib/device-credential";
-import { listSoldOut as listSoldOutTodayFn } from "@/lib/partner-console";
+import {
+  listSoldOutAt as listSoldOutAtFn,
+  soldOutIdsAt,
+} from "@/lib/partner-self";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 function useActorOrNull() {
   const { actor, isFetching } = useActor(createActor);
@@ -1112,15 +1116,21 @@ export function useSetTenantActive() {
 }
 
 // Món chủ quán/nhân viên báo "Hết hôm nay" (trang /quan-ly) — ẩn khỏi trang
-// đặt món và màn bán quầy. Rỗng khi bindings chưa có hàm mới.
-export function useSoldOutToday() {
+// đặt món và màn bán quầy. Có restaurantId: gồm cả món chỉ hết ở nhà hàng
+// đó. Rỗng khi bindings chưa có hàm mới.
+export function useSoldOutToday(restaurantId?: string | null) {
   const { actor, isFetching } = useActorOrNull();
   const tenantId = useTenantId();
-  return useQuery({
+  const q = useQuery({
     queryKey: ["soldOutToday", tenantId],
     queryFn: () =>
-      actor ? listSoldOutTodayFn(actor, tenantId) : Promise.resolve([]),
+      actor ? listSoldOutAtFn(actor, tenantId) : Promise.resolve([]),
     enabled: !!actor && !isFetching && !!tenantId,
     refetchInterval: 60_000,
   });
+  const data = useMemo(
+    () => (q.data ? soldOutIdsAt(q.data, restaurantId) : undefined),
+    [q.data, restaurantId],
+  );
+  return { ...q, data };
 }

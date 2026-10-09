@@ -420,6 +420,83 @@ export async function updateMenuItem(
   );
 }
 
+export interface ItemDraft {
+  name: string;
+  price: number;
+  unitName: string;
+  vatRate: number;
+  category: string;
+  visible: boolean;
+  /** null = giữ ảnh hiện tại (sửa) / không ảnh (thêm). */
+  image: Uint8Array | null;
+}
+
+/** Thêm / sửa món đầy đủ (đơn vị, VAT, danh mục, hiện với khách). */
+export async function saveMenuItemFull(
+  actor: Backend,
+  tenantId: string,
+  deviceId: string,
+  item: MenuItem | null,
+  d: ItemDraft,
+): Promise<MenuItem> {
+  const cred = credentialFor(deviceId);
+  if (!item) {
+    const created = unwrap(
+      (await actor.addItem(
+        tenantId,
+        cred,
+        `${tenantId}-${Date.now().toString(36)}`,
+        d.name.trim(),
+        BigInt(d.price),
+        d.unitName.trim() || "Phần",
+        BigInt(d.vatRate),
+        d.category.trim() || "Món chính",
+        d.image ?? new Uint8Array(),
+      )) as Result<MenuItem>,
+    );
+    if (d.visible) return created;
+    return unwrap(
+      (await actor.setItemVisible(
+        tenantId,
+        cred,
+        created.itemId,
+        false,
+      )) as Result<MenuItem>,
+    );
+  }
+  const image =
+    d.image ?? (await actor.getItemImage(item.itemId)) ?? new Uint8Array();
+  return unwrap(
+    (await actor.updateItem(
+      tenantId,
+      cred,
+      item.itemId,
+      d.name.trim(),
+      BigInt(d.price),
+      d.unitName.trim() || "Phần",
+      BigInt(d.vatRate),
+      d.category.trim() || "Món chính",
+      image,
+      d.visible,
+    )) as Result<MenuItem>,
+  );
+}
+
+export async function deleteMenuItem(
+  actor: Backend,
+  tenantId: string,
+  deviceId: string,
+  itemId: string,
+) {
+  unwrap(
+    (await actor.deleteItem(
+      tenantId,
+      credentialFor(deviceId),
+      itemId,
+    )) as Result<null>,
+  );
+}
+
 export async function createStaffCode(
   actor: Backend,
   tenantId: string,
@@ -456,6 +533,7 @@ export async function listConsoleDevices(
   actor: Backend,
   tenantId: string,
   ownerDeviceId = "",
+  roles: DeviceRole[] = [DeviceRole.tenantAdmin, DeviceRole.cashier],
 ): Promise<Device[]> {
   // Bindings mới nhận thêm thẻ xác thực của máy chủ quán (tham số thứ 3).
   const list = actor.listDevicesByRole as unknown as (
@@ -464,11 +542,28 @@ export async function listConsoleDevices(
     c: string,
   ) => Promise<Device[]>;
   const cred = credentialFor(ownerDeviceId);
-  const [owners, staff] = await Promise.all([
-    list.call(actor, tenantId, DeviceRole.tenantAdmin, cred),
-    list.call(actor, tenantId, DeviceRole.cashier, cred),
-  ]);
-  return [...owners, ...staff].filter((d) => d.active);
+  const all = await Promise.all(
+    roles.map((r) => list.call(actor, tenantId, r, cred)),
+  );
+  return all.flat().filter((d) => d.active);
+}
+
+/** Mã kích hoạt 6 ký tự cho máy mới với vai trò bất kỳ của đối tác. */
+export async function createDeviceCode(
+  actor: Backend,
+  tenantId: string,
+  deviceId: string,
+  restaurantId: string,
+  role: DeviceRole,
+) {
+  return unwrap(
+    (await actor.generateActivationCode(
+      tenantId,
+      restaurantId,
+      role,
+      credentialFor(deviceId),
+    )) as Result<{ code: string; expiresAt: bigint }>,
+  );
 }
 
 // ---- Đơn: gom trạng thái canister + trạng thái bếp ----

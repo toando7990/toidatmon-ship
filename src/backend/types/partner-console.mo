@@ -40,6 +40,9 @@ module {
     at : Common.Timestamp;
   };
 
+  /// Món hết hôm nay: restaurantId "" = hết ở mọi nhà hàng.
+  public type SoldOutEntry = { itemId : Text; restaurantId : Text };
+
   public type SettingsStore = Map.Map<Common.TenantId, PartnerSettings>;
   /// key "tenantId|itemId" → ngày (giờ VN, YYYYMMDD) mà món được báo hết.
   /// Chỉ có hiệu lực trong đúng ngày đó — sáng hôm sau tự "Còn" lại.

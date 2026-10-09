@@ -26,6 +26,7 @@ mixin (
   menus : Map.Map<Text, CoreTypes.MenuItem>,
   restaurants : Map.Map<Text, CoreTypes.Restaurant>,
   overrides : Map.Map<Text, Map.Map<Text, Nat>>,
+  menuOrder : Map.Map<Text, [Text]>,
 ) {
   // True when the caller may edit the menu/restaurants of `tenantId`: the
   // central admin always may; otherwise the caller must present a deviceId
@@ -111,13 +112,13 @@ mixin (
   // rỗng — lấy riêng qua getItemImage(itemId) để tránh vượt giới hạn kích
   // thước phản hồi IC (3MB) khi catalogue có nhiều món/ảnh.
   public query func listMenus(tenantId : Common.TenantId) : async [CoreTypes.MenuItem] {
-    MenuLib.listMenus(menus, tenantId);
+    MenuLib.sortByOrder(MenuLib.listMenus(menus, tenantId), menuOrder.get(tenantId));
   };
 
   // Return only visible menu items for frontend customers CỦA 1 ĐỐI TÁC. Ảnh
   // luôn rỗng — lấy riêng qua getItemImage(itemId).
   public query func getMenu(tenantId : Common.TenantId) : async [CoreTypes.MenuItem] {
-    MenuLib.getMenu(menus, tenantId);
+    MenuLib.sortByOrder(MenuLib.getMenu(menus, tenantId), menuOrder.get(tenantId));
   };
 
   // Trả về ảnh (Blob) của ĐÚNG 1 món theo itemId. Public — khách hàng browse
@@ -211,6 +212,6 @@ mixin (
     tenantId : Common.TenantId,
     restaurantId : Text,
   ) : async [CoreTypes.MenuItem] {
-    MenuLib.getMenuForRestaurant(menus, overrides, tenantId, restaurantId);
+    MenuLib.sortByOrder(MenuLib.getMenuForRestaurant(menus, overrides, tenantId, restaurantId), menuOrder.get(tenantId));
   };
 };

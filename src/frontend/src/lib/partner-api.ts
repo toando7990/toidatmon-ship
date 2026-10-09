@@ -210,4 +210,5 @@ export const SUPPORT_ACTION_LABEL: Record<string, string> = {
   hours: "Đổi giờ nhận đơn",
   menu: "Sửa món",
   devices: "Máy & nhân viên",
+  change_request: "Gửi yêu cầu thay đổi",
 };

@@ -2,6 +2,7 @@ import Map "mo:core/Map";
 import Array "mo:core/Array";
 import Text "mo:core/Text";
 import Result "mo:core/Result";
+import Nat "mo:core/Nat";
 
 import Types "../types/menu";
 
@@ -296,5 +297,30 @@ module {
         #ok(updated);
       };
     };
+  };
+
+  // Xếp món theo thứ tự Chủ đối tác kéo thả (setMenuOrder). Món không có
+  // trong danh sách giữ thứ tự cũ, xếp sau cùng.
+  public func sortByOrder(items : [Types.MenuItem], order : ?[Text]) : [Types.MenuItem] {
+    let ?ids = order else return items;
+    if (ids.size() == 0) return items;
+    let rank = Map.empty<Text, Nat>();
+    var i = 0;
+    for (id in ids.values()) {
+      if (rank.get(id) == null) rank.add(id, i);
+      i += 1;
+    };
+    let base = ids.size();
+    let keyed = Array.tabulate<(Nat, Types.MenuItem)>(
+      items.size(),
+      func(n : Nat) : (Nat, Types.MenuItem) {
+        let it = items[n];
+        let k = switch (rank.get(it.itemId)) { case (?r) r; case null base + n };
+        (k, it);
+      },
+    );
+    keyed.sort(func(a : (Nat, Types.MenuItem), b : (Nat, Types.MenuItem)) : { #less; #equal; #greater } = Nat.compare(a.0, b.0)).map(
+      func(p : (Nat, Types.MenuItem)) : Types.MenuItem = p.1
+    );
   };
 };

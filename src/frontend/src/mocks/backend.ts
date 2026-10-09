@@ -307,7 +307,34 @@ const partnerFinanceMock = {
   countRestaurantsByTenant: async () => [],
 };
 
+// Giai đoạn 2 trang đối tác (mixins/partner-self-api.mo + hết món theo nhà hàng).
+const partnerSelfMock = {
+  setMenuOrder: async () => ({ __kind__: "ok" as const, ok: null }),
+  setItemSoldOutAt: async () => ({ __kind__: "ok" as const, ok: null }),
+  listSoldOutTodayAt: async () => [],
+  setOwnerRecoveryHash: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  getOwnerRecoveryInfo: async () => ({ createdAt: 0n, createdBy: "" }),
+  recoverOwnerDevice: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  submitChangeRequest: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  listMyChangeRequests: async () => [],
+  listChangeRequests: async () => ({ __kind__: "ok" as const, ok: [] }),
+  decideChangeRequest: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+};
+
 export const mockBackend: backendInterface = {
+  ...partnerSelfMock,
   ...partnerFinanceMock,
   ...partnerApplicationMock,
   ...partnerConsoleMock,

@@ -50,7 +50,7 @@ mixin (
   // SAME TENANT. Used to let the "Báo cáo bán hàng và KM" role manage/track
   // promotions while admin retains full access.
   func canManagePromotions(caller : Principal, tenantId : Common.TenantId, deviceId : Text) : Bool {
-    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceAuth, deviceId, tenantId, #salesPromoReporting);
+    AccessControl.isAdmin(accessControlState, caller) or DevicesLib.deviceHasRole(devices, deviceAuth, deviceId, tenantId, #salesPromoReporting) or DevicesLib.deviceIsTenantAdmin(devices, deviceAuth, deviceId, tenantId);
   };
 
   // Khoá chống trùng theo đối tác cho promotionUsed.

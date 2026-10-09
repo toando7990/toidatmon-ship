@@ -1,3 +1,4 @@
+import { credentialFor } from "@/lib/device-credential";
 // Tài chính của ĐỐI TÁC (1 đối tác sở hữu 1 hoặc nhiều quán): tài khoản ngân
 // hàng nhận tiền đối soát (1 tài khoản / đối tác) + khuyến mại chung do Tôi
 // Đặt Món tài trợ. Hàm canister mới chỉ có trong bindings sau lần build
@@ -106,7 +107,12 @@ export async function getPartnerBank(
   credential = "",
 ): Promise<PartnerBank | null> {
   if (!hasFinanceApi(actor)) return null;
-  const r = await api(actor).getPartnerBank(tenantId, credential);
+  // Máy đối tác phải gửi "deviceId~khoá" — trước đây gửi deviceId trần nên
+  // máy đã có khoá luôn bị từ chối (không thấy tài khoản của mình).
+  const r = await api(actor).getPartnerBank(
+    tenantId,
+    credentialFor(credential),
+  );
   return Array.isArray(r) ? (r[0] ?? null) : (r ?? null);
 }
 

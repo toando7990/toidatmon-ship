@@ -16,10 +16,10 @@ import {
   CounterAccountCard,
   PayoutsCard,
 } from "@/components/PartnerConnections";
+import { PartnerCard } from "@/components/console/PartnerChanges";
 import {
   BigButton,
   Card,
-  ContactLinks,
   type Ctx,
   Switch,
   logSupport,
@@ -28,10 +28,8 @@ import {
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import {
-  type ConsoleRole,
-  ROLE_LABEL,
   type RestaurantDraft,
-  createStaffCode,
+  createDeviceCode,
   formatVnd,
   hasPin,
   listConsoleDevices,
@@ -42,11 +40,10 @@ import {
   setJoinPromo,
 } from "@/lib/partner-console";
 import { getPartnerBank, hasFinanceApi } from "@/lib/partner-finance";
-import { partnerName } from "@/lib/partner-profile";
+import { createRecoveryCode, getRecoveryInfo } from "@/lib/partner-self";
 import {
   type EffectiveParam,
   PARAM_BY_KEY,
-  currentValue,
   formatParam,
   formatVnDate,
 } from "@/lib/platform-params";
@@ -57,6 +54,7 @@ import {
   AlertTriangle,
   Check,
   ChevronRight,
+  KeyRound,
   Loader2,
   MapPin,
   Plus,
@@ -738,39 +736,98 @@ function HoursCard({ ctx }: { ctx: Ctx }) {
 
 // ---------- Máy & nhân viên ----------
 
+/** Vai trò máy Chủ đối tác cấp được (giai đoạn 2: mọi vai trò của đối tác). */
+const DEVICE_ROLES: {
+  role: DeviceRole;
+  label: string;
+  desc: string;
+  chip: string;
+  /** Máy gắn 1 nhà hàng. */
+  branch: boolean;
+  /** Trang máy mới mở để nhập mã. */
+  path: string;
+}[] = [
+  {
+    role: DeviceRole.cashier,
+    label: "Nhân viên",
+    desc: "Đơn của 1 nhà hàng, bán quầy, gạt còn/hết món",
+    chip: "bg-blue-100 text-blue-800",
+    branch: true,
+    path: "quan-ly",
+  },
+  {
+    role: DeviceRole.driver,
+    label: "Giao nhận",
+    desc: "Quét QR tài xế, thu tiền tài xế, in phiếu — 1 nhà hàng",
+    chip: "bg-cyan-100 text-cyan-800",
+    branch: true,
+    path: "driver",
+  },
+  {
+    role: DeviceRole.accounting,
+    label: "Kế toán",
+    desc: "Báo cáo, hoá đơn, tiền đối soát — mọi nhà hàng",
+    chip: "bg-violet-100 text-violet-800",
+    branch: false,
+    path: "enterprise/management",
+  },
+  {
+    role: DeviceRole.salesPromoReporting,
+    label: "Khuyến mại",
+    desc: "Tạo / dừng khuyến mại, xem báo cáo — mọi nhà hàng",
+    chip: "bg-orange-100 text-orange-800",
+    branch: false,
+    path: "enterprise/management",
+  },
+  {
+    role: DeviceRole.tenantAdmin,
+    label: "Chủ đối tác",
+    desc: "Toàn quyền",
+    chip: "bg-foreground text-background",
+    branch: false,
+    path: "quan-ly",
+  },
+];
+
+const roleInfo = (r: DeviceRole) =>
+  DEVICE_ROLES.find((x) => x.role === r) ?? DEVICE_ROLES[0];
+
 function DevicesCard({ ctx }: { ctx: Ctx }) {
   const { actor, isFetching } = useCanister();
+  const { tenant } = useTenant();
   const qc = useQueryClient();
   const ready = !!actor && !isFetching;
   const devicesQ = useQuery({
-    queryKey: ["console", "devices", ctx.tenantId],
+    queryKey: ["console", "devices", ctx.tenantId, "all"],
     queryFn: () =>
       listConsoleDevices(
         actor as NonNullable<typeof actor>,
         ctx.tenantId,
         ctx.device.deviceId,
+        DEVICE_ROLES.map((r) => r.role),
       ),
     enabled: ready,
   });
   const restQ = useConsoleRestaurants(ctx);
   const rests: Restaurant[] = (restQ.data ?? []).filter((r) => r.visible);
   const [adding, setAdding] = useState(false);
-  const [role, setRole] = useState<ConsoleRole>("staff");
+  const [role, setRole] = useState<DeviceRole>(DeviceRole.cashier);
   const [branch, setBranch] = useState("");
   const [code, setCode] = useState<string | null>(null);
+  const info = roleInfo(role);
   useEffect(() => {
     if (!branch && rests[0]) setBranch(rests[0].restaurantId);
   }, [branch, rests]);
   const makeCode = useMutation({
     mutationFn: async () => {
-      const p = await createStaffCode(
+      const p = await createDeviceCode(
         actor as NonNullable<typeof actor>,
         ctx.tenantId,
         ctx.device.deviceId,
-        role === "staff" ? branch : "",
+        info.branch ? branch : "",
         role,
       );
-      await logSupport(ctx, "devices", `Tạo mã ${ROLE_LABEL[role]}`);
+      await logSupport(ctx, "devices", `Tạo mã ${info.label}`);
       return p;
     },
     onSuccess: (p) => setCode(p.code),
@@ -795,59 +852,64 @@ function DevicesCard({ ctx }: { ctx: Ctx }) {
   const restName = (id: string) =>
     rests.find((r) => r.restaurantId === id)?.name ?? "";
   const list = devicesQ.data ?? [];
+  const slug = tenant?.slug ?? ctx.tenantId;
 
   return (
     <Card>
-      <h2 className="text-base font-extrabold">Máy dùng trang quản lý</h2>
+      <h2 className="text-base font-extrabold">
+        Máy đang dùng{list.length ? ` (${list.length})` : ""}
+      </h2>
       {devicesQ.isLoading && (
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       )}
       {devicesQ.isSuccess && list.length === 0 && (
         <p className="text-sm text-muted-foreground">Chưa có máy nào.</p>
       )}
-      {list.map((d) => (
-        <div key={d.deviceId} className="flex items-center gap-2.5">
-          <span className="flex flex-1 flex-col gap-0.5">
-            <span className="text-[15px] font-bold">
-              {d.name || "Máy chưa đặt tên"}
-            </span>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span
-                className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[11px] font-extrabold",
-                  d.role === DeviceRole.tenantAdmin
-                    ? "bg-foreground text-background"
-                    : "bg-blue-100 text-blue-800",
-                )}
-              >
-                {d.role === DeviceRole.tenantAdmin
-                  ? ROLE_LABEL.owner
-                  : ROLE_LABEL.staff}
+      {list.map((d) => {
+        const ri = roleInfo(d.role);
+        return (
+          <div
+            key={d.deviceId}
+            className="flex items-center gap-2.5 border-b pb-2.5 last:border-0"
+            data-ocid="console.device_row"
+          >
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="truncate text-[15px] font-bold">
+                {d.name || "Máy chưa đặt tên"}
               </span>
-              {restName(d.restaurantId) ||
-                (d.role === DeviceRole.tenantAdmin ? "Mọi nhà hàng" : "")}
-              {d.deviceId === ctx.device.deviceId && " · máy này"}
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 text-[11px] font-extrabold",
+                    ri.chip,
+                  )}
+                >
+                  {ri.label}
+                </span>
+                {restName(d.restaurantId) || "Mọi nhà hàng"}
+                {d.deviceId === ctx.device.deviceId && " · máy này"}
+              </span>
             </span>
-          </span>
-          {d.deviceId !== ctx.device.deviceId && (
-            <button
-              type="button"
-              onClick={() => revoke.mutate(d)}
-              disabled={revoke.isPending}
-              className="h-10 rounded-xl border px-3.5 text-sm font-bold"
-            >
-              Gỡ
-            </button>
-          )}
-        </div>
-      ))}
+            {d.deviceId !== ctx.device.deviceId && (
+              <button
+                type="button"
+                onClick={() => revoke.mutate(d)}
+                disabled={revoke.isPending}
+                className="h-10 rounded-xl border px-3.5 text-sm font-bold"
+              >
+                Gỡ
+              </button>
+            )}
+          </div>
+        );
+      })}
       {!adding ? (
         <button
           type="button"
           onClick={() => {
             setAdding(true);
             setCode(null);
-            setRole("staff");
+            setRole(DeviceRole.cashier);
           }}
           className="h-12 rounded-xl border border-dashed bg-muted/40 text-[15px] font-bold"
           data-ocid="console.add_device"
@@ -856,34 +918,40 @@ function DevicesCard({ ctx }: { ctx: Ctx }) {
         </button>
       ) : (
         <div className="flex flex-col gap-2.5 rounded-2xl border bg-muted/40 p-3">
-          <span className="text-sm font-extrabold">Máy mới dùng cho ai?</span>
-          {(["staff", "owner"] as ConsoleRole[]).map((r) => (
+          <span className="text-sm font-extrabold">
+            Thêm máy — dùng cho ai?
+          </span>
+          {DEVICE_ROLES.map((r) => (
             <button
-              key={r}
+              key={r.role}
               type="button"
               onClick={() => {
-                setRole(r);
+                setRole(r.role);
                 setCode(null);
               }}
+              aria-pressed={role === r.role}
               className={cn(
-                "flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left",
-                role === r
+                "flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left",
+                role === r.role
                   ? "border-2 border-primary bg-primary/10"
                   : "bg-card",
               )}
             >
-              <span className="text-[15px] font-extrabold">
-                {ROLE_LABEL[r]}
+              <span
+                className={cn(
+                  "shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-extrabold",
+                  r.chip,
+                )}
+              >
+                {r.label}
               </span>
               <span className="text-[13px] text-muted-foreground">
-                {r === "staff"
-                  ? "Đơn của 1 nhà hàng, bán quầy, gạt Còn/Hết món. Không sửa giá, không tạm nghỉ"
-                  : "Toàn quyền: mọi nhà hàng, món, giá, giờ, báo cáo, máy"}
+                {r.desc}
               </span>
             </button>
           ))}
-          {role === "staff" && rests.length > 1 && (
-            <div className="grid grid-cols-2 gap-2">
+          {info.branch && rests.length > 1 && (
+            <div className="flex flex-wrap gap-2">
               {rests.map((r) => (
                 <button
                   key={r.restaurantId}
@@ -892,10 +960,11 @@ function DevicesCard({ ctx }: { ctx: Ctx }) {
                     setBranch(r.restaurantId);
                     setCode(null);
                   }}
+                  aria-pressed={branch === r.restaurantId}
                   className={cn(
-                    "h-11 rounded-xl border text-sm font-extrabold",
+                    "min-h-[44px] rounded-full border px-4 text-sm font-extrabold",
                     branch === r.restaurantId
-                      ? "border-2 border-primary bg-primary/10"
+                      ? "border-foreground bg-foreground text-background"
                       : "bg-card",
                   )}
                 >
@@ -906,17 +975,22 @@ function DevicesCard({ ctx }: { ctx: Ctx }) {
           )}
           {code ? (
             <>
-              <p className="rounded-xl bg-blue-50 p-3 text-sm leading-relaxed text-blue-900">
-                Trên máy mới, mở trang quản lý và nhập mã
-                <br />
-                <strong className="text-2xl tracking-[4px]">{code}</strong>
-                <br />
-                {ROLE_LABEL[role]}
-                {role === "staff" &&
-                  restName(branch) &&
-                  ` · ${restName(branch)}`}{" "}
-                · dùng trong 15 phút
-              </p>
+              <div
+                className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center text-sm leading-relaxed text-blue-900"
+                data-ocid="console.device_code"
+              >
+                Trên máy mới, mở{" "}
+                <b>
+                  toidatmon.vn/{slug}/{info.path}
+                </b>{" "}
+                và nhập mã
+                <div className="my-1 text-3xl font-extrabold tracking-[6px] text-foreground">
+                  {code}
+                </div>
+                {info.label}
+                {info.branch && restName(branch) && ` · ${restName(branch)}`} ·
+                dùng trong 15 phút
+              </div>
               <BigButton
                 variant="outline"
                 onClick={() => {
@@ -928,13 +1002,102 @@ function DevicesCard({ ctx }: { ctx: Ctx }) {
               </BigButton>
             </>
           ) : (
-            <BigButton
-              disabled={makeCode.isPending || (role === "staff" && !branch)}
-              onClick={() => makeCode.mutate()}
-            >
-              Tạo mã kích hoạt
-            </BigButton>
+            <div className="grid grid-cols-2 gap-2">
+              <BigButton variant="outline" onClick={() => setAdding(false)}>
+                Huỷ
+              </BigButton>
+              <BigButton
+                disabled={makeCode.isPending || (info.branch && !branch)}
+                onClick={() => makeCode.mutate()}
+              >
+                Tạo mã
+              </BigButton>
+            </div>
           )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/** Mã khôi phục Chủ đối tác — lấy lại quyền khi mất máy Chủ đối tác. */
+function RecoveryCard({ ctx }: { ctx: Ctx }) {
+  const { actor, isFetching } = useCanister();
+  const qc = useQueryClient();
+  const infoQ = useQuery({
+    queryKey: ["console", "recovery", ctx.tenantId],
+    queryFn: () =>
+      getRecoveryInfo(
+        actor as NonNullable<typeof actor>,
+        ctx.tenantId,
+        ctx.device.deviceId,
+      ),
+    enabled: !!actor && !isFetching,
+  });
+  const [shown, setShown] = useState<string | null>(null);
+  const make = useMutation({
+    mutationFn: async () => {
+      const c = await createRecoveryCode(
+        actor as NonNullable<typeof actor>,
+        ctx.tenantId,
+        ctx.device.deviceId,
+      );
+      await logSupport(ctx, "devices", "Tạo mã khôi phục Chủ đối tác");
+      return c;
+    },
+    onSuccess: (c) => {
+      setShown(c);
+      qc.invalidateQueries({ queryKey: ["console", "recovery"] });
+    },
+    onError: onErr,
+  });
+  if (infoQ.isSuccess && infoQ.data === null) return null; // bindings cũ
+  const created = infoQ.data?.createdAt ?? 0n;
+  return (
+    <Card>
+      <h2 className="flex items-center gap-2 text-base font-extrabold">
+        <KeyRound className="h-5 w-5" aria-hidden="true" />
+        Mã khôi phục Chủ đối tác
+      </h2>
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        Dùng khi mất máy Chủ đối tác: mở trang quản lý, chọn “Dùng mã khôi
+        phục”. Cất mã ở nơi an toàn — mỗi mã dùng 1 lần, tạo mã mới thì mã cũ
+        hết hiệu lực.
+      </p>
+      {shown ? (
+        <div
+          className="flex flex-col gap-2 rounded-xl border-2 border-foreground bg-card p-3 text-center"
+          data-ocid="console.recovery_code"
+        >
+          <span className="text-2xl font-extrabold tracking-[3px]">
+            {shown}
+          </span>
+          <span className="text-[13px] font-bold text-red-700">
+            Mã chỉ hiện 1 lần — chụp màn hình hoặc chép ra giấy ngay.
+          </span>
+          <BigButton variant="outline" onClick={() => setShown(null)}>
+            Tôi đã cất mã
+          </BigButton>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] text-muted-foreground">
+            {created > 0n
+              ? `Đã tạo ${formatVnDate(created)}${infoQ.data?.createdBy ? ` · ${infoQ.data.createdBy}` : ""} · chưa dùng`
+              : "Chưa có mã"}
+          </span>
+          <button
+            type="button"
+            onClick={() => make.mutate()}
+            disabled={make.isPending || ctx.support}
+            className="h-11 shrink-0 rounded-xl border bg-card px-4 text-sm font-extrabold disabled:opacity-50"
+            data-ocid="console.recovery_make"
+          >
+            {make.isPending && (
+              <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />
+            )}
+            {created > 0n ? "Tạo mã mới" : "Tạo mã"}
+          </button>
         </div>
       )}
     </Card>
@@ -1047,46 +1210,6 @@ function PlanAndPromo({ ctx }: { ctx: Ctx }) {
 
 // ---------- Đối tác ----------
 
-function PartnerCard({ ctx }: { ctx: Ctx }) {
-  const { tenant } = useTenant();
-  const restQ = useConsoleRestaurants(ctx);
-  const hasContact =
-    !!currentValue(ctx.params, "contact_phone") ||
-    !!currentValue(ctx.params, "contact_zalo");
-  return (
-    <Card>
-      <h2 className="text-base font-extrabold">Đối tác</h2>
-      {tenant && (
-        <dl className="flex flex-col gap-1.5 text-[15px]">
-          <div className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">Pháp nhân</dt>
-            <dd className="text-right font-bold">{partnerName(tenant)}</dd>
-          </div>
-          {tenant.taxCode && (
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted-foreground">Mã số thuế</dt>
-              <dd className="font-bold tabular-nums">{tenant.taxCode}</dd>
-            </div>
-          )}
-          <div className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">Thương hiệu</dt>
-            <dd className="text-right font-bold">{tenant.name}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-muted-foreground">Nhà hàng</dt>
-            <dd className="font-bold">{restQ.data?.length ?? "…"}</dd>
-          </div>
-        </dl>
-      )}
-      <p className="text-[13px] text-muted-foreground">
-        Đổi tên pháp nhân, mã số thuế, thương hiệu, logo hay tài khoản nhận
-        tiền: gửi yêu cầu cho Tôi Đặt Món, bên mình kiểm tra rồi cập nhật.
-      </p>
-      {hasContact && <ContactLinks params={ctx.params} />}
-    </Card>
-  );
-}
-
 // ---------- Tab ----------
 
 export function SettingsTab({
@@ -1126,7 +1249,12 @@ export function SettingsTab({
           <HoursCard ctx={ctx} />
         </>
       )}
-      {section === "devices" && <DevicesCard ctx={ctx} />}
+      {section === "devices" && (
+        <>
+          <DevicesCard ctx={ctx} />
+          <RecoveryCard ctx={ctx} />
+        </>
+      )}
       {section === "money" && (
         <>
           <FeesCard params={ctx.params} />
