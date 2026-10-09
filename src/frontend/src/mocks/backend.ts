@@ -333,7 +333,23 @@ const partnerSelfMock = {
   }),
 };
 
+// Giai đoạn 3: giờ nhận đơn + tạm nghỉ từng nhà hàng (mixins/restaurant-ops-api.mo).
+const restaurantOpsMock = {
+  listRestaurantOps: async () => [],
+  getRestaurantStatuses: async () => [],
+  isRestaurantOpen: async () => true,
+  setRestaurantHours: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+  setRestaurantsPaused: async () => ({
+    __kind__: "err" as const,
+    err: "Mock: không hỗ trợ",
+  }),
+};
+
 export const mockBackend: backendInterface = {
+  ...restaurantOpsMock,
   ...partnerSelfMock,
   ...partnerFinanceMock,
   ...partnerApplicationMock,

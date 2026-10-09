@@ -18,6 +18,11 @@ import {
 } from "@/components/PartnerConnections";
 import { PartnerCard } from "@/components/console/PartnerChanges";
 import {
+  HoursEditor,
+  StatusChip,
+  useRestaurantStatuses,
+} from "@/components/console/RestaurantOps";
+import {
   BigButton,
   Card,
   type Ctx,
@@ -47,6 +52,7 @@ import {
   formatParam,
   formatVnDate,
 } from "@/lib/platform-params";
+import { setPausedAt } from "@/lib/restaurant-ops";
 import { cn } from "@/lib/utils";
 import { geocodeAddress } from "@/lib/vps-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -298,7 +304,9 @@ function RestaurantSheet({
       : EMPTY_DRAFT,
   );
   const [finding, setFinding] = useState(false);
-  const [prices, setPrices] = useState(false);
+  const [view, setView] = useState<"info" | "hours" | "prices">("info");
+  const prices = view === "prices";
+  const setPrices = (on: boolean) => setView(on ? "prices" : "info");
   const set = <K extends keyof RestaurantDraft>(k: K, v: RestaurantDraft[K]) =>
     setD((x) => ({ ...x, [k]: v }));
 
@@ -361,7 +369,35 @@ function RestaurantSheet({
             <X className="h-5 w-5" />
           </button>
         </div>
-        {prices && restaurant ? (
+        {restaurant && (
+          <div className="flex gap-2" data-ocid="console.restaurant_views">
+            {(
+              [
+                ["info", "Thông tin"],
+                ["hours", "Giờ nhận đơn"],
+                ["prices", "Giá riêng"],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={view === k}
+                onClick={() => setView(k)}
+                className={cn(
+                  "min-h-[40px] rounded-full border px-3.5 text-sm font-bold",
+                  view === k
+                    ? "border-foreground bg-foreground text-background"
+                    : "bg-card text-muted-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {view === "hours" && restaurant ? (
+          <HoursEditor ctx={ctx} restaurant={restaurant} onDone={onClose} />
+        ) : prices && restaurant ? (
           <BranchPrices
             ctx={ctx}
             restaurant={restaurant}
@@ -580,8 +616,30 @@ function BranchPrices({
 }
 
 function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
+  const { actor } = useCanister();
+  const qc = useQueryClient();
   const restQ = useConsoleRestaurants(ctx);
   const rests = restQ.data ?? [];
+  const statusQ = useRestaurantStatuses(ctx);
+  const reopen = useMutation({
+    mutationFn: async (r: Restaurant) => {
+      await setPausedAt(
+        actor as NonNullable<typeof actor>,
+        ctx.tenantId,
+        ctx.device.deviceId,
+        [r.restaurantId],
+        false,
+        0n,
+      );
+      await logSupport(ctx, "pause", `Mở lại ${r.name}`);
+    },
+    onSuccess: () => {
+      toast.success("Đã nhận đơn lại");
+      qc.invalidateQueries({ queryKey: ["console", "statuses"] });
+      qc.invalidateQueries({ queryKey: ["console", "settings"] });
+    },
+    onError: onErr,
+  });
   const [editing, setEditing] = useState<Restaurant | "new" | null>(null);
   return (
     <Card>
@@ -597,8 +655,8 @@ function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
         </button>
       </div>
       <p className="text-[13px] text-muted-foreground">
-        Địa chỉ, SĐT và vị trí của từng nhà hàng. Khách được giao từ nhà hàng
-        gần nhất.
+        Mỗi nhà hàng có địa chỉ, vị trí, giờ nhận đơn và tạm nghỉ riêng. Bấm vào
+        nhà hàng để sửa.
       </p>
       {restQ.isLoading && (
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -625,6 +683,9 @@ function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
                 <span className="text-[13px] text-muted-foreground">
                   {r.address} · {r.phone}
                 </span>
+                {r.visible && (
+                  <StatusChip status={statusQ.data?.get(r.restaurantId)} />
+                )}
                 {!hasPin(r) ? (
                   <span className="flex items-center gap-1 text-xs font-bold text-amber-700">
                     <AlertTriangle className="h-3.5 w-3.5" /> Chưa ghim vị trí —
@@ -642,6 +703,18 @@ function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
               </span>
               <ChevronRight className="mt-2 h-5 w-5 text-muted-foreground" />
             </button>
+            {statusQ.data?.get(r.restaurantId)?.state === "paused" &&
+              !ctx.settings?.paused && (
+                <button
+                  type="button"
+                  onClick={() => reopen.mutate(r)}
+                  disabled={reopen.isPending}
+                  className="mb-3 ml-[52px] h-10 rounded-xl border bg-card px-3.5 text-sm font-bold"
+                  data-ocid="console.reopen_restaurant"
+                >
+                  Mở lại ngay
+                </button>
+              )}
           </li>
         ))}
       </ul>
@@ -699,9 +772,10 @@ function HoursCard({ ctx }: { ctx: Ctx }) {
   });
   return (
     <Card>
-      <h2 className="text-base font-extrabold">Giờ nhận đơn</h2>
+      <h2 className="text-base font-extrabold">Giờ nhận đơn chung</h2>
       <p className="text-[13px] text-muted-foreground">
-        Áp dụng cho mọi nhà hàng. Ngoài giờ, khách không đặt online được.
+        Dùng cho nhà hàng chưa đặt giờ riêng. Giờ riêng theo ngày: bấm vào từng
+        nhà hàng › Giờ nhận đơn.
       </p>
       <div className="grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1.5 text-[13px] font-bold">

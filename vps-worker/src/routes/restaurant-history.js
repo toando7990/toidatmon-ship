@@ -32,7 +32,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_ORDERS = 300;
 
 // Máy trực quán: chỉ nhà hàng của máy. Vai trò quản lý: cả đối tác.
-const STAFF_ROLES = ['driver', 'cashier', 'paymentQueue', 'admin'];
+const STAFF_ROLES = ['driver', 'cashier', 'paymentQueue', 'admin', 'restaurantManager'];
 const TENANT_WIDE_ROLES = ['tenantAdmin', 'accounting', 'salesPromoReporting'];
 
 // Mốc "đầu ngày hôm nay" theo giờ Việt Nam (UTC+7) — cùng công thức với

@@ -16,6 +16,7 @@ const DEVICES = {
   'own~k': { deviceId: 'own', tenantId: 'phoba', role: 'tenantAdmin', restaurantId: '', name: 'Chủ', active: true },
   'st1~k': { deviceId: 'st1', tenantId: 'phoba', role: 'cashier', restaurantId: 'R1', name: 'Quầy 1', active: true },
   'acc~k': { deviceId: 'acc', tenantId: 'phoba', role: 'accounting', restaurantId: '', name: 'KT', active: true },
+  'mgr~k': { deviceId: 'mgr', tenantId: 'phoba', role: 'restaurantManager', restaurantId: 'R2', name: 'QL Nguyễn Trãi', active: true },
   'oth~k': { deviceId: 'oth', tenantId: 'comtam', role: 'tenantAdmin', restaurantId: '', name: 'Khác', active: true },
 };
 const cancelled = [];
@@ -137,4 +138,24 @@ test('/analytics: bắt buộc quyền, máy đối tác chỉ thấy số liệ
   assert.equal((await call('GET', '/orders'))[0], 401);
   assert.equal((await call('GET', '/orders/O1'))[0], 401);
   assert.equal((await call('GET', '/orders', 'admin'))[0], 200);
+});
+
+test('Quản lý nhà hàng: chỉ đơn + báo cáo của nhà hàng mình, không huỷ đơn nhà hàng khác', async () => {
+  const [, live] = await call('GET', '/partner/orders/live', 'mgr~k');
+  assert.deepEqual(live.orders.map((o) => o.orderId).sort(), ['O2', 'O3']);
+  const day = new Date(now + 7 * 3600e3).toISOString().slice(0, 10);
+  const [st, rep] = await call('GET', `/partner/report?from=${day}&to=${day}&restaurantId=R1`, 'mgr~k');
+  assert.equal(st, 200);
+  assert.deepEqual(rep.byRestaurant.map((r) => r.restaurantId), ['R2']);
+  const [c] = await call('POST', '/partner/orders/O1/cancel', 'mgr~k', { reason: 'Hết món' });
+  assert.equal(c, 404);
+});
+
+test('admin xem toàn sàn: /analytics có byTenant theo từng đối tác', async () => {
+  const [st, a] = await call('GET', '/analytics?range=7d', 'admin');
+  assert.equal(st, 200);
+  const ids = a.byTenant.map((t) => t.tenantId).sort();
+  assert.deepEqual(ids, ['comtam', 'phoba']);
+  const [, one] = await call('GET', '/analytics?range=7d&tenantId=phoba', 'admin');
+  assert.deepEqual(one.byTenant, []);
 });

@@ -132,6 +132,20 @@ router.get('/analytics', analyticsGuard, (req, res, next) => {
       revenue: r.revenue,
     }));
 
+    // byTenant — chỉ khi admin xem toàn sàn: số đơn / doanh thu (đã thanh
+    // toán) / tỉ lệ huỷ theo từng đối tác (trang "Báo cáo toàn sàn").
+    const byTenant = tid
+      ? []
+      : db.prepare(
+        `SELECT tenant_id AS tenantId,
+                COUNT(DISTINCT restaurant_id) AS restaurants,
+                SUM(CASE WHEN payment_status='paid' THEN 1 ELSE 0 END) AS orders,
+                COALESCE(SUM(CASE WHEN payment_status='paid' THEN amount ELSE 0 END),0) AS revenue,
+                SUM(CASE WHEN booking_status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                COUNT(*) AS allOrders
+         FROM orders WHERE created_at >= ? GROUP BY tenant_id ORDER BY revenue DESC`,
+      ).all(fromMs);
+
     // byDay — group by date trong range (theo NGÀY VN, xem
     // DAY_MS_VN_SQL_EXPR ở đầu file). CHỈ tính đơn đã thanh toán.
     const byDayRows = db.prepare(
@@ -220,6 +234,7 @@ router.get('/analytics', analyticsGuard, (req, res, next) => {
       cancelledOrders,
       averageOrderValue,
       byRestaurant,
+      byTenant,
       byDay,
       topItems,
       customers: {

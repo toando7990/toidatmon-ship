@@ -23,13 +23,24 @@ module {
     DevicesLib.deviceIsTenantAdmin(devices, auth, credential, tenantId);
   };
 
-  /// Chủ quán hoặc Nhân viên (#cashier) đang hoạt động của đúng đối tác.
+  /// Chủ quán, Quản lý nhà hàng hoặc Nhân viên (#cashier) đang hoạt động của đúng đối tác.
   public func isOwnerOrStaff(devices : DevicesLib.DevicesStore, auth : DeviceAuthTypes.DeviceAuthState, credential : Text, tenantId : Common.TenantId) : Bool {
     let ?deviceId = DeviceAuth.resolve(auth, credential) else return false;
     switch (devices.get(deviceId)) {
       case null { false };
       case (?d) {
-        d.active and d.tenantId == tenantId and (d.role == #tenantAdmin or d.role == #cashier);
+        d.active and d.tenantId == tenantId and (d.role == #tenantAdmin or d.role == #cashier or d.role == #restaurantManager);
+      };
+    };
+  };
+
+  /// Quản lý nhà hàng (#restaurantManager) của đúng nhà hàng `restaurantId`.
+  public func isManagerOf(devices : DevicesLib.DevicesStore, auth : DeviceAuthTypes.DeviceAuthState, credential : Text, tenantId : Common.TenantId, restaurantId : Text) : Bool {
+    let ?deviceId = DeviceAuth.resolve(auth, credential) else return false;
+    switch (devices.get(deviceId)) {
+      case null { false };
+      case (?d) {
+        d.active and d.tenantId == tenantId and d.role == #restaurantManager and d.restaurantId != "" and d.restaurantId == restaurantId;
       };
     };
   };

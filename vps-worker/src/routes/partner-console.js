@@ -28,8 +28,9 @@ const router = express.Router();
 const DAY = 24 * 60 * 60 * 1000;
 const UTC7 = 7 * 60 * 60 * 1000;
 const STAFF = ['cashier', 'driver'];
-const OPS_ROLES = ['tenantAdmin', ...STAFF];
-const REPORT_ROLES = ['tenantAdmin', 'accounting', 'salesPromoReporting'];
+const OPS_ROLES = ['tenantAdmin', 'restaurantManager', ...STAFF];
+// Quản lý nhà hàng: báo cáo CHỈ nhà hàng của máy (partner-guard gắn restaurantId).
+const REPORT_ROLES = ['tenantAdmin', 'restaurantManager', 'accounting', 'salesPromoReporting'];
 
 function startOfTodayVn(now = Date.now()) {
   return Math.floor((now + UTC7) / DAY) * DAY - UTC7;

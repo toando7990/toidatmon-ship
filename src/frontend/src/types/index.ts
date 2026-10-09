@@ -188,6 +188,15 @@ export interface InvoiceResponse {
 
 // VPS analytics response — aggregated dashboard metrics.
 export interface AnalyticsResponse {
+  /** Chỉ khi admin xem toàn sàn (không lọc đối tác). */
+  byTenant?: Array<{
+    tenantId: string;
+    restaurants: number;
+    orders: number;
+    revenue: number;
+    cancelled: number;
+    allOrders: number;
+  }>;
   totalOrders: number;
   totalRevenue: number;
   paidOrders: number;

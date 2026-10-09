@@ -81,6 +81,7 @@ import {
   listSoldOutAt as listSoldOutAtFn,
   soldOutIdsAt,
 } from "@/lib/partner-self";
+import { listStatuses as listRestaurantStatusesFn } from "@/lib/restaurant-ops";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -1133,4 +1134,21 @@ export function useSoldOutToday(restaurantId?: string | null) {
     [q.data, restaurantId],
   );
   return { ...q, data };
+}
+
+// Trạng thái từng nhà hàng (đang nhận đơn / tạm nghỉ / ngoài giờ) — trang
+// đặt món bỏ qua nhà hàng không nhận đơn khi tự chọn nhà hàng. Bindings cũ:
+// Map rỗng (coi như mọi nhà hàng mở).
+export function useRestaurantStatusMap() {
+  const { actor, isFetching } = useActorOrNull();
+  const tenantId = useTenantId();
+  return useQuery({
+    queryKey: ["restaurantStatuses", tenantId],
+    queryFn: () =>
+      actor
+        ? listRestaurantStatusesFn(actor, tenantId)
+        : Promise.resolve(new Map()),
+    enabled: !!actor && !isFetching && !!tenantId,
+    refetchInterval: 60_000,
+  });
 }

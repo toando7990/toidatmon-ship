@@ -40,6 +40,8 @@ import PartnerProfileApi "mixins/partner-profile-api";
 import PartnerProfileTypes "types/partner-profile";
 import PartnerSelfApi "mixins/partner-self-api";
 import PartnerSelfTypes "types/partner-self";
+import RestaurantOpsApi "mixins/restaurant-ops-api";
+import RestaurantOpsTypes "types/restaurant-ops";
 import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
@@ -131,6 +133,8 @@ actor Main {
   let menuOrder : PartnerSelfTypes.MenuOrderStore;
   let ownerRecovery : PartnerSelfTypes.RecoveryStore;
   let changeRequests : PartnerSelfTypes.ChangeRequestStore;
+  // Giai đoạn 3: giờ nhận đơn + tạm nghỉ từng nhà hàng — migrations/20261016_000000.mo.
+  let restaurantOps : RestaurantOpsTypes.OpsStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -349,6 +353,7 @@ actor Main {
   include PartnerProfileApi(accessControlState, partnerProfiles, restaurants, platformDevices);
   include PartnerFinanceApi(accessControlState, partnerBanks, fundedPromos, platformDevices, devices, deviceAuth, vouchers, counterPayments);
   include PartnerSelfApi(accessControlState, tenants, devices, deviceAuth, menus, menuOrder, ownerRecovery, changeRequests);
+  include RestaurantOpsApi(accessControlState, devices, deviceAuth, restaurants, storeHoursState, partnerSettings, restaurantOps);
   include PlatformDevicesApi(accessControlState, platformDevices, platformActivations, homeHidden, partnerApplications, tenants, devices);
 
   /// Returns the canister's own id as text, so the VPS knows which canister
