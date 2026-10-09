@@ -151,6 +151,43 @@ mixin (
     #ok(());
   };
 
+  /// Báo hết / còn món TẠI 1 nhà hàng (restaurantId "" = mọi nhà hàng).
+  /// Chủ đối tác: mọi nhà hàng. Nhân viên: chỉ nhà hàng của máy (máy không
+  /// gắn nhà hàng thì như cũ — mọi nhà hàng).
+  public shared ({ caller }) func setItemSoldOutAt(
+    tenantId : Common.TenantId,
+    deviceId : Common.DeviceId,
+    itemId : Text,
+    restaurantId : Text,
+    soldOut : Bool,
+  ) : async Result.Result<(), Text> {
+    if (not (isAdmin(caller) or Lib.isOwnerOrStaff(devices, deviceAuth, deviceId, tenantId))) {
+      return #err("Máy này không có quyền");
+    };
+    if (not (isAdmin(caller) or Lib.isOwner(devices, deviceAuth, deviceId, tenantId))) {
+      let own = switch (DeviceAuth.resolve(deviceAuth, deviceId)) {
+        case (?id) { switch (devices.get(id)) { case (?d) d.restaurantId; case null "" } };
+        case null "";
+      };
+      if (own != "" and own != restaurantId) {
+        return #err("Máy nhân viên chỉ báo còn/hết món cho nhà hàng của mình");
+      };
+    };
+    switch (menus.get(itemId)) {
+      case (?m) { if (m.tenantId != tenantId) { return #err("Không tìm thấy món") } };
+      case null { return #err("Không tìm thấy món") };
+    };
+    Lib.pruneSoldOut(soldOutItems);
+    Lib.setSoldOutAt(soldOutItems, tenantId, itemId, restaurantId, soldOut);
+    #ok(());
+  };
+
+  /// Món hết hôm nay kèm nhà hàng (công khai: trang đặt món / bán quầy ẩn
+  /// món hết ở nhà hàng đang chọn).
+  public query func listSoldOutTodayAt(tenantId : Common.TenantId) : async [Types.SoldOutEntry] {
+    Lib.soldOutTodayAt(soldOutItems, tenantId);
+  };
+
   /// itemId các món báo hết hôm nay (công khai: trang đặt món ẩn các món này).
   public query func listSoldOutToday(tenantId : Common.TenantId) : async [Text] {
     Lib.soldOutToday(soldOutItems, tenantId);

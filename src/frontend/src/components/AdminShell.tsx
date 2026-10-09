@@ -13,6 +13,7 @@ import { useTenants } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
 import { useCanister } from "@/lib/canister";
 import { listPartnerApplications } from "@/lib/partner-applications";
+import { hasSelfApi, listAllChanges } from "@/lib/partner-self";
 import { partnerPath, resolveTenant, stripPartnerPrefix } from "@/lib/tenant";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import {
   ChevronsUpDown,
   ClipboardList,
   ExternalLink,
+  FileDiff,
   Layers,
   LifeBuoy,
   LogOut,
@@ -49,7 +51,7 @@ interface AdminItem {
   icon: LucideIcon;
   /** Đường dẫn khác cũng tính là đang ở mục này (link cũ). */
   alias?: string[];
-  badgeKey?: "applications";
+  badgeKey?: "applications" | "changes";
 }
 interface AdminGroup {
   id: "platform" | "store" | "business";
@@ -68,6 +70,12 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         label: "Đơn đăng ký đối tác",
         icon: ClipboardList,
         badgeKey: "applications",
+      },
+      {
+        to: "/admin/yeu-cau-thay-doi",
+        label: "Yêu cầu thay đổi",
+        icon: FileDiff,
+        badgeKey: "changes",
       },
       { to: "/admin/ho-tro-doi-tac", label: "Hỗ trợ đối tác", icon: LifeBuoy },
       { to: "/admin/doi-soat", label: "Đối soát & trả tiền", icon: Wallet },
@@ -234,7 +242,25 @@ function AdminNav({
     enabled: !!actor && !isFetching,
     staleTime: 60_000,
   });
-  const badges = { applications: pendingQ.data ?? 0 };
+  const changesQ = useQuery({
+    queryKey: ["admin-shell", "pendingChanges"],
+    queryFn: async () => {
+      if (!actor || !hasSelfApi(actor)) return 0;
+      try {
+        return (await listAllChanges(actor)).filter(
+          (r) => r.status === "pending",
+        ).length;
+      } catch {
+        return 0;
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60_000,
+  });
+  const badges = {
+    applications: pendingQ.data ?? 0,
+    changes: changesQ.data ?? 0,
+  };
 
   const nq = norm(q.trim());
   const groups = ADMIN_GROUPS.map((g) => ({

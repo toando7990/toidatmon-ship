@@ -38,6 +38,8 @@ import PartnerFinanceApi "mixins/partner-finance-api";
 import PartnerFinanceTypes "types/partner-finance";
 import PartnerProfileApi "mixins/partner-profile-api";
 import PartnerProfileTypes "types/partner-profile";
+import PartnerSelfApi "mixins/partner-self-api";
+import PartnerSelfTypes "types/partner-self";
 import VpsAdminApi "mixins/vps-admin-api";
 import PlatformParamsTypes "types/platform-params";
 
@@ -125,6 +127,10 @@ actor Main {
   let partnerBanks : PartnerFinanceTypes.BankStore;
   let fundedPromos : PartnerFinanceTypes.FundedStore;
   let partnerProfiles : PartnerProfileTypes.ProfileStore;
+  // Giai đoạn 2 trang đối tác — migrations/20261015_000000.mo.
+  let menuOrder : PartnerSelfTypes.MenuOrderStore;
+  let ownerRecovery : PartnerSelfTypes.RecoveryStore;
+  let changeRequests : PartnerSelfTypes.ChangeRequestStore;
 
   // Email OTP verification state — keyed by lower-cased email address. Supplied
   // by migrations/20260815_000000.mo (empty Map on fresh install/upgrade).
@@ -326,7 +332,7 @@ actor Main {
   include DevicesApi(accessControlState, tenants, devices, deviceAuth, pendingActivations);
   include UpgradeApi(accessControlState, orders, devices, pendingActivations, menus, restaurants, restaurantMenuOverrides);
   include SecretApi(secretState, accessControlState);
-  include MenuApi(accessControlState, tenants, devices, deviceAuth, menus, restaurants, restaurantMenuOverrides);
+  include MenuApi(accessControlState, tenants, devices, deviceAuth, menus, restaurants, restaurantMenuOverrides, menuOrder);
   include MenuSeedApi(accessControlState, devices, deviceAuth, menus);
   include EmailVerificationApi(otpRecords, registrationPromos, registrationBonusIssued, vouchers, secretState, tenants);
   include PromotionApi(accessControlState, devices, deviceAuth, kmUsage, kmDailyCount, promotions, secretState, otpRecords, promotionUsed);
@@ -342,6 +348,7 @@ actor Main {
   include DishGroupsApi(accessControlState, dishGroups, dishGroupAssignments, platformDevices);
   include PartnerProfileApi(accessControlState, partnerProfiles, restaurants, platformDevices);
   include PartnerFinanceApi(accessControlState, partnerBanks, fundedPromos, platformDevices, devices, deviceAuth, vouchers, counterPayments);
+  include PartnerSelfApi(accessControlState, tenants, devices, deviceAuth, menus, menuOrder, ownerRecovery, changeRequests);
   include PlatformDevicesApi(accessControlState, platformDevices, platformActivations, homeHidden, partnerApplications, tenants, devices);
 
   /// Returns the canister's own id as text, so the VPS knows which canister

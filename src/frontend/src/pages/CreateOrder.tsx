@@ -192,7 +192,7 @@ export default function CreateOrder() {
   // vào việc đã chọn nhà hàng hay chưa. Chỉ chặn ở bước THÊM MÓN (xem handleQuantityChange).
   const { data: menuAll, isLoading: menuLoading } = useMenus();
   // Ẩn món chủ quán/nhân viên báo "Hết hôm nay" (trang /quan-ly).
-  const { data: soldOutToday } = useSoldOutToday();
+  const { data: soldOutToday } = useSoldOutToday(restaurantId);
   const menu = useMemo(() => {
     if (!menuAll || !soldOutToday?.length) return menuAll;
     const sold = new Set(soldOutToday);

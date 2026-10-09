@@ -221,23 +221,31 @@ function VoucherOverview({
 
 export function PromoManagerPage({
   initialKind = "all",
-}: { initialKind?: KindFilter }) {
-  const promotionsQ = usePromotions();
-  const regQ = useRegistrationPromos();
-  const salesQ = useSalesPromos();
+  deviceId,
+  embedded = false,
+}: {
+  initialKind?: KindFilter;
+  /** Máy của đối tác (trang /quan-ly, tab Khuyến mại) — rỗng = admin. */
+  deviceId?: string;
+  /** Nhúng trong trang quản lý đối tác: bỏ tiêu đề lớn và lề ngoài. */
+  embedded?: boolean;
+}) {
+  const promotionsQ = usePromotions(deviceId);
+  const regQ = useRegistrationPromos(deviceId);
+  const salesQ = useSalesPromos(deviceId);
 
-  const createGio = useCreatePromotion();
-  const updateGio = useUpdatePromotion();
-  const deleteGio = useDeletePromotion();
-  const stopGio = useStopPromotion();
-  const createReg = useCreateRegistrationPromo();
-  const updateReg = useUpdateRegistrationPromo();
-  const deleteReg = useDeleteRegistrationPromo();
-  const stopReg = useStopRegistrationPromo();
-  const createSales = useCreateSalesPromo();
-  const updateSales = useUpdateSalesPromo();
-  const deleteSales = useDeleteSalesPromo();
-  const stopSales = useStopSalesPromo();
+  const createGio = useCreatePromotion(deviceId);
+  const updateGio = useUpdatePromotion(deviceId);
+  const deleteGio = useDeletePromotion(deviceId);
+  const stopGio = useStopPromotion(deviceId);
+  const createReg = useCreateRegistrationPromo(deviceId);
+  const updateReg = useUpdateRegistrationPromo(deviceId);
+  const deleteReg = useDeleteRegistrationPromo(deviceId);
+  const stopReg = useStopRegistrationPromo(deviceId);
+  const createSales = useCreateSalesPromo(deviceId);
+  const updateSales = useUpdateSalesPromo(deviceId);
+  const deleteSales = useDeleteSalesPromo(deviceId);
+  const stopSales = useStopSalesPromo(deviceId);
 
   // Khuyến mại chung (sàn tài trợ) — chỉ admin sàn đánh dấu được.
   const funded = usePlatformFunded();
@@ -466,19 +474,31 @@ export function PromoManagerPage({
 
   return (
     <section
-      className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10"
+      className={
+        embedded
+          ? "w-full"
+          : "mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10"
+      }
       data-ocid="promo.page"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-            Quản lý khuyến mại
-          </h1>
+        {embedded ? (
           <p className="text-sm text-muted-foreground">
-            Giờ vàng, khuyến mại đăng ký và thưởng doanh số — tạo, theo dõi,
-            dừng ở một chỗ.
+            Giờ vàng, quà đăng ký, thưởng doanh số. Chương trình có nhãn{" "}
+            <b className="text-foreground">Sàn tài trợ</b> do Tôi Đặt Món bù một
+            phần tiền giảm khi đối soát.
           </p>
-        </div>
+        ) : (
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+              Quản lý khuyến mại
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Giờ vàng, khuyến mại đăng ký và thưởng doanh số — tạo, theo dõi,
+              dừng ở một chỗ.
+            </p>
+          </div>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" data-ocid="promo.create_button">

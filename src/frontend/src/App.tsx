@@ -13,6 +13,7 @@ import { loadEnterpriseActivation } from "@/lib/enterprise-activation";
 import { resolveTenant, stripPartnerPrefix } from "@/lib/tenant";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { AnalyticsDashboard } from "@/pages/AnalyticsDashboard";
+import ChangeRequestsAdmin from "@/pages/ChangeRequestsAdmin";
 import { ClaimOrder } from "@/pages/ClaimOrder";
 import CounterOrder from "@/pages/CounterOrder";
 import CreateOrder from "@/pages/CreateOrder";
@@ -572,6 +573,17 @@ const adminPartnerSupportRoute = createRoute({
   ),
 });
 
+// Yêu cầu thay đổi của đối tác (tài khoản, pháp nhân, thương hiệu, gói).
+const adminChangeRequestsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/yeu-cau-thay-doi",
+  component: () => (
+    <AdminGate>
+      <ChangeRequestsAdmin />
+    </AdminGate>
+  ),
+});
+
 // Thiết bị cấp sàn: admin tạo mã / thu hồi; nhân viên dùng /san.
 const adminPlatformDevicesRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -713,6 +725,7 @@ const router = createRouter({
     adminDeliveryRoute,
     adminPlatformDevicesRoute,
     adminPartnerSupportRoute,
+    adminChangeRequestsRoute,
     platformStaffRoute,
     adminPromoManagerRoute,
     partnerUnavailableRoute,

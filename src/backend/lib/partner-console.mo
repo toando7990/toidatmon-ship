@@ -65,17 +65,33 @@ module {
     };
   };
 
-  /// itemId các món đang báo hết TRONG HÔM NAY (giờ VN) của 1 đối tác.
-  public func soldOutToday(store : Types.SoldOutStore, tenantId : Text) : [Text] {
+  /// Hết món tại 1 nhà hàng: key "tenantId|itemId|restaurantId".
+  /// restaurantId "" = hết ở MỌI nhà hàng (key cũ "tenantId|itemId").
+  public func setSoldOutAt(store : Types.SoldOutStore, tenantId : Text, itemId : Text, restaurantId : Text, soldOut : Bool) {
+    if (restaurantId == "") { return setSoldOut(store, tenantId, itemId, soldOut) };
+    let k = key(tenantId, itemId) # "|" # restaurantId;
+    if (soldOut) { store.add(k, vnDay(Time.now())) } else { store.remove(k) };
+  };
+
+  /// Các món hết hôm nay: (itemId, restaurantId — "" = mọi nhà hàng).
+  public func soldOutTodayAt(store : Types.SoldOutStore, tenantId : Text) : [Types.SoldOutEntry] {
     let today = vnDay(Time.now());
     let prefix = tenantId # "|";
-    let out = Map.empty<Text, Bool>();
-    for ((k, day) in store.entries()) {
-      if (day == today and k.startsWith(#text prefix)) {
-        out.add(k.trimStart(#text prefix), true);
-      };
-    };
-    out.keys().toArray();
+    store.entries().filter(
+      func((k, day) : (Text, Nat)) : Bool = day == today and k.startsWith(#text prefix)
+    ).map(
+      func((k, _day) : (Text, Nat)) : Types.SoldOutEntry {
+        let parts = k.trimStart(#text prefix).split(#char '|');
+        let itemId = switch (parts.next()) { case (?p) p; case null "" };
+        let restaurantId = switch (parts.next()) { case (?p) p; case null "" };
+        { itemId; restaurantId };
+      }
+    ).toArray();
+  };
+
+  /// itemId các món đang báo hết Ở MỌI NHÀ HÀNG trong hôm nay (giờ VN).
+  public func soldOutToday(store : Types.SoldOutStore, tenantId : Text) : [Text] {
+    soldOutTodayAt(store, tenantId).filter(func(e : Types.SoldOutEntry) : Bool = e.restaurantId == "").map(func(e : Types.SoldOutEntry) : Text = e.itemId);
   };
 
   /// Dọn bản ghi "hết món" của những ngày trước (gọi khi ghi).

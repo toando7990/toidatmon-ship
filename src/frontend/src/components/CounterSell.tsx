@@ -314,7 +314,7 @@ export function CounterSell({
   const { actor } = useCanister();
   const qc = useQueryClient();
   const { data: menuAll, isLoading } = useMenuForRestaurant(restaurantId);
-  const { data: soldOut } = useSoldOutToday();
+  const { data: soldOut } = useSoldOutToday(restaurantId);
   const { data: promotion } = useCurrentPromotion();
   const { data: salesPromo } = useCurrentSalesPromo();
   const countdown = usePromotionCountdown(
