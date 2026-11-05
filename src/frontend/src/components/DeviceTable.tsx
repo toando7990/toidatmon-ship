@@ -2,6 +2,7 @@
 // active status, nút Thu hồi. UI tiếng Việt.
 
 import { type Device, DeviceRole } from "@/backend";
+import { SkeletonTable } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -67,13 +68,7 @@ export function DeviceTable({
 }: DeviceTableProps) {
   if (isLoading) {
     return (
-      <div
-        className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-        data-ocid="device.table.loading_state"
-      >
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Đang tải danh sách thiết bị…
-      </div>
+      <SkeletonTable rows={4} cols={4} ocid="device.table.loading_state" />
     );
   }
 

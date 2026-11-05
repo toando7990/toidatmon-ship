@@ -160,13 +160,13 @@ export function PromotionBanner() {
                 <span className="text-[10px] text-muted-foreground">
                   Toàn hệ thống
                 </span>
-                <span className="font-display text-[11px] font-bold text-[oklch(0.5_0.15_250)]">
+                <span className="font-display text-[11px] font-bold text-primary">
                   {dailyCount.toString()}/{promotion.dailyOrderLimit.toString()}
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
                 <div
-                  className="h-full rounded-full bg-[oklch(0.62_0.14_250)] transition-all"
+                  className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${dailyPercent}%` }}
                 />
               </div>

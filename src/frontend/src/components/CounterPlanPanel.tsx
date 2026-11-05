@@ -38,8 +38,8 @@ function statusOf(p: CounterPlan | null | undefined): {
   if (!p || !p.enabled) {
     return { label: "Chưa đăng ký", cls: "bg-muted text-muted-foreground" };
   }
-  if (!p.active) return { label: "Hết hạn", cls: "bg-red-100 text-red-800" };
-  return { label: "Đang dùng", cls: "bg-green-100 text-green-800" };
+  if (!p.active) return { label: "Hết hạn", cls: "badge-destructive" };
+  return { label: "Đang dùng", cls: "badge-success" };
 }
 
 function Row({ tenant }: { tenant: Tenant }) {

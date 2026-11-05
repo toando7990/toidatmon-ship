@@ -26,171 +26,245 @@
   font-display: swap;
 }
 
+/* =========================================================================
+   Tôi Đặt Món — ONE brand system for every area
+   (storefront /<slug>, platform home, /quan-ly, /san, /admin).
+   Đỏ gạch #9A3426 = primary · Xanh lime #BACF50 = accent.
+   ========================================================================= */
 @layer base {
   :root {
     --font-display: "Space Grotesk";
     --font-body: "Plus Jakarta Sans";
     --font-mono: "JetBrains Mono";
-    --radius: 0.5rem;
 
-    /* Warm cream base — light mode */
-    --background: 0.97 0.012 75;
-    --foreground: 0.2 0.02 50;
-    --card: 0.99 0.008 75;
-    --card-foreground: 0.2 0.02 50;
-    --popover: 0.99 0.008 75;
-    --popover-foreground: 0.2 0.02 50;
+    /* Shared shape scale: sm 8px · md 10px · lg 12px (+ xl 16 / 2xl 20 / full) */
+    --radius: 0.75rem;
 
-    /* Vivid vermillion red — Vietnamese brand primary */
-    --primary: 0.55 0.22 28;
-    --primary-foreground: 0.98 0.008 75;
+    /* Neutrals — warm paper with a faint lime cast */
+    --background: 0.975 0.008 100;
+    --foreground: 0.235 0.028 60;
+    --card: 1 0 0;
+    --card-foreground: 0.235 0.028 60;
+    --popover: 1 0 0;
+    --popover-foreground: 0.235 0.028 60;
 
-    --secondary: 0.94 0.018 75;
-    --secondary-foreground: 0.28 0.025 50;
-    --muted: 0.94 0.015 75;
-    --muted-foreground: 0.5 0.02 50;
+    /* Đỏ gạch #9A3426 */
+    --primary: 0.472 0.139 30.7;
+    --primary-foreground: 0.99 0.004 90;
 
-    --accent: 0.55 0.22 28;
-    --accent-foreground: 0.98 0.008 75;
+    /* Lime-soft surface with olive ink */
+    --secondary: 0.952 0.035 114;
+    --secondary-foreground: 0.33 0.07 120;
+    --muted: 0.955 0.008 95;
+    --muted-foreground: 0.5 0.022 70;
 
-    --destructive: 0.5 0.22 25;
-    --destructive-foreground: 0.98 0.008 25;
+    /* Xanh lime #BACF50 — fills only; text on it uses deep olive */
+    --accent: 0.814 0.153 117.9;
+    --accent-foreground: 0.27 0.06 120;
 
-    /* Functional status colors */
-    --success: 0.55 0.16 150;
-    --success-foreground: 0.98 0.01 150;
-    --warning: 0.72 0.16 70;
-    --warning-foreground: 0.2 0.04 70;
-    --info: 0.5 0.16 245;
-    --info-foreground: 0.98 0.01 245;
+    --destructive: 0.55 0.2 22;
+    --destructive-foreground: 0.99 0.004 22;
 
-    --border: 0.89 0.018 75;
-    --input: 0.89 0.018 75;
-    --ring: 0.55 0.22 28;
+    /* Functional status — never decorative */
+    --success: 0.52 0.13 152;
+    --success-foreground: 0.99 0.01 152;
+    --warning: 0.77 0.15 72;
+    --warning-foreground: 0.27 0.06 60;
+    --info: 0.5 0.12 240;
+    --info-foreground: 0.99 0.008 240;
 
-    --chart-1: 0.55 0.22 28;
-    --chart-2: 0.55 0.16 150;
-    --chart-3: 0.5 0.16 245;
-    --chart-4: 0.72 0.16 70;
-    --chart-5: 0.5 0.22 25;
+    --border: 0.905 0.014 95;
+    --input: 0.88 0.016 95;
+    --ring: 0.472 0.139 30.7;
 
-    --sidebar: 0.985 0.008 75;
-    --sidebar-foreground: 0.2 0.02 50;
-    --sidebar-primary: 0.55 0.22 28;
-    --sidebar-primary-foreground: 0.98 0.008 75;
-    --sidebar-accent: 0.94 0.018 75;
-    --sidebar-accent-foreground: 0.28 0.025 50;
-    --sidebar-border: 0.89 0.018 75;
-    --sidebar-ring: 0.55 0.22 28;
+    --chart-1: 0.472 0.139 30.7;
+    --chart-2: 0.72 0.15 118;
+    --chart-3: 0.5 0.12 240;
+    --chart-4: 0.77 0.15 72;
+    --chart-5: 0.4 0.07 120;
+
+    --sidebar: 1 0 0;
+    --sidebar-foreground: 0.235 0.028 60;
+    --sidebar-primary: 0.472 0.139 30.7;
+    --sidebar-primary-foreground: 0.99 0.004 90;
+    --sidebar-accent: 0.952 0.035 114;
+    --sidebar-accent-foreground: 0.33 0.07 120;
+    --sidebar-border: 0.905 0.014 95;
+    --sidebar-ring: 0.472 0.139 30.7;
 
     --gradient-primary: linear-gradient(
       135deg,
-      oklch(0.55 0.22 28),
-      oklch(0.6 0.2 45)
+      oklch(0.472 0.139 30.7),
+      oklch(0.53 0.14 36)
     );
     --gradient-subtle: linear-gradient(
       180deg,
-      oklch(0.99 0.008 75),
-      oklch(0.96 0.015 75)
+      oklch(1 0 0),
+      oklch(0.965 0.012 105)
     );
-    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --gradient-accent: linear-gradient(
+      135deg,
+      oklch(0.814 0.153 117.9),
+      oklch(0.88 0.12 112)
+    );
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* --- Tenant branding layer (multi-partner) -------------------------------
-       A partner's brand color is applied at runtime by setting these
-       properties on a wrapper element (inline style or a scoped class).
-       Defaults are aliases of the existing brand tokens, so when no partner
-       brand is set the look is byte-identical to the single-tenant app. */
-    --brand-primary: var(--primary);
-    --brand-primary-foreground: var(--primary-foreground);
-    --brand-accent: var(--accent);
-    --brand-accent-foreground: var(--accent-foreground);
-    --brand-surface: var(--card);
-    --brand-surface-foreground: var(--card-foreground);
-    --brand-on-surface-muted: var(--muted-foreground);
-    --brand-ring: var(--ring);
-    /* Neutral partner-logo slot; partner supplies its own image */
+    /* Mobile chrome geometry — header, bottom nav, fixed bars */
+    --header-h: 3.5rem;
+    --bottom-nav-h: 4rem;
+    --fixed-bar-h: 4.5rem;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+
+    /* Legacy brand aliases (kept so existing markup still resolves) */
+    --tdm-red: oklch(0.472 0.139 30.7);
+    --tdm-lime: oklch(0.814 0.153 117.9);
+    --tdm-lime-soft: oklch(0.952 0.035 114);
+    --tdm-olive: oklch(0.33 0.07 120);
+    --bbh-gold: 0.814 0.153 117.9;
+
+    /* --- Tenant branding layer (multi-partner) ---------------------------
+       Defaults alias the unified brand tokens; a partner may override
+       --brand-* on a .brand-scope wrapper. */
+    --brand-primary: oklch(var(--primary));
+    --brand-primary-foreground: oklch(var(--primary-foreground));
+    --brand-accent: oklch(var(--accent));
+    --brand-accent-foreground: oklch(var(--accent-foreground));
+    --brand-surface: oklch(var(--card));
+    --brand-surface-foreground: oklch(var(--card-foreground));
+    --brand-on-surface-muted: oklch(var(--muted-foreground));
+    --brand-ring: oklch(var(--ring));
     --brand-logo-size: 2.5rem;
     --brand-lockup-gap: 0.75rem;
   }
 
   .dark {
-    /* Warm charcoal base — dark mode (driver outdoor use) */
-    --background: 0.16 0.015 50;
-    --foreground: 0.93 0.012 60;
-    --card: 0.2 0.018 50;
-    --card-foreground: 0.93 0.012 60;
-    --popover: 0.2 0.018 50;
-    --popover-foreground: 0.93 0.012 60;
+    --background: 0.17 0.012 60;
+    --foreground: 0.94 0.01 95;
+    --card: 0.21 0.014 60;
+    --card-foreground: 0.94 0.01 95;
+    --popover: 0.21 0.014 60;
+    --popover-foreground: 0.94 0.01 95;
 
-    /* Brighter vermillion for dark mode contrast */
-    --primary: 0.68 0.2 32;
-    --primary-foreground: 0.16 0.015 32;
+    --primary: 0.64 0.15 33;
+    --primary-foreground: 0.15 0.02 33;
 
-    --secondary: 0.24 0.02 50;
-    --secondary-foreground: 0.85 0.012 60;
-    --muted: 0.24 0.02 50;
-    --muted-foreground: 0.56 0.015 55;
+    --secondary: 0.27 0.035 118;
+    --secondary-foreground: 0.9 0.07 115;
+    --muted: 0.25 0.012 60;
+    --muted-foreground: 0.68 0.018 80;
 
-    --accent: 0.68 0.2 32;
-    --accent-foreground: 0.16 0.015 32;
+    --accent: 0.82 0.15 118;
+    --accent-foreground: 0.2 0.045 120;
 
-    --destructive: 0.6 0.22 25;
-    --destructive-foreground: 0.16 0.015 25;
+    --destructive: 0.64 0.19 22;
+    --destructive-foreground: 0.15 0.02 22;
 
-    --success: 0.65 0.16 150;
-    --success-foreground: 0.16 0.02 150;
-    --warning: 0.78 0.16 70;
-    --warning-foreground: 0.16 0.04 70;
-    --info: 0.6 0.16 245;
-    --info-foreground: 0.16 0.02 245;
+    --success: 0.68 0.14 152;
+    --success-foreground: 0.16 0.03 152;
+    --warning: 0.8 0.15 72;
+    --warning-foreground: 0.2 0.05 60;
+    --info: 0.68 0.11 240;
+    --info-foreground: 0.16 0.03 240;
 
-    --border: 0.3 0.02 50;
-    --input: 0.3 0.02 50;
-    --ring: 0.68 0.2 32;
+    --border: 0.31 0.014 60;
+    --input: 0.34 0.016 60;
+    --ring: 0.64 0.15 33;
 
-    --chart-1: 0.68 0.2 32;
-    --chart-2: 0.65 0.16 150;
-    --chart-3: 0.6 0.16 245;
-    --chart-4: 0.78 0.16 70;
-    --chart-5: 0.6 0.22 25;
+    --chart-1: 0.64 0.15 33;
+    --chart-2: 0.82 0.15 118;
+    --chart-3: 0.68 0.11 240;
+    --chart-4: 0.8 0.15 72;
+    --chart-5: 0.6 0.09 120;
 
-    --sidebar: 0.18 0.018 50;
-    --sidebar-foreground: 0.93 0.012 60;
-    --sidebar-primary: 0.68 0.2 32;
-    --sidebar-primary-foreground: 0.16 0.015 32;
-    --sidebar-accent: 0.24 0.02 50;
-    --sidebar-accent-foreground: 0.85 0.012 60;
-    --sidebar-border: 0.3 0.02 50;
-    --sidebar-ring: 0.68 0.2 32;
+    --sidebar: 0.19 0.013 60;
+    --sidebar-foreground: 0.94 0.01 95;
+    --sidebar-primary: 0.64 0.15 33;
+    --sidebar-primary-foreground: 0.15 0.02 33;
+    --sidebar-accent: 0.27 0.035 118;
+    --sidebar-accent-foreground: 0.9 0.07 115;
+    --sidebar-border: 0.31 0.014 60;
+    --sidebar-ring: 0.64 0.15 33;
 
     --gradient-primary: linear-gradient(
       135deg,
-      oklch(0.68 0.2 32),
-      oklch(0.72 0.18 45)
+      oklch(0.64 0.15 33),
+      oklch(0.68 0.14 38)
     );
     --gradient-subtle: linear-gradient(
       180deg,
-      oklch(0.2 0.018 50),
-      oklch(0.16 0.015 50)
+      oklch(0.21 0.014 60),
+      oklch(0.17 0.012 60)
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      oklch(0.82 0.15 118),
+      oklch(0.86 0.12 112)
     );
 
-    /* Tenant branding layer — same aliases, resolved against dark tokens */
-    --brand-primary: var(--primary);
-    --brand-primary-foreground: var(--primary-foreground);
-    --brand-accent: var(--accent);
-    --brand-accent-foreground: var(--accent-foreground);
-    --brand-surface: var(--card);
-    --brand-surface-foreground: var(--card-foreground);
-    --brand-on-surface-muted: var(--muted-foreground);
-    --brand-ring: var(--ring);
+    --tdm-red: oklch(0.64 0.15 33);
+    --tdm-lime: oklch(0.82 0.15 118);
+    --tdm-lime-soft: oklch(0.27 0.035 118);
+    --tdm-olive: oklch(0.9 0.07 115);
+
+    --brand-primary: oklch(var(--primary));
+    --brand-primary-foreground: oklch(var(--primary-foreground));
+    --brand-accent: oklch(var(--accent));
+    --brand-accent-foreground: oklch(var(--accent-foreground));
+    --brand-surface: oklch(var(--card));
+    --brand-surface-foreground: oklch(var(--card-foreground));
+    --brand-on-surface-muted: oklch(var(--muted-foreground));
+    --brand-ring: oklch(var(--ring));
   }
 
   * {
     @apply border-border;
   }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    font-feature-settings: "cv11", "ss01";
   }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+  :focus-visible {
+    outline: 2px solid oklch(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* --- Legacy area themes ---------------------------------------------------
+   Formerly separate palettes. Now intentionally empty: every area inherits
+   the unified :root / .dark brand tokens. Class names are kept so existing
+   markup still compiles and renders. */
+.bbh-order-theme,
+.bbh-verify-theme,
+.bbh-enterprise-theme,
+.tdm-theme {
+  --bbh-gold: 0.814 0.153 117.9;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.brand-scope {
+  --brand-primary: oklch(var(--primary));
+  --brand-primary-foreground: oklch(var(--primary-foreground));
+  --brand-accent: oklch(var(--accent));
+  --brand-accent-foreground: oklch(var(--accent-foreground));
+  --brand-surface: oklch(var(--card));
+  --brand-surface-foreground: oklch(var(--card-foreground));
+  --brand-on-surface-muted: oklch(var(--muted-foreground));
+  --brand-ring: oklch(var(--ring));
 }
 
 @layer utilities {
@@ -203,18 +277,26 @@
   .bg-gradient-subtle {
     background-image: var(--gradient-subtle);
   }
+  .bg-gradient-accent {
+    background-image: var(--gradient-accent);
+  }
   .text-gradient-primary {
     background-image: var(--gradient-primary);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
-  /* Status badge utilities — functional, not decorative */
+  /* Figures: prices, KPIs, counts */
+  .num {
+    @apply font-display tabular-nums tracking-tight;
+  }
+
+  /* Status badges — functional, not decorative */
   .badge-success {
     @apply bg-success/15 text-success border-success/30;
   }
   .badge-warning {
-    @apply bg-warning/20 text-warning-foreground border-warning/40;
+    @apply bg-warning/20 text-warning-foreground border-warning/45;
   }
   .badge-info {
     @apply bg-info/15 text-info border-info/30;
@@ -222,137 +304,218 @@
   .badge-destructive {
     @apply bg-destructive/15 text-destructive border-destructive/30;
   }
-}
+  .badge-brand {
+    @apply bg-primary/10 text-primary border-primary/25;
+  }
+  .badge-lime {
+    @apply bg-accent text-accent-foreground border-transparent;
+  }
+  /* Lime chip — category filters, active segment */
+  .chip {
+    @apply inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-sm font-semibold text-foreground transition-smooth hover:bg-muted;
+  }
+  .chip-active {
+    @apply border-transparent bg-accent text-accent-foreground hover:bg-accent;
+  }
 
-/* --- Bún Bò Huế 65: theme trắng kem / đỏ / xanh lá lấy từ 3 màu logo,
-   dùng cho trang Đặt hàng. Thay hoàn toàn tông sơn mài đỏ-đậm/vàng cũ. --- */
-.bbh-order-theme {
-  --background: 0.985 0.007 89;
-  --foreground: 0.267 0.013 52;
-  --card: 1 0 90;
-  --card-foreground: 0.267 0.013 52;
-  --popover: 1 0 90;
-  --popover-foreground: 0.267 0.013 52;
-  --primary: 0.527 0.181 30;
-  --primary-foreground: 0.99 0.006 89;
-  --secondary: 0.948 0.02 136;
-  --secondary-foreground: 0.324 0.07 145;
-  --muted: 0.96 0.012 89;
-  --muted-foreground: 0.499 0.021 70;
-  --accent: 0.412 0.096 145;
-  --accent-foreground: 0.99 0.006 89;
-  --destructive: 0.55 0.2 25;
-  --destructive-foreground: 0.98 0.008 25;
-  --border: 0.93 0.016 83;
-  --input: 0.93 0.016 83;
-  --ring: 0.527 0.181 30;
-  --bbh-gold: 0.412 0.096 145;
-  --gradient-primary: linear-gradient(
-    135deg,
-    oklch(0.527 0.181 30),
-    oklch(0.58 0.17 32)
-  );
-  --gradient-subtle: linear-gradient(180deg, oklch(1 0 90), oklch(0.97 0.01 89));
-}
+  /* --- Shared interaction states ---------------------------------------- */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  .is-disabled {
+    @apply pointer-events-none opacity-50;
+  }
+  .is-busy {
+    @apply pointer-events-none cursor-progress opacity-80;
+  }
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
 
-/* --- Bún Bò Huế 65: theme sáng thân thiện cho màn hình xác nhận email / OTP --- */
-.bbh-verify-theme {
-  --background: 0.975 0.014 75;
-  --foreground: 0.24 0.025 50;
-  --card: 0.99 0.008 75;
-  --card-foreground: 0.24 0.025 50;
-  --popover: 0.99 0.008 75;
-  --popover-foreground: 0.24 0.025 50;
-  --primary: 0.55 0.22 28;
-  --primary-foreground: 0.98 0.008 75;
-  --secondary: 0.94 0.018 75;
-  --secondary-foreground: 0.3 0.025 50;
-  --muted: 0.94 0.015 75;
-  --muted-foreground: 0.5 0.02 50;
-  --accent: 0.55 0.22 28;
-  --accent-foreground: 0.98 0.008 75;
-  --destructive: 0.5 0.22 25;
-  --destructive-foreground: 0.98 0.008 25;
-  --success: 0.55 0.16 150;
-  --success-foreground: 0.98 0.01 150;
-  --warning: 0.72 0.16 70;
-  --warning-foreground: 0.2 0.04 70;
-  --info: 0.5 0.16 245;
-  --info-foreground: 0.98 0.01 245;
-  --border: 0.9 0.016 75;
-  --input: 0.9 0.016 75;
-  --ring: 0.55 0.22 28;
-  --bbh-gold: 0.78 0.11 80;
-  --gradient-primary: linear-gradient(
-    135deg,
-    oklch(0.55 0.22 28),
-    oklch(0.6 0.2 45)
-  );
-  --gradient-subtle: linear-gradient(
-    180deg,
-    oklch(0.99 0.008 75),
-    oklch(0.96 0.015 75)
-  );
-}
+  /* --- Skeleton loading (replaces "Đang tải…") -------------------------- */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      oklch(var(--card) / 0.65),
+      transparent
+    );
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  .skeleton-text {
+    @apply skeleton h-3.5 w-full rounded;
+  }
+  .skeleton-title {
+    @apply skeleton h-5 w-2/5 rounded;
+  }
+  .skeleton-circle {
+    @apply skeleton h-10 w-10 rounded-full;
+  }
+  .skeleton-card {
+    @apply rounded-xl border border-border bg-card p-4 shadow-panel;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      animation: none;
+    }
+  }
 
-/* --- Bún Bò Huế 65: theme doanh nghiệp — màn hình quản lý cấp doanh nghiệp
-   (hàng đợi thanh toán, kế toán, báo cáo bán hàng & KM). Nền trung tính lạnh,
-   mật độ thông tin cao, trạng thái thanh toán rõ ràng, giữ vermillion thương hiệu. --- */
-.bbh-enterprise-theme {
-  --background: 0.972 0.006 240;
-  --foreground: 0.22 0.012 250;
-  --card: 0.995 0.004 240;
-  --card-foreground: 0.22 0.012 250;
-  --popover: 0.995 0.004 240;
-  --popover-foreground: 0.22 0.012 250;
-  --primary: 0.53 0.21 28;
-  --primary-foreground: 0.99 0.006 240;
-  --secondary: 0.945 0.008 240;
-  --secondary-foreground: 0.3 0.014 250;
-  --muted: 0.945 0.008 240;
-  --muted-foreground: 0.49 0.015 250;
-  --accent: 0.53 0.21 28;
-  --accent-foreground: 0.99 0.006 240;
-  --destructive: 0.52 0.21 25;
-  --destructive-foreground: 0.99 0.006 25;
-  --success: 0.52 0.15 150;
-  --success-foreground: 0.99 0.006 150;
-  --warning: 0.72 0.15 75;
-  --warning-foreground: 0.2 0.04 75;
-  --info: 0.5 0.15 250;
-  --info-foreground: 0.99 0.006 250;
-  --border: 0.9 0.01 240;
-  --input: 0.9 0.01 240;
-  --ring: 0.53 0.21 28;
-  --sidebar: 0.985 0.005 240;
-  --sidebar-foreground: 0.24 0.012 250;
-  --sidebar-primary: 0.53 0.21 28;
-  --sidebar-primary-foreground: 0.99 0.006 240;
-  --sidebar-accent: 0.945 0.008 240;
-  --sidebar-accent-foreground: 0.3 0.014 250;
-  --sidebar-border: 0.9 0.01 240;
-  --sidebar-ring: 0.53 0.21 28;
-  --chart-1: 0.53 0.21 28;
-  --chart-2: 0.5 0.15 250;
-  --chart-3: 0.52 0.15 150;
-  --chart-4: 0.72 0.15 75;
-  --chart-5: 0.52 0.21 25;
-  --gradient-primary: linear-gradient(
-    135deg,
-    oklch(0.53 0.21 28),
-    oklch(0.58 0.19 35)
-  );
-  --gradient-subtle: linear-gradient(
-    180deg,
-    oklch(0.995 0.004 240),
-    oklch(0.965 0.008 240)
-  );
-}
+  /* --- Shared state screen: sign-in / no-access / empty / error --------- */
+  .state-screen {
+    @apply flex min-h-[60vh] items-center justify-center px-5 py-12;
+  }
+  .state-card {
+    @apply w-full max-w-sm rounded-2xl border border-border bg-card p-7 text-center shadow-panel;
+  }
+  .state-inline {
+    @apply flex flex-col items-center px-4 py-10 text-center;
+  }
+  .state-icon {
+    @apply mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary;
+  }
+  .state-icon-muted {
+    @apply bg-muted text-muted-foreground;
+  }
+  .state-icon-warning {
+    @apply bg-warning/20 text-warning-foreground;
+  }
+  .state-icon-destructive {
+    @apply bg-destructive/15 text-destructive;
+  }
+  .state-icon-success {
+    @apply bg-success/15 text-success;
+  }
+  .state-title {
+    @apply font-display text-xl font-bold tracking-tight text-foreground;
+  }
+  .state-desc {
+    @apply mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground;
+  }
+  .state-actions {
+    @apply mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center;
+  }
 
-@layer utilities {
-  /* OTP 6-ô nhập mã — hộp vuông riêng cho từng ký tự */
+  /* --- Mobile chrome: safe areas, bottom nav, fixed bars ---------------- */
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+  .mb-safe {
+    margin-bottom: var(--safe-bottom);
+  }
+  /* Content offset when a bottom nav is fixed */
+  .pb-bottom-nav {
+    padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 0.75rem);
+  }
+  /* Content offset when a fixed action/cart bar is present */
+  .pb-fixed-bar {
+    padding-bottom: calc(var(--fixed-bar-h) + var(--safe-bottom) + 0.75rem);
+  }
+  /* Both stacked: fixed bar sits above bottom nav */
+  .pb-fixed-stack {
+    padding-bottom: calc(
+      var(--bottom-nav-h) +
+      var(--fixed-bar-h) +
+      var(--safe-bottom) +
+      0.75rem
+    );
+  }
+  .bottom-above-nav {
+    bottom: calc(var(--bottom-nav-h) + var(--safe-bottom));
+  }
+  .top-header {
+    top: var(--header-h);
+  }
+  .app-header {
+    @apply sticky top-0 z-40 border-b border-border bg-card;
+    padding-top: var(--safe-top);
+  }
+  .bottom-nav {
+    @apply fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card shadow-bar;
+    padding-bottom: var(--safe-bottom);
+  }
+  .bottom-nav-inner {
+    @apply mx-auto flex max-w-lg items-stretch justify-around;
+    height: var(--bottom-nav-h);
+  }
+  .bottom-nav-item {
+    @apply relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold text-muted-foreground transition-smooth hover:text-foreground;
+  }
+  .bottom-nav-item-active {
+    @apply text-primary hover:text-primary;
+  }
+  .bottom-nav-item-active::before {
+    content: "";
+    @apply absolute top-0 h-1 w-8 rounded-b-full bg-accent;
+  }
+  .fixed-bar {
+    @apply fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card px-4 pt-3 shadow-bar;
+    padding-bottom: calc(var(--safe-bottom) + 0.75rem);
+  }
+  .icon-btn {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-lg text-foreground transition-smooth hover:bg-muted focus-ring;
+  }
+  .icon-btn-bordered {
+    @apply icon-btn h-11 w-11 border border-border bg-card;
+  }
+
+  /* --- Shared buttons (same shape as ui/button, mobile-friendly) --------- */
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 text-sm font-semibold transition-smooth focus-ring active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50;
+  }
+  .btn-lg {
+    @apply h-12 px-5 text-base font-bold;
+  }
+  .btn-primary {
+    @apply bg-primary text-primary-foreground shadow-subtle hover:bg-primary/90;
+  }
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+  .btn-outline {
+    @apply border border-border bg-card text-foreground hover:bg-muted;
+  }
+  .btn-dark {
+    @apply bg-foreground text-background hover:opacity-90;
+  }
+  .btn-ghost-destructive {
+    @apply border border-border bg-card text-foreground hover:bg-destructive/10 hover:text-destructive;
+  }
+
+  /* --- Shared switch (checked primary, unchecked input) ------------------ */
+  .switch-track {
+    @apply relative inline-flex shrink-0 items-center rounded-full bg-input transition-smooth focus-ring disabled:cursor-not-allowed disabled:opacity-50 aria-checked:bg-primary;
+  }
+  .switch-thumb {
+    @apply pointer-events-none absolute rounded-full bg-card shadow-subtle transition-transform duration-200;
+  }
+
+  /* --- Shared surfaces --------------------------------------------------- */
+  .surface-card {
+    @apply rounded-xl border border-border bg-card shadow-panel;
+  }
+  .surface-card-hover {
+    @apply transition-smooth hover:shadow-panel-hover;
+  }
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .page-container {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
+  }
+
+  /* OTP 6-ô nhập mã */
   .otp-input {
-    @apply h-14 w-12 rounded-xl border bg-card text-center font-mono text-2xl font-semibold text-foreground transition-smooth focus:border-primary focus:ring-2 focus:ring-ring/40 outline-none;
+    @apply h-14 w-12 rounded-lg border border-input bg-card text-center font-mono text-2xl font-semibold text-foreground transition-smooth focus:border-primary focus:ring-2 focus:ring-ring/30 outline-none;
   }
   .otp-input-filled {
     @apply border-primary bg-primary/5;
@@ -360,25 +523,25 @@
   .otp-input-error {
     @apply border-destructive bg-destructive/5 animate-otp-shake;
   }
-  /* Trạng thái đã xác nhận thành công */
   .verify-success-mark {
     @apply inline-flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-success;
   }
-  /* --- Doanh nghiệp: bảng dữ liệu mật độ cao + thẻ KPI + thanh trạng thái --- */
+
+  /* --- Data-dense console: tables, KPI cards, toolbars ------------------- */
   .ent-table-row {
-    @apply border-b border-border text-sm transition-smooth last:border-0 hover:bg-muted/40;
+    @apply border-b border-border text-sm transition-smooth last:border-0 hover:bg-muted/50;
   }
   .ent-th {
-    @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+    @apply whitespace-nowrap bg-muted/60 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground;
   }
   .ent-td {
     @apply px-3 py-2.5 align-middle;
   }
   .ent-kpi {
-    @apply rounded-lg border border-border bg-card p-4 shadow-sm;
+    @apply rounded-xl border border-border bg-card p-4 shadow-panel;
   }
   .ent-kpi-value {
-    @apply font-display text-2xl font-bold tracking-tight text-foreground;
+    @apply font-display text-2xl font-bold tabular-nums tracking-tight text-foreground;
   }
   .ent-kpi-label {
     @apply text-xs font-medium text-muted-foreground;
@@ -387,127 +550,74 @@
     @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold;
   }
   .ent-toolbar {
-    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-3 shadow-sm;
+    @apply flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-3 shadow-panel;
   }
-}
 
-/* --- Tenant branding (multi-partner) ------------------------------------
-   Brand scope wrapper: an ancestor element carries the partner's brand
-   overrides; descendants consume --brand-* only. When no partner brand is
-   set the --brand-* defaults fall back to the existing brand tokens. */
-/* --- Thương hiệu Tôi Đặt Món (theo logo: đỏ gạch + xanh cốm) -------------
-   Gắn class .tdm-theme lên <html> ở các trang CỦA Tôi Đặt Món (trang chính,
-   trang quản lý quán, đăng ký đối tác) — useTdmTheme(). Trang đặt món của
-   từng quán giữ màu riêng của quán. */
-.tdm-theme {
-  --background: 0.976 0.012 111.8;
-  --foreground: 0.252 0.036 113.4;
-  --card: 1 0 0;
-  --card-foreground: 0.252 0.036 113.4;
-  --popover: 1 0 0;
-  --popover-foreground: 0.252 0.036 113.4;
-  /* Đỏ gạch #9A3426 — nút chính, chữ thương hiệu */
-  --primary: 0.472 0.139 30.7;
-  --primary-foreground: 1 0 0;
-  --secondary: 0.954 0.024 114.5;
-  --secondary-foreground: 0.387 0.079 119.9;
-  --muted: 0.954 0.024 114.5;
-  --muted-foreground: 0.533 0.041 116.3;
-  /* Xanh cốm #BACF50 — điểm nhấn, chữ ô liu đậm trên nền cốm */
-  --accent: 0.814 0.153 117.9;
-  --accent-foreground: 0.387 0.079 119.9;
-  --border: 0.916 0.031 115;
-  --input: 0.916 0.031 115;
-  --ring: 0.472 0.139 30.7;
-  --tdm-red: #9a3426;
-  --tdm-lime: #bacf50;
-  --tdm-lime-soft: #e9f0c9;
-  --tdm-olive: #3f4a12;
-}
-
-.brand-scope {
-  --brand-primary: var(--primary);
-  --brand-primary-foreground: var(--primary-foreground);
-  --brand-accent: var(--accent);
-  --brand-accent-foreground: var(--accent-foreground);
-  --brand-surface: var(--card);
-  --brand-surface-foreground: var(--card-foreground);
-  --brand-on-surface-muted: var(--muted-foreground);
-  --brand-ring: var(--ring);
-}
-
-@layer utilities {
-  /* Partner-branded storefront header lockup: logo slot + display name */
+  /* --- Partner storefront header lockup ---------------------------------- */
   .brand-header {
     @apply sticky top-0 z-40 border-b border-border;
     background-color: var(--brand-surface);
     color: var(--brand-surface-foreground);
+    padding-top: var(--safe-top);
   }
   .brand-lockup {
-    @apply flex items-center;
+    @apply flex min-w-0 items-center;
     gap: var(--brand-lockup-gap);
   }
   .brand-logo-slot {
-    @apply flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-background;
+    @apply flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-background;
     width: var(--brand-logo-size);
     height: var(--brand-logo-size);
   }
   .brand-logo-slot img {
     @apply h-full w-full object-contain;
   }
-  /* Monogram fallback when a partner has no logo set */
   .brand-logo-fallback {
     @apply flex h-full w-full items-center justify-center font-display text-sm font-bold;
     background-color: var(--brand-primary);
     color: var(--brand-primary-foreground);
   }
   .brand-name {
-    @apply font-display text-lg font-bold leading-tight tracking-tight;
+    @apply truncate font-display text-lg font-bold leading-tight tracking-tight;
   }
   .brand-subname {
-    @apply text-xs font-medium;
+    @apply truncate text-xs font-medium;
     color: var(--brand-on-surface-muted);
   }
-  /* Partner accent rule under the lockup */
   .brand-accent-rule {
-    @apply h-0.5 w-10 rounded-full;
+    @apply h-1 w-10 rounded-full;
     background-color: var(--brand-accent);
   }
-  /* Small pill marking the active partner context in the header */
   .brand-partner-chip {
     @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold;
     border-color: color-mix(in oklch, var(--brand-primary) 30%, transparent);
-    background-color: color-mix(in oklch, var(--brand-primary) 12%, transparent);
+    background-color: color-mix(in oklch, var(--brand-primary) 10%, transparent);
     color: var(--brand-primary);
   }
 
-  /* --- Partner not found / unavailable notice page --------------------- */
+  /* --- Partner not found / unavailable notice (state-screen variant) ----- */
   .partner-notice {
-    @apply flex min-h-[70vh] items-center justify-center px-6 py-16;
-    background-color: var(--background);
+    @apply flex min-h-[70vh] items-center justify-center bg-background px-5 py-16;
   }
   .partner-notice-card {
-    @apply w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-panel;
+    @apply w-full max-w-sm rounded-2xl border border-border bg-card p-7 text-center shadow-panel;
   }
   .partner-notice-mark {
-    @apply mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full;
-    background-color: color-mix(in oklch, var(--warning) 18%, transparent);
-    color: var(--warning);
+    @apply mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-warning/20 text-warning-foreground;
   }
   .partner-notice-title {
-    @apply font-display text-2xl font-bold tracking-tight text-foreground;
+    @apply font-display text-xl font-bold tracking-tight text-foreground;
   }
   .partner-notice-body {
-    @apply mt-2 text-sm leading-relaxed text-muted-foreground;
+    @apply mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground;
   }
   .partner-notice-slug {
-    @apply mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-3 py-1.5 font-mono text-xs text-muted-foreground;
+    @apply mt-4 inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/60 px-3 py-1.5 font-mono text-xs text-muted-foreground;
   }
   .partner-notice-actions {
-    @apply mt-6 flex flex-wrap items-center justify-center gap-2;
+    @apply mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center;
   }
-  /* Branded footer strip that carries the partner identity across pages */
   .brand-footer {
-    @apply border-t border-border bg-muted/40;
+    @apply border-t border-border bg-muted/50;
   }
 }

@@ -250,7 +250,7 @@ export default function PartnerApply() {
             data-ocid="partner_apply.success"
           >
             <CheckCircle2
-              className="mx-auto h-12 w-12 text-green-600"
+              className="mx-auto h-12 w-12 text-success"
               aria-hidden="true"
             />
             <h1 className="mt-3 font-display text-xl font-bold">

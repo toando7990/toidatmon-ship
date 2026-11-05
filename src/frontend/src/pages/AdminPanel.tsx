@@ -2,6 +2,7 @@
 // revokeDevice, cleanupExpiredActivations, getCanisterIdText. UI tiếng
 // Việt.
 
+import { Skeleton } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -190,11 +191,12 @@ export function AdminPanel() {
           <div className="flex flex-col gap-3">
             {canisterIdQuery.isLoading ? (
               <div
-                className="flex items-center gap-2 text-sm text-muted-foreground"
+                className="flex flex-col gap-2"
                 data-ocid="admin.canister.loading_state"
+                aria-busy="true"
               >
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Đang tải Canister ID…
+                <span className="sr-only">Đang tải Canister ID…</span>
+                <Skeleton className="h-9 w-full" />
               </div>
             ) : canisterIdQuery.isError ? (
               <p
@@ -362,17 +364,22 @@ export function AdminPanel() {
               className="text-xs text-muted-foreground"
               data-ocid="admin.store_hours.current_value"
             >
-              {storeHoursQuery.isLoading
-                ? "Đang tải giờ hiện tại…"
-                : storeHoursQuery.data
-                  ? `Giờ hiện tại: ${formatTime(
-                      Number(storeHoursQuery.data.openHour),
-                      Number(storeHoursQuery.data.openMinute),
-                    )} – ${formatTime(
-                      Number(storeHoursQuery.data.closeHour),
-                      Number(storeHoursQuery.data.closeMinute),
-                    )}`
-                  : "Chưa cấu hình giờ mở/đóng."}
+              {storeHoursQuery.isLoading ? (
+                <>
+                  <span className="sr-only">Đang tải giờ hiện tại…</span>
+                  <Skeleton className="h-3.5 w-40" />
+                </>
+              ) : storeHoursQuery.data ? (
+                `Giờ hiện tại: ${formatTime(
+                  Number(storeHoursQuery.data.openHour),
+                  Number(storeHoursQuery.data.openMinute),
+                )} – ${formatTime(
+                  Number(storeHoursQuery.data.closeHour),
+                  Number(storeHoursQuery.data.closeMinute),
+                )}`
+              ) : (
+                "Chưa cấu hình giờ mở/đóng."
+              )}
             </div>
             <Button
               type="submit"

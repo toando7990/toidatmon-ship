@@ -4,6 +4,7 @@
 // dẫn webhook Ahamove, thống kê 7 ngày. Đọc/ghi qua VPS bằng vé quản trị
 // do canister cấp (issueVpsAdminTicket).
 
+import { SkeletonLines } from "@/components/Skeletons";
 import { ProviderBadge } from "@/components/delivery/ProviderBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -148,10 +149,10 @@ export function DeliverySettingsCard() {
                 </Button>
               </>
             ) : (
-              <p className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Đang tải…
-              </p>
+              <div aria-busy="true">
+                <span className="sr-only">Đang tải…</span>
+                <SkeletonLines lines={2} />
+              </div>
             )}
           </div>
         ) : (

@@ -61,18 +61,18 @@ export function PlatformFrame({
   usePageTitle(title ? `${title} · Tôi Đặt Món` : TDM_DEFAULT_TITLE);
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <header className="bg-[var(--tdm-lime)] text-[var(--tdm-olive)]">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2">
+    <div className="min-h-screen bg-background pb-bottom-nav md:pb-0">
+      <header className="pt-safe border-b border-border bg-card shadow-subtle">
+        <div className="mx-auto flex min-h-[var(--header-h)] max-w-6xl items-center gap-3 px-4 py-2">
           <Link
             to="/"
-            className="shrink-0"
+            className="focus-ring shrink-0 rounded-lg"
             aria-label="Tôi Đặt Món — trang chủ"
           >
             <TdmLogo size="sm" />
           </Link>
           {title && (
-            <span className="truncate text-sm font-bold md:hidden">
+            <span className="truncate font-display text-sm font-bold text-foreground md:hidden">
               · {title}
             </span>
           )}
@@ -84,17 +84,18 @@ export function PlatformFrame({
               <Link
                 key={n.to}
                 to={n.to}
+                aria-current={isActive(pathname, n.to) ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-sm font-semibold",
+                  "focus-ring relative flex min-h-[40px] items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-smooth",
                   isActive(pathname, n.to)
-                    ? "bg-card text-primary shadow-sm"
-                    : "hover:bg-card/50",
+                    ? "bg-secondary text-primary"
+                    : "text-foreground hover:bg-muted",
                 )}
               >
                 <n.icon className="h-4 w-4" aria-hidden="true" />
                 {n.label}
                 {n.to === "/track" && activeOrders > 0 && (
-                  <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
+                  <span className="num ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
                     {activeOrders}
                   </span>
                 )}
@@ -103,16 +104,17 @@ export function PlatformFrame({
           </nav>
           <div className="ml-auto flex items-center">{actions}</div>
         </div>
+        <div className="h-1 bg-accent" aria-hidden="true" />
       </header>
 
       {children}
 
       <nav
         aria-label="Menu chính"
-        className="fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="bottom-nav md:hidden"
         data-ocid="platform.bottom_nav"
       >
-        <div className="grid grid-cols-4">
+        <div className="bottom-nav-inner">
           {NAV.map((n) => {
             const on = isActive(pathname, n.to);
             return (
@@ -120,22 +122,15 @@ export function PlatformFrame({
                 key={n.to}
                 to={n.to}
                 className={cn(
-                  "relative flex h-16 flex-col items-center justify-center gap-0.5 text-[12px] font-semibold",
-                  on ? "text-primary" : "text-muted-foreground",
+                  "bottom-nav-item focus-ring",
+                  on && "bottom-nav-item-active",
                 )}
                 aria-current={on ? "page" : undefined}
               >
-                <span
-                  className={cn(
-                    "flex h-7 w-12 items-center justify-center rounded-full",
-                    on && "bg-[var(--tdm-lime-soft)]",
-                  )}
-                >
-                  <n.icon className="h-6 w-6" aria-hidden="true" />
-                </span>
+                <n.icon className="h-5 w-5" aria-hidden="true" />
                 {n.short}
                 {n.to === "/track" && activeOrders > 0 && (
-                  <span className="absolute right-[calc(50%-20px)] top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                  <span className="num absolute right-[calc(50%-22px)] top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                     {activeOrders}
                   </span>
                 )}

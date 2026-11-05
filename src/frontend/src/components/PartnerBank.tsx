@@ -160,7 +160,7 @@ export function PartnerBankDialog({
         </DialogHeader>
         <div className="flex flex-col gap-3">
           {current?.source === "application" && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p className="badge-warning rounded-lg border px-3 py-2 text-xs">
               Đang lấy tạm từ đơn đăng ký — kiểm tra lại rồi bấm Lưu để xác
               nhận.
             </p>
@@ -264,7 +264,7 @@ export function PartnerBankDialog({
             </span>
           </label>
           {oldDiffers && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p className="badge-warning rounded-lg border px-3 py-2 text-xs">
               QR tại quầy đang dùng tài khoản khác ({old?.bankName} ·{" "}
               {old?.vaAccountNumber}). Lưu để chuyển sang tài khoản này.
             </p>
@@ -314,7 +314,7 @@ export function CounterQrBadge({
   }
   if (accountNumber && c.vaAccountNumber !== accountNumber) {
     return (
-      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900">
+      <span className="badge-warning rounded border px-1.5 py-0.5 text-[11px] font-semibold">
         QR tại quầy dùng TK khác
       </span>
     );
@@ -357,7 +357,7 @@ export function BankLine({
           <b className="tabular-nums">{formatAccount(b.accountNumber)}</b> ·{" "}
           {b.holder}
           {b.source === "application" && (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900">
+            <span className="badge-warning rounded border px-1.5 py-0.5 text-[11px] font-semibold">
               lấy từ đơn đăng ký
             </span>
           )}
@@ -404,7 +404,7 @@ export function PartnerBankPanel({ tenants }: { tenants: Tenant[] }) {
         )}
       </p>
       {!apiReady && !isFetching && (
-        <p className="mt-2 text-sm text-amber-900">
+        <p className="mt-2 text-sm text-warning-foreground">
           Hệ thống đang cập nhật — chức năng có sau lần build kế tiếp.
         </p>
       )}

@@ -69,6 +69,11 @@ type StoreHours =
    openHour: nat;
    openMinute: nat;
  };
+type SoldOutEntry = 
+ record {
+   itemId: text;
+   restaurantId: text;
+ };
 type SendCodeResult = 
  variant {
    err: text;
@@ -101,17 +106,17 @@ type Result__1 =
 type Result_9 = 
  variant {
    err: text;
-   ok: vec SalesPromo;
+   ok: RestaurantOps;
  };
 type Result_8 = 
  variant {
    err: text;
-   ok: Device;
+   ok;
  };
 type Result_7 = 
  variant {
    err: text;
-   ok;
+   ok: ChangeRequest;
  };
 type Result_6 = 
  variant {
@@ -123,27 +128,17 @@ type Result_5 =
    err: text;
    ok: MenuItem;
  };
-type Result_4 = 
- variant {
-   err: text;
-   ok: Promotion;
- };
-type Result_3 = 
- variant {
-   err: text;
-   ok: RegistrationPromo;
- };
-type Result_2 = 
- variant {
-   err: text;
-   ok: Restaurant;
- };
-type Result_18 = 
+type Result_43 = 
  variant {
    err: Error;
    ok;
  };
-type Result_16 = 
+type Result_42 = 
+ variant {
+   err: text;
+   ok: PlatformDeviceView;
+ };
+type Result_40 = 
  variant {
    err: text;
    ok: record {
@@ -151,35 +146,175 @@ type Result_16 =
          promotionCode: text;
        };
  };
-type Result_15 = 
+type Result_4 = 
+ variant {
+   err: text;
+   ok: Promotion;
+ };
+type Result_39 = 
+ variant {
+   err: text;
+   ok: PlatformActivation;
+ };
+type Result_38 = 
  variant {
    err: text;
    ok: PendingActivation;
  };
-type Result_14 = 
+type Result_37 = 
  variant {
    err: text;
    ok: OrderStatus;
  };
-type Result_13 = 
+type Result_36 = 
  variant {
    err: text;
    ok: bool;
  };
-type Result_12 = 
+type Result_35 = 
  variant {
    err: text;
    ok: opt Voucher;
  };
-type Result_11 = 
+type Result_34 = 
+ variant {
+   err: text;
+   ok: record {
+         expiresAt: nat;
+         "principal": text;
+         sig: text;
+       };
+ };
+type Result_33 = 
+ variant {
+   err: text;
+   ok: vec ChangeRequest;
+ };
+type Result_32 = 
+ variant {
+   err: text;
+   ok: vec Application;
+ };
+type Result_31 = 
+ variant {
+   err: text;
+   ok: vec record {
+             text;
+             PartnerBank;
+           };
+ };
+type Result_30 = 
+ variant {
+   err: text;
+   ok: vec record {
+             text;
+             PartnerProfile;
+           };
+ };
+type Result_3 = 
+ variant {
+   err: text;
+   ok: RegistrationPromo;
+ };
+type Result_29 = 
+ variant {
+   err: text;
+   ok: vec PlatformActivation;
+ };
+type Result_28 = 
+ variant {
+   err: text;
+   ok: vec PlatformDeviceView;
+ };
+type Result_27 = 
+ variant {
+   err: text;
+   ok: vec ParamEntry;
+ };
+type Result_26 = 
  variant {
    err: text;
    ok: vec Promotion;
  };
-type Result_10 = 
+type Result_25 = 
  variant {
    err: text;
    ok: vec RegistrationPromo;
+ };
+type Result_24 = 
+ variant {
+   err: text;
+   ok: vec SalesPromo;
+ };
+type Result_23 = 
+ variant {
+   err: text;
+   ok: vec Device;
+ };
+type Result_22 = 
+ variant {
+   err: text;
+   ok: OrderPrep;
+ };
+type Result_20 = 
+ variant {
+   err: text;
+   ok: text;
+ };
+type Result_2 = 
+ variant {
+   err: text;
+   ok: Restaurant;
+ };
+type Result_19 = 
+ variant {
+   err: text;
+   ok: Application;
+ };
+type Result_18 = 
+ variant {
+   err: text;
+   ok: Device;
+ };
+type Result_17 = 
+ variant {
+   err: text;
+   ok: DishGroup;
+ };
+type Result_16 = 
+ variant {
+   err: text;
+   ok: CounterPaymentAccount;
+ };
+type Result_15 = 
+ variant {
+   err: text;
+   ok: KitchenNote;
+ };
+type Result_14 = 
+ variant {
+   err: text;
+   ok: int;
+ };
+type Result_13 = 
+ variant {
+   err: text;
+   ok: PartnerBank;
+ };
+type Result_12 = 
+ variant {
+   err: text;
+   ok: PartnerSettings;
+ };
+type Result_11 = 
+ variant {
+   err: text;
+   ok: PartnerProfile;
+ };
+type Result_10 = 
+ variant {
+   err: text;
+   ok: ParamVersion;
  };
 type Result_1 = 
  variant {
@@ -190,6 +325,23 @@ type Result =
  variant {
    err: text;
    ok: Order;
+ };
+type RestaurantStatus = 
+ record {
+   closesAt: int;
+   opensAt: int;
+   pausedUntil: int;
+   restaurantId: text;
+   state: text;
+ };
+type RestaurantOps = 
+ record {
+   hasHours: bool;
+   paused: bool;
+   pausedUntil: int;
+   tenantId: TenantId;
+   updatedAt: int;
+   week: vec DayHours;
  };
 type RestaurantMenuOverrideEntry = 
  record {
@@ -245,6 +397,39 @@ type Promotion =
    tiers: vec DiscountTier;
    timeSlots: vec TimeSlot;
  };
+type PrepStage = 
+ variant {
+   handed;
+   ready;
+ };
+type PlatformRole = 
+ variant {
+   accounting;
+   moderator;
+   ops;
+   partnerDev;
+   support;
+   viewer;
+ };
+type PlatformDeviceView = 
+ record {
+   activatedAt: int;
+   active: bool;
+   deviceId: text;
+   lastSeenAt: int;
+   name: text;
+   note: text;
+   phone: text;
+   role: PlatformRole;
+ };
+type PlatformActivation = 
+ record {
+   code: text;
+   createdAt: int;
+   expiresAt: int;
+   note: text;
+   role: PlatformRole;
+ };
 type PendingActivationEntry = 
  record {
    activation: PendingActivation;
@@ -267,6 +452,45 @@ type PaymentStatus =
    refunded;
    unpaid;
  };
+type PartnerSettings = 
+ record {
+   counterPlan: bool;
+   joinPlatformPromo: bool;
+   paused: bool;
+   updatedAt: Timestamp;
+ };
+type PartnerProfile = 
+ record {
+   businessType: BusinessType;
+   contactEmail: text;
+   contactName: text;
+   registrationNumber: text;
+   representativeName: text;
+   updatedAt: int;
+   updatedBy: text;
+ };
+type PartnerBank = 
+ record {
+   accountHolder: text;
+   accountNumber: text;
+   bankName: text;
+   branch: text;
+   updatedAt: int;
+   updatedBy: text;
+ };
+type ParamVersion = 
+ record {
+   effectiveFrom: Timestamp;
+   note: text;
+   setAt: Timestamp;
+   value: text;
+ };
+type ParamEntry = 
+ record {
+   key: text;
+   scope: text;
+   versions: vec ParamVersion;
+ };
 type OrderStatus = 
  record {
    bookingStatus: BookingStatus;
@@ -277,6 +501,12 @@ type OrderStatus =
    sharedLink: text;
    tingeeQrCode: text;
    tingeeQrId: text;
+ };
+type OrderPrep = 
+ record {
+   handedAt: Timestamp;
+   orderId: text;
+   readyAt: Timestamp;
  };
 type OrderItem = 
  record {
@@ -344,6 +574,13 @@ type MenuEntry =
    itemId: text;
    menu: MenuItem;
  };
+type KitchenNote = 
+ record {
+   at: Timestamp;
+   dineIn: bool;
+   note: text;
+   orderId: text;
+ };
 type InvoiceStatus = 
  variant {
    failed;
@@ -351,6 +588,12 @@ type InvoiceStatus =
    none;
  };
 type Hmac = text;
+type HiddenItem = 
+ record {
+   at: int;
+   by: text;
+   reason: text;
+ };
 type Error = 
  variant {
    AmbiguousAttribute: record {
@@ -380,6 +623,22 @@ type EnterpriseRole =
    salesPromoReporting;
  };
 type Email = text;
+type EffectiveParam = 
+ record {
+   current: opt ParamVersion;
+   key: text;
+   overridden: bool;
+   upcoming: opt ParamVersion;
+ };
+type DishGroup = 
+ record {
+   active: bool;
+   groupId: text;
+   keywords: vec text;
+   name: text;
+   sortOrder: nat;
+   updatedAt: int;
+ };
 type DiscountTier = 
  record {
    discountAmount: nat;
@@ -392,6 +651,7 @@ type DeviceRole =
    cashier;
    driver;
    paymentQueue;
+   restaurantManager;
    salesPromoReporting;
    tenantAdmin;
  };
@@ -412,10 +672,57 @@ type Device =
    role: DeviceRole;
    tenantId: TenantId;
  };
+type Decision = 
+ variant {
+   approve;
+   reject;
+   requestInfo;
+ };
+type DayHours = 
+ record {
+   closeMin: nat;
+   open: bool;
+   openMin: nat;
+ };
+type CounterPaymentAccount = 
+ record {
+   accountName: text;
+   bankBin: text;
+   bankName: text;
+   enabled: bool;
+   merchantId: text;
+   updatedAt: Timestamp;
+   vaAccountNumber: text;
+ };
+type ChangeStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+ };
+type ChangeRequest = 
+ record {
+   adminNote: text;
+   createdAt: int;
+   createdBy: text;
+   decidedAt: int;
+   kind: text;
+   note: text;
+   payload: text;
+   requestId: text;
+   status: ChangeStatus;
+   tenantId: TenantId;
+ };
 type Cell = 
  record {
    name: text;
    value: Value;
+ };
+type BusinessType = 
+ variant {
+   company;
+   householdBusiness;
+   individual;
  };
 type BookingStatus = 
  variant {
@@ -426,12 +733,71 @@ type BookingStatus =
    pickedUp;
    shipping;
  };
+type ApplicationStatusView = 
+ record {
+   adminNote: text;
+   applicationId: ApplicationId;
+   brandName: text;
+   createdAt: Timestamp;
+   desiredSlug: text;
+   status: ApplicationStatus;
+   updatedAt: Timestamp;
+ };
+type ApplicationStatus = 
+ variant {
+   approved;
+   needsInfo;
+   pending;
+   rejected;
+ };
+type ApplicationInput = 
+ record {
+   agreedDataProcessing: bool;
+   agreedTaxWithholding: bool;
+   agreedTerms: bool;
+   bankAccountHolder: text;
+   bankAccountNumber: text;
+   bankName: text;
+   branchCount: nat;
+   brandName: text;
+   businessType: BusinessType;
+   confirmedAccurate: bool;
+   contactEmail: text;
+   contactName: text;
+   contactPhone: text;
+   cuisine: text;
+   desiredSlug: text;
+   headOfficeAddress: text;
+   legalName: text;
+   registrationNumber: text;
+   representativeName: text;
+   storeAddress: text;
+   taxCode: text;
+   usesEInvoice: bool;
+ };
+type ApplicationId = text;
+type Application = 
+ record {
+   adminNote: text;
+   applicationId: ApplicationId;
+   createdAt: Timestamp;
+   input: ApplicationInput;
+   status: ApplicationStatus;
+   tenantId: text;
+   updatedAt: Timestamp;
+ };
 service : {
   _initialize_access_control: () -> ();
-  _internet_identity_sign_in_finish: () -> (Result_18);
+  _internet_identity_sign_in_finish: () -> (Result_43);
   _internet_identity_sign_in_start: () -> (blob);
   activateDevice: (code: text, deviceId: DeviceId, name: text, phone:
-   text) -> (Result_8);
+   text) -> (Result_18);
+  activateDeviceSecure: (code: text, deviceId: DeviceId, name: text, phone:
+   text, tokenHash: blob) -> (Result_18);
+  /// Kích hoạt máy bằng mã (dùng 1 lần, hạn 24 giờ). tokenHash = SHA-256 của
+  /// khoá ngẫu nhiên sinh trên máy.
+  activatePlatformDevice: (code: text, deviceId: text, name: text, phone:
+   text, tokenHash: blob) -> (Result_42);
   addItem: (tenantId: TenantId, deviceId: DeviceId, itemId: text, name: 
    text, price: nat, unitName: text, vatRate: nat, category: text, image:
    blob) -> (Result_5);
@@ -439,21 +805,30 @@ service : {
    text, name: text, address: text, phone: text, lat: float64, lng:
    float64) -> (Result_2);
   applyPromotion: (tenantId: TenantId, email: text, orderAmount: nat, hmac:
-   Hmac) -> (Result_16);
+   Hmac) -> (Result_40);
   applyPromotionCounter: (tenantId: TenantId, orderAmount: nat, hmac:
-   Hmac) -> (Result_16);
+   Hmac) -> (Result_40);
   applyVoucher: (tenantId: TenantId, email: text, code: text, orderAmount:
    nat, hmac: Hmac) -> (Result_6);
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
   callerHasEnterpriseRole: (deviceId: DeviceId, tenantId: TenantId, role:
    EnterpriseRole) -> (bool) query;
   cancelOrder: (orderId: text, hmac: text) -> (Result);
+  cancelPlatformActivation: (code: text) -> (Result_8);
+  /// Admin: huỷ một thay đổi chưa tới ngày hiệu lực.
+  cancelPlatformParamChange: (scope: text, key: text, effectiveFrom:
+   Timestamp) -> (Result_8);
   changeOrderRestaurant: (orderId: text, newRestaurantId: text, hmac:
    text) -> (Result);
   claimOrderEmail: (tenantId: text, orderId: text, email: text) -> (Result);
   cleanupExpiredActivations: () -> (nat);
   cleanupOrderByDevice: (tenantId: text, deviceId: text, orderId: text) ->
    (Result);
+  /// Số nhà hàng / chi nhánh của từng đối tác (đang hiển thị + đang ẩn).
+  countRestaurantsByTenant: () -> (vec record {
+                                         text;
+                                         nat;
+                                       }) query;
   countVouchersByProgram: (tenantId: text, programCode: text) -> (nat) query;
   createOrder: (tenantId: text, orderId: text, restaurantId: text, cusName:
    text, cusPhone: text, cusAddress: text, cusTaxCode: text, receiverEmail:
@@ -461,6 +836,7 @@ service : {
    nat, taxTotal: nat, ahamoveOrderId: text, tingeeQrId: text, sharedLink:
    text, tingeeQrCode: text, pickupCode: text, kmDiscountAmount: nat,
    voucherDiscountAmount: nat, hmac: text) -> (Result);
+  createPlatformActivation: (role: PlatformRole, note: text) -> (Result_39);
   createPromotion: (tenantId: TenantId, deviceId: text, name: text,
    startDate: text, endDate: text, daysOfWeek: vec bool, timeSlots:
    vec TimeSlot, dailyOrderLimit: nat, perCustomerDailyLimit: nat, tiers:
@@ -479,19 +855,25 @@ service : {
       ok: Tenant;
     });
   deactivateExpiredPromotions: (hmac: Hmac) -> (Result_6);
+  /// Admin: duyệt (sau khi đã áp dụng bằng các API admin) hoặc từ chối (bắt
+  /// buộc ghi lý do — đối tác xem được).
+  decideChangeRequest: (requestId: text, approve: bool, adminNote: text) ->
+   (Result_7);
+  /// Admin: xoá nhóm (bỏ luôn các món đã gán tay vào nhóm đó).
+  deleteDishGroup: (groupId: text, credential: text) -> (Result_8);
   deleteItem: (tenantId: TenantId, deviceId: DeviceId, itemId: text) ->
-   (Result_7);
+   (Result_8);
   deletePromotion: (tenantId: TenantId, deviceId: text, code: text) ->
-   (Result_7);
+   (Result_8);
   deleteRegistrationPromo: (tenantId: TenantId, deviceId: text, code:
-   text) -> (Result_7);
+   text) -> (Result_8);
   deleteRestaurant: (tenantId: TenantId, deviceId: DeviceId, restaurantId:
-   text) -> (Result_7);
+   text) -> (Result_8);
   deleteSalesPromo: (tenantId: TenantId, deviceId: text, code: text) ->
-   (Result_7);
+   (Result_8);
   execute: (qJson: text) -> (Result__1) query;
   generateActivationCode: (tenantId: TenantId, restaurantId: RestaurantId,
-   role: DeviceRole, deviceId: DeviceId) -> (Result_15);
+   role: DeviceRole, deviceId: DeviceId) -> (Result_38);
   getApiDoc: () -> (text) query;
   getCallerUserRole: () -> (UserRole) query;
   /// Returns the canister's own id as text, so the VPS knows which canister
@@ -499,10 +881,22 @@ service : {
   /// canister principal at runtime (mo:core/IC.getCanisterId does not exist in
   /// core 2.6.1).
   getCanisterIdText: () -> (text) query;
+  /// Tài khoản nhận tiền QR tại quầy của quán (VPS đọc khi tạo QR; null = chưa có).
+  getCounterPaymentAccount: (tenantId: TenantId) ->
+   (opt CounterPaymentAccount) query;
+  /// Gói bán quầy: đã bật chưa, hạn tới đâu (0 = không hạn), còn hiệu lực không.
+  getCounterPlan: (tenantId: TenantId) ->
+   (record {
+      active: bool;
+      enabled: bool;
+      until: Timestamp;
+    }) query;
   getCurrentPromotion: (tenantId: TenantId) -> (opt Promotion) query;
   getCurrentRegistrationPromo: (tenantId: TenantId) ->
    (opt RegistrationPromo) query;
   getCurrentSalesPromo: (tenantId: TenantId) -> (opt SalesPromo) query;
+  /// Phí đơn online của quán: phiên bản chung + riêng quán của các khoá phí.
+  getFeeParamsForVps: (tenantId: TenantId, hmac: text) -> (Result_27) query;
   getItemImage: (itemId: text) -> (opt blob) query;
   getKmDailyCount: (tenantId: TenantId, programCode: text) -> (nat) query;
   getKmUsageCount: (tenantId: TenantId, email: text, programCode: text) ->
@@ -511,15 +905,41 @@ service : {
   getMenuForRestaurant: (tenantId: TenantId, restaurantId: text) ->
    (vec MenuItem) query;
   getOrder: (tenantId: text, orderId: text, deviceId: text) -> (Result);
-  getOrderStatus: (tenantId: text, orderId: text) -> (Result_14) query;
+  getOrderStatus: (tenantId: text, orderId: text) -> (Result_37) query;
   getOrdersByEmail: (tenantId: text, email: text, deviceId: text) ->
    (vec Order);
+  /// Chủ đối tác: mã khôi phục đã tạo lúc nào (0 = chưa có / đã dùng).
+  getOwnerRecoveryInfo: (tenantId: TenantId, credential: text) ->
+   (record {
+      createdAt: int;
+      createdBy: text;
+    }) query;
+  getPartnerApplicationStatus: (applicationId: text, contactEmail: text) ->
+   (opt ApplicationStatusView) query;
+  /// Tài khoản của 1 đối tác: admin, Kế toán sàn, máy Chủ quán hoặc Kế toán của đối tác đó.
+  getPartnerBank: (tenantId: TenantId, credential: text) ->
+   (opt PartnerBank) query;
+  /// Thông tin thiết bị (vai trò, đối tác, chi nhánh) — để trang quản lý biết
+  /// hiện giao diện Chủ quán hay Nhân viên. null nếu không có / đã bị gỡ.
+  getPartnerDevice: (deviceId: DeviceId) -> (opt Device) query;
+  /// Tham số áp dụng cho 1 quán. Admin hoặc máy Chủ quán / Nhân viên của quán.
+  getPartnerParams: (tenantId: TenantId, credential: text) ->
+   (vec EffectiveParam) query;
+  /// Cài đặt quán (công khai: trang đặt món cần biết quán có tạm nghỉ không).
+  /// counterPlan trả về là trạng thái ĐANG HIỆU LỰC (đã tính hạn gói).
+  getPartnerSettings: (tenantId: TenantId) -> (PartnerSettings) query;
   /// Query: return the paymentMode for `tenantId` as its canonical Text
   /// ("driver" or "customer"). Public — no caller gating; the value is not
   /// sensitive. A tenant with no explicit config returns the default "driver".
   getPaymentMode: (tenantId: TenantId) -> (text) query;
+  /// Máy (thẻ "deviceId~khoá") đang hoạt động → thông tin + vai trò; ngược
+  /// lại null. VPS dùng để phân quyền (lib/platform-guard.js).
+  getPlatformDevice: (credential: text) -> (opt PlatformDeviceView) query;
   getPromotionByCode: (tenantId: TenantId, code: text) ->
    (opt Promotion) query;
+  /// Trạng thái hiện tại (đang nhận đơn / tạm nghỉ / ngoài giờ) của mọi nhà
+  /// hàng thuộc đối tác (cả nhà hàng đang ẩn).
+  getRestaurantStatuses: (tenantId: TenantId) -> (vec RestaurantStatus) query;
   getRestaurants: (tenantId: TenantId) -> (vec Restaurant) query;
   /// Query: return the storeHours config for `tenantId`. Public — no caller
   /// gating; the value is not sensitive and the frontend needs it to render the
@@ -532,29 +952,54 @@ service : {
   /// subdomain hoặc tiền tố đường dẫn /<slug>. Công khai.
   getTenantBySlug: (slug: text) -> (opt Tenant) query;
   getUpgradeState: () -> (UpgradeState);
+  /// Công khai: phiếu giảm giá thuộc chương trình nào ("" nếu không có).
+  /// VPS dùng để biết phiếu có thuộc khuyến mại chung do sàn tài trợ không.
+  getVoucherProgram: (code: text) -> (text) query;
   isCallerAdmin: () -> (bool) query;
   isEmailVerified: (email: Email) -> (bool) query;
   isPromotionUsed: (tenantId: TenantId, deviceId: text, code: text) ->
-   (Result_13) query;
+   (Result_36) query;
   isRegistrationPromoUsed: (tenantId: TenantId, deviceId: text, code:
-   text) -> (Result_13) query;
+   text) -> (Result_36) query;
+  /// Nhà hàng có đang nhận đơn không (VPS gọi khi tạo đơn online).
+  isRestaurantOpen: (tenantId: TenantId, restaurantId: text) -> (bool) query;
   isSalesPromoUsed: (tenantId: TenantId, deviceId: text, code: text) ->
-   (Result_13) query;
-  /// Query: return whether the store of `tenantId` is currently open based on
-  /// the current time. Public — the frontend calls this on both the driver and
-  /// customer flows to decide whether to block order placement and show a
-  /// waiting screen instead of allowing item selection.
+   (Result_36) query;
+  /// Đối tác còn nhận đơn không: đang không tạm nghỉ toàn bộ VÀ có ít nhất 1
+  /// nhà hàng đang hiện cho khách đang nhận đơn. Đối tác chưa có nhà hàng nào
+  /// hiện thì dùng giờ chung như cũ.
   isStoreOpen: (tenantId: TenantId) -> (bool) query;
   issueInvoiceByDevice: (tenantId: text, deviceId: text, orderId: text,
    invoiceId: text, pdfUrl: text) -> (Result);
   issueSalesBonus: (tenantId: TenantId, email: text, periodType: text,
-   periodKey: text, totalSales: nat, hmac: Hmac) -> (Result_12);
-  listDevicesByRestaurant: (tenantId: TenantId, restaurantId:
-   RestaurantId) -> (vec Device) query;
-  listDevicesByRole: (tenantId: TenantId, role: DeviceRole) ->
-   (vec Device) query;
+   periodKey: text, totalSales: nat, hmac: Hmac) -> (Result_35);
+  issueVpsAdminTicket: () -> (Result_34);
+  /// Admin: mọi yêu cầu (mới nhất trước).
+  listChangeRequests: () -> (Result_33) query;
+  listDevicesByRestaurant: (tenantId: TenantId, restaurantId: RestaurantId,
+   credential: text) -> (vec Device) query;
+  listDevicesByRole: (tenantId: TenantId, role: DeviceRole, credential:
+   text) -> (vec Device) query;
+  /// Gán tay: [(“tenantId|itemId”, groupId hoặc “-”)].
+  listDishGroupAssignments: () -> (vec record {
+                                         text;
+                                         text;
+                                       }) query;
+  /// Mọi nhóm món, xếp theo sortOrder (trang chủ chỉ dùng nhóm active).
+  listDishGroups: () -> (vec DishGroup) query;
+  listHomeHidden: () -> (vec record {
+                               text;
+                               HiddenItem;
+                             }) query;
+  /// Ghi chú bếp các đơn trong 2 ngày gần nhất của 1 đối tác.
+  listKitchenNotes: (tenantId: TenantId) -> (vec KitchenNote) query;
   listMenus: (tenantId: TenantId) -> (vec MenuItem) query;
+  /// Yêu cầu của 1 đối tác (Chủ đối tác hoặc admin), mới nhất trước.
+  listMyChangeRequests: (tenantId: TenantId, credential: text) ->
+   (vec ChangeRequest) query;
   listMyVouchers: (tenantId: TenantId, email: text) -> (vec Voucher) query;
+  /// Trạng thái bếp các đơn trong 2 ngày gần nhất của 1 đối tác.
+  listOrderPrep: (tenantId: TenantId) -> (vec OrderPrep) query;
   listOrders: (tenantId: text, deviceId: text) -> (vec Order);
   /// Query: return today's paid orders for the driver pickup queue — orders with
   /// paymentStatus=#paid AND bookingStatus=#confirmed (not yet picked up),
@@ -563,16 +1008,54 @@ service : {
   /// non-admin/anonymous callers (the driver pickup-queue flow) get the records
   /// with PII fields blanked, mirroring listPendingPaymentOrders gating.
   listPaidOrdersForPickup: () -> (vec Order);
+  listPartnerApplications: (statusFilter: opt ApplicationStatus) ->
+   (variant {
+      err: text;
+      ok: vec Application;
+    }) query;
+  listPartnerApplicationsAs: (credential: text, statusFilter:
+   opt ApplicationStatus) -> (Result_32) query;
+  /// Admin / máy sàn Kế toán: tài khoản của mọi đối tác.
+  listPartnerBanks: (credential: text) -> (Result_31) query;
+  /// Admin hoặc máy cấp sàn (mọi vai trò) — sàn làm việc với đối tác.
+  listPartnerProfiles: (credential: text) -> (Result_30) query;
   listPendingPaymentOrders: (tenantId: text, restaurantId: text) ->
    (vec Order);
-  listPromotions: (tenantId: TenantId, deviceId: text) -> (Result_11) query;
+  listPlatformActivations: () -> (Result_29) query;
+  listPlatformDevices: () -> (Result_28) query;
+  /// Công khai (VPS đọc khi tạo đơn): [("tenantId|code", tài trợ từ lúc ns)].
+  listPlatformFundedPromos: () -> (vec record {
+                                         text;
+                                         int;
+                                       }) query;
+  /// Admin: mọi tham số (chung + riêng từng quán) kèm lịch sử.
+  listPlatformParams: () -> (Result_27) query;
+  listPromotions: (tenantId: TenantId, deviceId: text) -> (Result_26) query;
   listRegistrationPromos: (tenantId: TenantId, deviceId: text) ->
-   (Result_10) query;
+   (Result_25) query;
+  /// Giờ riêng + tạm nghỉ của các nhà hàng thuộc đối tác (nhà hàng chưa cài
+  /// gì thì không có trong danh sách — dùng giờ chung).
+  listRestaurantOps: (tenantId: TenantId) ->
+   (vec record {
+          text;
+          RestaurantOps;
+        }) query;
   listRestaurants: (tenantId: TenantId) -> (vec Restaurant) query;
-  listSalesPromos: (tenantId: TenantId, deviceId: text) -> (Result_9) query;
+  listSalesPromos: (tenantId: TenantId, deviceId: text) -> (Result_24) query;
+  /// itemId các món báo hết hôm nay (công khai: trang đặt món ẩn các món này).
+  listSoldOutToday: (tenantId: TenantId) -> (vec text) query;
+  /// Món hết hôm nay kèm nhà hàng (công khai: trang đặt món / bán quầy ẩn
+  /// món hết ở nhà hàng đang chọn).
+  listSoldOutTodayAt: (tenantId: TenantId) -> (vec SoldOutEntry) query;
+  /// Xem (chỉ đọc) máy của 1 quán để hỗ trợ cài đặt.
+  listTenantDevicesAs: (credential: text, tenantId: TenantId) ->
+   (Result_23) query;
   /// Liệt kê đối tác. Công khai. activeOnly=true chỉ trả đối tác đang hoạt
   /// động (caller không phải admin luôn chỉ thấy đối tác đang hoạt động).
   listTenants: (activeOnly: bool) -> (vec Tenant) query;
+  /// Bếp báo "Làm xong món" (#ready) hoặc "Đã đưa cho tài xế / khách" (#handed).
+  markOrderPrep: (tenantId: TenantId, deviceId: DeviceId, orderId: text,
+   stage: PrepStage) -> (Result_22);
   markPaymentExpired: (orderId: text, hmac: text) -> (Result);
   /// Admin/driver update: mark an order as #pickedUp (Tài xế đã nhận hàng).
   /// Only succeeds when the order is currently #confirmed AND #paid; this ends
@@ -581,28 +1064,116 @@ service : {
   /// exist, or the order is not in the required state.
   markPickedUp: (orderId: text) -> (Result);
   pruneOldOrdersNow: (hmac: text) -> (Result_6);
+  /// Công khai: máy mới nhập mã khôi phục → thành máy Chủ đối tác (có khoá
+  /// bí mật như activateDeviceSecure). Mã dùng 1 lần rồi xoá.
+  recoverOwnerDevice: (tenantId: TenantId, code: text, deviceId: DeviceId,
+   name: text, phone: text, tokenHash: blob) -> (Result_18);
+  releaseVoucher: (tenantId: TenantId, email: text, code: text, hmac:
+   Hmac) -> (Result_20);
+  /// Sơ duyệt: chỉ được "yêu cầu bổ sung". Duyệt / từ chối vẫn là việc của admin.
+  requestApplicationInfo: (credential: text, applicationId: text, note:
+   text) -> (Result_19);
   restoreUpgradeState: ("blob": blob) -> (bool);
+  reviewPartnerApplication: (applicationId: text, decision: Decision, note:
+   text) -> (variant {
+               err: text;
+               ok: Application;
+             });
   revokeDevice: (tenantId: TenantId, deviceId: DeviceId, adminDeviceId:
-   DeviceId) -> (Result_8);
+   DeviceId) -> (Result_18);
+  /// Thu hồi: máy mất quyền ngay ở canister; VPS nhớ tối đa 5 phút.
+  revokePlatformDevice: (deviceId: text) -> (Result_8);
+  /// Admin: tạo mới hoặc sửa nhóm (groupId chữ thường không dấu, số, “-”).
+  saveDishGroup: (groupId: text, name: text, keywords: vec text, sortOrder:
+   nat, active: bool, credential: text) -> (Result_17);
   schema: () -> (text) query;
   seedMenuItems: (tenantId: TenantId, deviceId: DeviceId) -> (bool);
   sendKmNotifyEmails: (emails: vec text, subject: text, htmlBody: text, hmac:
-   Hmac) -> (Result_7);
+   Hmac) -> (Result_8);
   sendVerificationCode: (email: Email) -> (SendCodeResult);
+  /// Admin: đặt tài khoản nhận tiền QR tại quầy cho quán.
+  setCounterPaymentAccount: (tenantId: TenantId, bankBin: text, bankName:
+   text, vaAccountNumber: text, accountName: text, merchantId: text, enabled:
+   bool) -> (Result_16);
+  /// Bật/tắt gói bán tại quầy. CHỈ admin Tôi Đặt Món (sau khi quán trả phí).
+  setCounterPlan: (tenantId: TenantId, enabled: bool) -> (Result_12);
+  /// Admin: bật/tắt gói bán quầy kèm hạn (0 = không hạn).
+  setCounterPlanUntil: (tenantId: TenantId, enabled: bool, until:
+   Timestamp) -> (Result_8);
+  /// Admin: gán tay 1 món vào nhóm. groupId "" = bỏ gán tay (về tự động),
+  /// "-" = không xếp vào nhóm nào.
+  setDishGroupAssignment: (tenantId: TenantId, itemId: text, groupId: 
+   text, credential: text) -> (Result_8);
+  setHomeHidden: (tenantId: TenantId, itemId: text, hidden: bool, reason:
+   text, credential: text) -> (Result_8);
+  /// Báo hết / còn món TẠI 1 nhà hàng (restaurantId "" = mọi nhà hàng).
+  /// Chủ đối tác: mọi nhà hàng. Nhân viên: chỉ nhà hàng của máy (máy không
+  /// gắn nhà hàng thì như cũ — mọi nhà hàng).
+  setItemSoldOutAt: (tenantId: TenantId, deviceId: DeviceId, itemId: 
+   text, restaurantId: text, soldOut: bool) -> (Result_8);
+  /// Báo món hết trong hôm nay / còn lại. Chủ quán hoặc Nhân viên.
+  setItemSoldOutToday: (tenantId: TenantId, deviceId: DeviceId, itemId: 
+   text, soldOut: bool) -> (Result_8);
   setItemVisible: (tenantId: TenantId, deviceId: DeviceId, itemId: text,
    visible: bool) -> (Result_5);
+  /// Tham gia khuyến mại chung. CHỈ Chủ quán.
+  setJoinPlatformPromo: (tenantId: TenantId, deviceId: DeviceId, join:
+   bool) -> (Result_12);
+  /// Chủ đối tác: lưu thứ tự món hiện cho khách (itemId lạ / của đối tác
+  /// khác bị bỏ qua). Áp dụng cho listMenus / getMenu / getMenuForRestaurant.
+  setMenuOrder: (tenantId: TenantId, credential: text, itemIds: vec text) ->
+   (Result_8);
+  /// Máy quầy ghi "Ăn tại quán / Mang về" + ghi chú bếp cho đơn vừa tạo.
+  setOrderKitchenNote: (tenantId: TenantId, deviceId: DeviceId, orderId:
+   text, dineIn: bool, note: text) -> (Result_15);
+  /// Chủ đối tác: lưu mã khôi phục mới (máy tự sinh mã ngẫu nhiên, chỉ gửi
+  /// SHA-256 của mã đã chuẩn hoá — viết hoa, bỏ gạch). Mã cũ hết hiệu lực.
+  setOwnerRecoveryHash: (tenantId: TenantId, credential: text, codeHash:
+   blob) -> (Result_14);
+  /// Admin: nhập / sửa tài khoản nhận tiền của đối tác. 1 tài khoản dùng cho
+  /// CẢ đối soát (sàn chuyển tiền) VÀ chuyển khoản tại quầy (khách quét QR ở
+  /// bất kỳ nhà hàng nào của đối tác → tiền về tài khoản đối tác).
+  /// bankBin: mã BIN VietQR của ngân hàng; counterQr: dùng cho QR tại quầy.
+  setPartnerBank: (tenantId: TenantId, bankBin: text, bankName: text,
+   accountNumber: text, accountHolder: text, branch: text, counterQr:
+   bool) -> (Result_13);
+  /// Tạm nghỉ / nhận đơn lại (mọi nhà hàng của đối tác). CHỈ Chủ đối tác.
+  setPartnerPaused: (tenantId: TenantId, deviceId: DeviceId, paused: 
+   bool) -> (Result_12);
+  setPartnerProfile: (tenantId: TenantId, businessType: BusinessType,
+   registrationNumber: text, representativeName: text, contactName: text,
+   contactEmail: text) -> (Result_11);
   /// Admin-only update: set the paymentMode for `tenantId` to "driver" or
   /// "customer". Rejects any other value with #err. Returns #ok on success,
   /// #err if the caller is not an admin or the value is invalid. Mirrors
   /// setVpsSecret in mixins/secret-api.mo.
-  setPaymentMode: (tenantId: TenantId, mode: text) -> (Result_7);
+  setPaymentMode: (tenantId: TenantId, mode: text) -> (Result_8);
+  /// Admin: đặt giá trị. scope "" = chung, tenantId = riêng quán đó.
+  /// effectiveFrom (ns) trong quá khứ = áp dụng ngay. value "" = bỏ giá trị.
+  setPlatformParam: (scope: text, key: text, value: text, effectiveFrom:
+   Timestamp, note: text) -> (Result_10);
+  /// Admin: đánh dấu / bỏ đánh dấu chương trình KM là "khuyến mại chung do sàn
+  /// tài trợ" (code: mã Giờ vàng / KM đăng ký / KM doanh số của đối tác).
+  setPromoPlatformFunded: (tenantId: TenantId, code: text, funded: bool) ->
+   (Result_8);
+  /// Đặt giờ nhận đơn theo ngày cho 1 nhà hàng. hasHours = false → dùng giờ
+  /// chung của đối tác.
+  setRestaurantHours: (tenantId: TenantId, credential: text, restaurantId:
+   text, hasHours: bool, week: vec DayHours) -> (Result_9);
   setRestaurantPriceOverride: (tenantId: TenantId, deviceId: DeviceId,
-   restaurantId: text, itemId: text, price: nat) -> (Result_7);
+   restaurantId: text, itemId: text, price: nat) -> (Result_8);
+  /// Tạm nghỉ / mở lại 1 hoặc nhiều nhà hàng. until: ns (0 = đến khi mở lại).
+  /// Mở lại (paused = false) cũng bỏ tạm nghỉ toàn bộ đối tác nếu máy là Chủ.
+  setRestaurantsPaused: (tenantId: TenantId, credential: text, restaurantIds:
+   vec text, paused: bool, until: int) -> (Result_8);
   /// Admin-only update: set the store open/close hours for `tenantId`. Rejects
   /// any caller that is not an admin with #err. Returns #ok on success, #err if
   /// the caller is not an admin. Mirrors setPaymentMode in
   /// mixins/payment-mode-config-api.mo.
-  setStoreHours: (tenantId: TenantId, hours: StoreHours) -> (Result_7);
+  setStoreHours: (tenantId: TenantId, hours: StoreHours) -> (Result_8);
+  /// Giờ mở cửa do Chủ quán tự đặt (setStoreHours cũ chỉ cho admin).
+  setStoreHoursByDevice: (tenantId: TenantId, deviceId: DeviceId, hours:
+   StoreHours) -> (Result_8);
   /// Bật/tắt đối tác. Admin trung tâm only.
   setTenantActive: (tenantId: TenantId, active: bool) ->
    (variant {
@@ -623,6 +1194,16 @@ service : {
    (Result_3);
   stopSalesPromo: (tenantId: TenantId, deviceId: text, code: text) ->
    (Result_1);
+  /// Chủ đối tác gửi yêu cầu thay đổi. Tối đa 5 yêu cầu đang chờ / đối tác.
+  submitChangeRequest: (tenantId: TenantId, credential: text, kind: text,
+   payload: text, note: text) -> (Result_7);
+  submitPartnerApplication: (input: ApplicationInput) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  /// Ghi nhận "dùng gần nhất" (tối đa 5 phút/lần) — trang /san gọi khi mở.
+  touchPlatformDevice: (credential: text) -> (opt PlatformDeviceView);
   tryConsumeKmSlot: (tenantId: TenantId, email: text, programCode: text,
    dailyLimit: nat, hmac: Hmac) -> (Result_6);
   updateInvoiceStatus: (orderId: OrderId, invoiceStatus: InvoiceStatus,

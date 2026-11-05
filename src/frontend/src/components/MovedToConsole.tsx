@@ -4,6 +4,7 @@
 // link "QR nhận hàng" (?scan_order=&scan_code=) được giữ nguyên để tab Tài xế
 // mở thẳng đơn.
 
+import { StateScreen } from "@/components/AppStates";
 import { TdmLogo } from "@/components/TdmLogo";
 import { useTenant } from "@/hooks/useTenant";
 import { saveConsoleDevice } from "@/lib/partner-console";
@@ -78,31 +79,32 @@ export function MovedToConsole({
       data-ocid="moved_to_console.page"
     >
       <TdmLogo />
-      <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-800">
-        <K.icon className="h-9 w-9" />
-      </span>
-      <h1 className="text-2xl font-extrabold">
-        {K.title} đã chuyển vào Quản lý
-      </h1>
-      <p className="text-[15px] leading-relaxed text-muted-foreground">
-        Từ nay máy Giao nhận, Nhân viên, Kế toán đều dùng chung trang{" "}
-        <b className="text-foreground">toidatmon.vn/{slug}/quan-ly</b>.{" "}
-        {stored?.deviceId
-          ? `Máy này đã kích hoạt${stored.name ? ` (${stored.name})` : ""} nên không cần nhập lại mã.`
-          : "Mở trang Quản lý và nhập mã kích hoạt 6 ký tự do Chủ đối tác cấp."}
-      </p>
-      <a
-        href={target}
-        className="flex h-14 items-center justify-center rounded-2xl bg-primary text-[17px] font-extrabold text-primary-foreground"
-        data-ocid="moved_to_console.open"
+      <StateScreen
+        variant="empty"
+        icon={K.icon}
+        layout="inline"
+        title={`${K.title} đã chuyển vào Quản lý`}
+        description={
+          <>
+            Từ nay máy Giao nhận, Nhân viên, Kế toán đều dùng chung trang{" "}
+            <b className="text-foreground">toidatmon.vn/{slug}/quan-ly</b>.{" "}
+            {stored?.deviceId
+              ? `Máy này đã kích hoạt${stored.name ? ` (${stored.name})` : ""} nên không cần nhập lại mã.`
+              : "Mở trang Quản lý và nhập mã kích hoạt 6 ký tự do Chủ đối tác cấp."}
+          </>
+        }
+        primaryAction={{
+          label: "Mở trang Quản lý",
+          href: target,
+          ocid: "moved_to_console.open",
+        }}
       >
-        Mở trang Quản lý
-      </a>
-      {stored?.deviceId && (
-        <p className="text-center text-sm text-muted-foreground">
-          Tự chuyển sau 5 giây · Mã QR trên phiếu cũ vẫn quét được
-        </p>
-      )}
+        {stored?.deviceId && (
+          <p className="text-center text-sm text-muted-foreground">
+            Tự chuyển sau 5 giây · Mã QR trên phiếu cũ vẫn quét được
+          </p>
+        )}
+      </StateScreen>
     </div>
   );
 }

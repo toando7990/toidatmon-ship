@@ -1,5 +1,5 @@
 // Main layout with Vietnamese nav, responsive, admin-gated links.
-// Header: bg-card border-b shadow-subtle. Main: bg-background.
+// Header: .app-header (bg-card, sticky, safe-top) + shadow-subtle. Main: bg-background.
 //
 // Giai đoạn "tối ưu trang đặt món cho di động" (theo bản xem trước HTML
 // đã duyệt): BỎ HẲN chân trang cũ (SĐT/tên công ty/địa chỉ — thông tin
@@ -12,6 +12,7 @@
 // thiệu) vẫn nằm trong nút "Menu" như cũ trên mobile.
 
 import { AdminShell, isAdminShellPath } from "@/components/AdminShell";
+import { TdmIcon } from "@/components/TdmLogo";
 import {
   DeviceHeaderProvider,
   useDeviceHeader,
@@ -33,6 +34,7 @@ import {
   Layers,
   LogOut,
   type LucideIcon,
+  Menu,
   Percent,
   Settings2,
   ShieldCheck,
@@ -42,6 +44,7 @@ import {
   User,
   UtensilsCrossed,
   Wallet,
+  X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
@@ -110,12 +113,13 @@ function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
       onClick={onClick}
       data-ocid={`nav.link.${item.to.replace(/\//g, "_") || "home"}`}
       className={cn(
-        "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-smooth",
+        "focus-ring flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-smooth",
         "min-h-[44px] md:min-h-0",
         isActive
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-foreground hover:bg-secondary hover:text-secondary-foreground",
+          ? "bg-secondary text-primary"
+          : "text-foreground hover:bg-muted",
       )}
+      aria-current={isActive ? "page" : undefined}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="truncate">{item.label}</span>
@@ -123,9 +127,9 @@ function NavLink({ item, onClick }: { item: NavItem; onClick?: () => void }) {
   );
 }
 
-// Thanh điều hướng cố định ở đáy màn hình — CHỈ mobile (md:hidden). Icon
-// trên + nhãn ngắn dưới, mục active có gạch màu primary phía trên +
-// icon/nhãn đổi màu, khớp quy ước app di động thông thường.
+// Thanh điều hướng cố định ở đáy màn hình — CHỈ mobile (md:hidden). Dùng
+// chung hình dạng .bottom-nav-* với PlatformFrame: icon trên + nhãn ngắn
+// dưới, mục active chữ đỏ gạch + vạch lime phía trên.
 function BottomNavLink({ item }: { item: NavItem }) {
   const router = useRouterState();
   const isActive =
@@ -137,19 +141,14 @@ function BottomNavLink({ item }: { item: NavItem }) {
     <Link
       to={item.to}
       data-ocid={`bottom_nav.link.${item.to.replace(/\//g, "_") || "home"}`}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "relative flex flex-1 flex-col items-center gap-0.5 px-1 pb-1.5 pt-2.5 text-[10.5px] font-semibold transition-smooth",
-        isActive ? "text-primary" : "text-muted-foreground",
+        "bottom-nav-item focus-ring",
+        isActive && "bottom-nav-item-active",
       )}
     >
-      {isActive && (
-        <span
-          className="absolute top-0 h-[3px] w-7 rounded-b-[4px] bg-primary"
-          aria-hidden="true"
-        />
-      )}
       <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-      <span>{item.label}</span>
+      <span className="truncate">{item.label}</span>
     </Link>
   );
 }
@@ -266,24 +265,55 @@ function LayoutInner({ children }: { children: ReactNode }) {
     return <AdminShell>{children}</AdminShell>;
   }
 
+  // /admin khi chưa đăng nhập / chưa có quyền: chỉ hiện màn hình chặn dùng
+  // chung, KHÔNG bọc khung cửa hàng (header quán, link Theo dõi/Lịch sử).
+  if (isAdminRoute && !showAdmin) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <header className="app-header shadow-subtle">
+          <div className="mx-auto flex min-h-[var(--header-h)] w-full max-w-7xl items-center gap-3 px-4 py-2 md:px-6">
+            <a
+              href="/"
+              className="brand-lockup focus-ring min-w-0 rounded-md"
+              data-ocid="admin_gate.brand_link"
+            >
+              <TdmIcon className="h-9 w-9" />
+              <span className="flex min-w-0 flex-col">
+                <span className="brand-name truncate">Tôi Đặt Món</span>
+                <span className="brand-subname truncate">Quản trị</span>
+              </span>
+            </a>
+          </div>
+        </header>
+        <main className="flex-1 bg-background pb-safe" data-ocid="page.main">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div
       className="brand-scope flex min-h-screen flex-col bg-background"
       style={brandStyle}
     >
-      {/* Khách vào quán từ trang chính (toidatmon.vn/ten-quan): đường quay
-          lại xem món các quán khác, theo dõi/lịch sử mọi quán. */}
-      {source === "path" && !deviceHeader && (
-        <a
-          href="/"
-          className="block bg-foreground px-4 py-1.5 text-center text-xs font-semibold text-background"
-          data-ocid="nav.back_to_platform"
-        >
-          ← Tôi Đặt Món · món ngon của mọi quán
-        </a>
-      )}
-      <header className="sticky top-0 z-40 border-b border-border bg-card shadow-sm">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-6">
+      <header className="app-header shadow-subtle">
+        {/* Khách vào quán từ trang chính (toidatmon.vn/ten-quan): đường quay
+            lại xem món các quán khác, theo dõi/lịch sử mọi quán. Nằm TRONG
+            header dính (một dòng mảnh, cắt chữ) để không đẩy hay chồng lên
+            header trên màn hình nhỏ. */}
+        {source === "path" && !deviceHeader && (
+          <a
+            href="/"
+            className="focus-ring flex h-7 items-center justify-center gap-1 truncate bg-secondary px-4 text-center text-[11.5px] font-semibold text-secondary-foreground transition-smooth hover:bg-secondary/80"
+            data-ocid="nav.back_to_platform"
+          >
+            <span className="truncate">
+              ← Tôi Đặt Món · món ngon của mọi quán
+            </span>
+          </a>
+        )}
+        <div className="mx-auto flex min-h-[var(--header-h)] w-full max-w-7xl items-center justify-between gap-4 px-4 py-2 md:px-6">
           {deviceHeader ? (
             <div
               className="flex min-w-0 items-center gap-3"
@@ -354,7 +384,7 @@ function LayoutInner({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={handleLogout}
                   data-ocid="nav.logout_button"
-                  className="ml-1 inline-flex min-h-[44px] items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-smooth hover:bg-destructive/10 hover:text-destructive md:min-h-0"
+                  className="btn btn-ghost-destructive ml-1 md:min-h-0 md:py-2"
                 >
                   <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span className="truncate">Đăng xuất</span>
@@ -378,17 +408,23 @@ function LayoutInner({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
               data-ocid="nav.mobile.toggle"
-              aria-label="Mở menu"
+              aria-label={mobileOpen ? "Đóng menu" : "Mở menu"}
               aria-expanded={mobileOpen}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-border p-2 text-foreground md:hidden"
+              aria-controls="nav-mobile-panel"
+              className="icon-btn-bordered shrink-0 md:hidden"
             >
-              <span className="text-sm font-semibold">Menu</span>
+              {mobileOpen ? (
+                <X className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Menu className="h-5 w-5" aria-hidden="true" />
+              )}
             </button>
           )}
         </div>
 
         {mobileOpen && (
           <nav
+            id="nav-mobile-panel"
             className="flex flex-col gap-1 border-t border-border bg-card px-4 py-3 md:hidden"
             data-ocid="nav.mobile"
             aria-label="Điều hướng di động"
@@ -414,7 +450,7 @@ function LayoutInner({ children }: { children: ReactNode }) {
                   handleLogout();
                 }}
                 data-ocid="nav.logout_button"
-                className="mt-1 inline-flex min-h-[44px] items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground transition-smooth hover:bg-destructive/10 hover:text-destructive"
+                className="btn btn-ghost-destructive mt-1 justify-start"
               >
                 <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="truncate">Đăng xuất</span>
@@ -427,7 +463,11 @@ function LayoutInner({ children }: { children: ReactNode }) {
       </header>
 
       <main
-        className={cn("flex-1 bg-background", showBottomNav && "pb-24 md:pb-0")}
+        className={cn(
+          "flex-1 bg-background",
+          showBottomNav &&
+            "pb-[calc(var(--bottom-nav-h)+var(--safe-bottom)+1px+0.75rem)] md:pb-0",
+        )}
         data-ocid="page.main"
       >
         {children}
@@ -435,13 +475,15 @@ function LayoutInner({ children }: { children: ReactNode }) {
 
       {showBottomNav && (
         <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.05)] md:hidden"
+          className="bottom-nav md:hidden"
           data-ocid="nav.bottom"
           aria-label="Điều hướng dưới"
         >
-          {BOTTOM_NAV.map((item) => (
-            <BottomNavLink key={item.to} item={item} />
-          ))}
+          <div className="bottom-nav-inner">
+            {BOTTOM_NAV.map((item) => (
+              <BottomNavLink key={item.to} item={item} />
+            ))}
+          </div>
         </nav>
       )}
     </div>

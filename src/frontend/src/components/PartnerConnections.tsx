@@ -5,6 +5,7 @@
 //   - Kết nối AnaSystem: tạo khoá để AnaSystem tại quán kéo đơn đã thanh toán
 //     về và tự xuất hoá đơn điện tử bằng tài khoản hoá đơn của quán.
 
+import { Skeleton, SkeletonLines } from "@/components/Skeletons";
 import { useCanister } from "@/lib/canister";
 import {
   formatAccount,
@@ -115,7 +116,7 @@ export function CounterAccountCard({
       <h2 className="text-base font-extrabold">Tiền chuyển khoản tại quầy</h2>
       {hasTingee ? (
         <p className="text-[15px]">
-          <b className="text-green-700">Tingee của đối tác</b> · VA{" "}
+          <b className="text-success">Tingee của đối tác</b> · VA{" "}
           {maskAccount(tg?.vaAccountNumber ?? "")} · {BIN_NAME(tg?.bankBin)} —
           tiền về tài khoản đối tác, <b>tự xác nhận</b>.
         </p>
@@ -327,7 +328,7 @@ export function AnasystemCard({ deviceId }: { deviceId: string }) {
         <p className="text-[15px]">
           {s.connected ? (
             <>
-              <b className="text-green-700">Đã kết nối</b> · khoá …{s.keyHint} ·
+              <b className="text-success">Đã kết nối</b> · khoá …{s.keyHint} ·
               AnaSystem lấy đơn lần cuối {fmtTime(s.lastUsedAt)}
             </>
           ) : (
@@ -336,7 +337,7 @@ export function AnasystemCard({ deviceId }: { deviceId: string }) {
         </p>
       )}
       {newKey && (
-        <div className="flex flex-col gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+        <div className="badge-warning flex flex-col gap-2 rounded-xl border p-3 text-sm">
           <p className="font-bold">
             Nhập 2 dòng này vào AnaSystem (khoá chỉ hiện 1 lần):
           </p>
@@ -346,14 +347,14 @@ export function AnasystemCard({ deviceId }: { deviceId: string }) {
           ].map((r) => (
             <div key={r.label} className="flex items-center gap-2">
               <span className="w-24 shrink-0 text-xs">{r.label}</span>
-              <code className="min-w-0 flex-1 break-all rounded bg-white px-2 py-1 text-xs">
+              <code className="min-w-0 flex-1 break-all rounded bg-card px-2 py-1 font-mono text-xs text-foreground">
                 {r.value}
               </code>
               <button
                 type="button"
                 aria-label={`Chép ${r.label}`}
                 onClick={() => copy(r.value)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-white"
+                className="icon-btn-bordered h-9 w-9 shrink-0 bg-card text-foreground"
               >
                 <Copy className="h-4 w-4" />
               </button>
@@ -435,11 +436,14 @@ export function PayoutsCard({
             </b>{" "}
             · {bankQ.data.accountHolder}
           </span>
+        ) : bankQ.isLoading ? (
+          <div aria-busy="true" className="flex flex-col gap-1.5 py-0.5">
+            <span className="sr-only">Đang tải…</span>
+            <Skeleton className="h-5 w-4/5 max-w-sm" />
+          </div>
         ) : (
           <span className="text-sm text-muted-foreground">
-            {bankQ.isLoading
-              ? "Đang tải…"
-              : "Chưa có — liên hệ Tôi Đặt Món để cập nhật tài khoản."}
+            Chưa có — liên hệ Tôi Đặt Món để cập nhật tài khoản.
           </span>
         )}
         <span className="text-xs text-muted-foreground">
@@ -447,13 +451,16 @@ export function PayoutsCard({
         </span>
       </div>
       {q.isLoading && (
-        <p className="text-sm text-muted-foreground">Đang tải…</p>
+        <div aria-busy="true">
+          <span className="sr-only">Đang tải…</span>
+          <SkeletonLines lines={2} />
+        </div>
       )}
       {q.isError && (
         <p className="text-sm text-muted-foreground">Chưa xem được lúc này.</p>
       )}
       {p && p.orderCount > 0 && (
-        <div className="flex flex-col gap-1 rounded-xl bg-[var(--tdm-lime-soft,#eef2dc)] p-3 text-[15px]">
+        <div className="badge-lime flex flex-col gap-1 rounded-xl border p-3 text-[15px]">
           <span className="font-bold">
             Đang chờ đối soát · {p.orderCount} đơn
           </span>
@@ -487,8 +494,8 @@ export function PayoutsCard({
             <span
               className={
                 x.status === "paid"
-                  ? "text-xs font-bold text-green-700"
-                  : "text-xs font-bold text-amber-700"
+                  ? "text-xs font-bold text-success"
+                  : "text-xs font-bold text-warning-foreground"
               }
             >
               {x.status === "paid"

@@ -6,6 +6,8 @@
 // (đối tác xem được).
 
 import type { Tenant } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
+import { SkeletonList } from "@/components/Skeletons";
 import { changeSummary } from "@/components/console/PartnerChanges";
 import { useTenants } from "@/hooks/useQueries";
 import { updateTenant, useCanister } from "@/lib/canister";
@@ -228,12 +230,7 @@ export default function ChangeRequestsAdmin() {
             type="button"
             aria-pressed={tab === s}
             onClick={() => setTab(s)}
-            className={cn(
-              "rounded-full border px-4 py-1.5 text-sm font-semibold",
-              tab === s
-                ? "border-foreground bg-foreground text-background"
-                : "bg-card text-muted-foreground",
-            )}
+            className={cn("chip", tab === s && "chip-active")}
           >
             {label}
             {s === "pending" ? ` · ${count(s)}` : ""}
@@ -242,24 +239,39 @@ export default function ChangeRequestsAdmin() {
       </div>
 
       {!hasSelfApi(actor) && ready && (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Hệ thống đang cập nhật, vui lòng thử lại sau ít phút.
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="warning"
+          title="Hệ thống đang cập nhật, vui lòng thử lại sau ít phút."
+          className="mt-6"
+        />
       )}
       {listQ.isLoading && (
-        <Loader2 className="mt-6 h-5 w-5 animate-spin text-muted-foreground" />
+        <SkeletonList count={3} avatar={false} className="mt-6" />
       )}
       {listQ.isError && (
-        <p className="mt-6 text-sm text-destructive">
-          {listQ.error instanceof Error
-            ? listQ.error.message
-            : "Không tải được"}
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="error"
+          title="Không tải được"
+          description={
+            listQ.error instanceof Error ? listQ.error.message : undefined
+          }
+          primaryAction={{
+            label: "Thử lại",
+            onClick: () => void listQ.refetch(),
+          }}
+          className="surface-card mt-6"
+        />
       )}
       {listQ.isSuccess && shown.length === 0 && (
-        <p className="mt-6 rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-          Không có yêu cầu nào.
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="empty"
+          icon={FileDiff}
+          title="Không có yêu cầu nào."
+          className="surface-card mt-6"
+        />
       )}
 
       <div className="mt-4 flex flex-col gap-3">
@@ -283,7 +295,7 @@ export default function ChangeRequestsAdmin() {
           return (
             <article
               key={r.requestId}
-              className="rounded-2xl border bg-card p-4"
+              className="surface-card p-4"
               data-ocid="changes_admin.row"
             >
               <header className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -294,7 +306,7 @@ export default function ChangeRequestsAdmin() {
                   {t?.name ? `· ${t.name} ` : ""}· gửi {fmt(r.createdAt)}
                   {r.createdBy ? ` từ ${r.createdBy}` : ""}
                 </span>
-                <span className="ml-auto rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                <span className="badge-warning ent-pill ml-auto font-bold">
                   {CHANGE_KIND_LABEL[r.kind as ChangeKind] ?? r.kind}
                 </span>
               </header>
@@ -317,14 +329,14 @@ export default function ChangeRequestsAdmin() {
                       <span className="break-words text-muted-foreground line-through">
                         {cur[k] || "—"}
                       </span>
-                      <span className="break-words font-bold text-green-700">
+                      <span className="break-words font-bold text-success">
                         {p[k]}
                         {k === "accountHolder" &&
                           holderOk !== null &&
                           (holderOk ? (
                             <span> ✓ khớp pháp nhân</span>
                           ) : (
-                            <span className="text-red-700">
+                            <span className="text-destructive">
                               {" "}
                               ⚠ khác tên pháp nhân
                             </span>
@@ -348,12 +360,12 @@ export default function ChangeRequestsAdmin() {
                       onChange={(e) => setReason(e.target.value)}
                       placeholder="Lý do từ chối (đối tác xem được)"
                       aria-label="Lý do từ chối"
-                      className="h-10 flex-1 rounded-lg border px-3 text-sm"
+                      className="h-10 flex-1 rounded-md border border-input bg-card px-3 text-sm focus-ring"
                     />
                     <button
                       type="button"
                       onClick={() => setRejecting(null)}
-                      className="h-10 rounded-lg border px-4 text-sm font-semibold"
+                      className="btn btn-outline min-h-10"
                     >
                       Huỷ
                     </button>
@@ -366,7 +378,7 @@ export default function ChangeRequestsAdmin() {
                           reason: reason.trim(),
                         })
                       }
-                      className="h-10 rounded-lg bg-red-700 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                      className="btn min-h-10 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       Từ chối
                     </button>
@@ -379,7 +391,7 @@ export default function ChangeRequestsAdmin() {
                         setRejecting(r.requestId);
                         setReason("");
                       }}
-                      className="h-10 rounded-lg border px-4 text-sm font-semibold"
+                      className="btn btn-outline min-h-10"
                       data-ocid="changes_admin.reject"
                     >
                       Từ chối (ghi lý do)
@@ -388,7 +400,7 @@ export default function ChangeRequestsAdmin() {
                       type="button"
                       disabled={approve.isPending}
                       onClick={() => approve.mutate(r)}
-                      className="flex h-10 items-center gap-2 whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                      className="btn btn-primary min-h-10"
                       data-ocid="changes_admin.approve"
                     >
                       {approve.isPending &&

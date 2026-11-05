@@ -12,6 +12,7 @@ import type { Order } from "@/backend";
 import { PrinterSettingsDialog } from "@/components/PrinterSettingsDialog";
 import { QRDisplay } from "@/components/QRDisplay";
 import { QrScannerDialog } from "@/components/QrScannerDialog";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   BigButton,
   type Ctx,
@@ -77,9 +78,9 @@ const STAGES: { key: ConsoleStage; label: string }[] = [
 ];
 
 const CHANNEL: Record<OrderChannel, { label: string; cls: string }> = {
-  delivery: { label: "Online · giao", cls: "bg-orange-100 text-orange-800" },
-  pickup: { label: "Tài xế đến lấy", cls: "bg-cyan-100 text-cyan-800" },
-  counter: { label: "Tại quầy", cls: "bg-indigo-100 text-indigo-800" },
+  delivery: { label: "Online · giao", cls: "badge-warning" },
+  pickup: { label: "Tài xế đến lấy", cls: "badge-info" },
+  counter: { label: "Tại quầy", cls: "badge-brand" },
 };
 
 const CANCEL_REASONS = [
@@ -371,7 +372,7 @@ export function OrdersTab({
                   : "Chuông đang tắt"}
             </span>
           </span>
-          <span className="shrink-0 rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-primary">
+          <span className="shrink-0 rounded-xl bg-card px-3 py-2 text-sm font-extrabold text-primary">
             Xem ngay
           </span>
         </button>
@@ -464,9 +465,7 @@ export function OrdersTab({
         })}
       </div>
 
-      {ordersQ.isLoading && (
-        <p className="py-6 text-center text-muted-foreground">Đang tải đơn…</p>
-      )}
+      {ordersQ.isLoading && <SkeletonList count={3} label="Đang tải đơn…" />}
       {!ordersQ.isLoading && shown.length === 0 && (
         <p className="py-8 text-center text-[15px] text-muted-foreground">
           Chưa có đơn nào ở đây.
@@ -538,7 +537,7 @@ export function OrdersTab({
             </div>
             <div className="flex flex-wrap items-center gap-2 text-[13px]">
               {restName(o.restaurantId) && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-[var(--tdm-lime-soft,#e9f0c9)] px-1.5 py-0.5 font-extrabold text-[var(--tdm-olive,#3f4a12)]">
+                <span className="badge-lime inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-extrabold">
                   <Store className="h-3 w-3" aria-hidden="true" />
                   {restName(o.restaurantId)}
                 </span>
@@ -562,7 +561,7 @@ export function OrdersTab({
             </ul>
             {n && (
               <p className="text-[15px]">
-                <span className="mr-1.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-extrabold text-amber-900">
+                <span className="badge-warning mr-1.5 rounded-md px-1.5 py-0.5 text-xs font-extrabold">
                   {n.dineIn ? "Ăn tại quán" : "Mang về"}
                 </span>
                 {n.note}
@@ -573,9 +572,7 @@ export function OrdersTab({
               <p
                 className={cn(
                   "flex items-center gap-1.5 text-[13px] font-bold",
-                  d.allFailed || d.uncertain
-                    ? "text-destructive"
-                    : "text-cyan-800",
+                  d.allFailed || d.uncertain ? "text-destructive" : "text-info",
                 )}
               >
                 {d.allFailed || d.uncertain ? (

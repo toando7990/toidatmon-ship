@@ -4,12 +4,14 @@
 // (setRestaurantPriceOverride + getMenuForRestaurant). UI tiếng Việt.
 
 import type { Restaurant } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { PriceOverrideEditor } from "@/components/PriceOverrideEditor";
 import {
   RestaurantForm,
   type RestaurantFormValues,
 } from "@/components/RestaurantForm";
 import { RestaurantTable } from "@/components/RestaurantTable";
+import { SkeletonTable } from "@/components/Skeletons";
 import {
   useAddRestaurant,
   useDeleteRestaurant,
@@ -257,25 +259,25 @@ export default function RestaurantManager() {
       {mode.kind === "list" && (
         <div className="mt-6">
           {restaurantsQuery.isLoading && (
-            <div
-              className="flex items-center gap-2 rounded-md border border-border bg-card p-6 text-sm text-muted-foreground"
-              data-ocid="restaurant.loading_state"
-            >
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Đang tải danh sách nhà hàng…
-            </div>
+            <SkeletonTable rows={4} cols={5} ocid="restaurant.loading_state" />
           )}
           {restaurantsQuery.isError && (
-            <div
-              className="rounded-md border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive"
-              data-ocid="restaurant.error_state"
-              role="alert"
-            >
-              Lỗi tải danh sách nhà hàng:{" "}
-              {restaurantsQuery.error instanceof Error
-                ? restaurantsQuery.error.message
-                : "Không xác định"}
-            </div>
+            <StateScreen
+              layout="inline"
+              variant="error"
+              title="Lỗi tải danh sách nhà hàng"
+              description={
+                restaurantsQuery.error instanceof Error
+                  ? restaurantsQuery.error.message
+                  : "Không xác định"
+              }
+              primaryAction={{
+                label: "Thử lại",
+                onClick: () => void restaurantsQuery.refetch(),
+              }}
+              ocid="restaurant.error_state"
+              className="surface-card"
+            />
           )}
           {!restaurantsQuery.isLoading && !restaurantsQuery.isError && (
             <RestaurantTable
@@ -300,7 +302,7 @@ export default function RestaurantManager() {
       {/* Confirm delete modal */}
       {confirmDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[oklch(var(--foreground)/0.5)] p-4"
           data-ocid="restaurant.delete_modal"
           onClick={(e) => {
             if (e.target === e.currentTarget) setConfirmDelete(null);

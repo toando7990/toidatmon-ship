@@ -22,7 +22,7 @@ export function ProviderBadge({
         />
       ) : (
         <span
-          className="flex h-4 w-4 items-center justify-center rounded bg-[#f16622] text-[9px] font-bold text-white"
+          className="flex h-4 w-4 items-center justify-center rounded bg-primary text-[9px] font-bold text-primary-foreground"
           aria-hidden="true"
         >
           L

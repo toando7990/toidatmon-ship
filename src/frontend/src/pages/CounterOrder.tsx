@@ -138,7 +138,7 @@ function CounterGoldenHourBanner() {
             )
             .join(" · ")}
         </span>
-        <span className="ml-auto shrink-0 whitespace-nowrap rounded-lg bg-primary px-3 py-1 font-display text-sm font-bold text-white">
+        <span className="num ml-auto shrink-0 whitespace-nowrap rounded-lg bg-primary px-3 py-1 font-display text-sm font-bold text-primary-foreground">
           {countdown.formatted}
         </span>
       </div>
@@ -169,7 +169,7 @@ function CounterGoldenHourBanner() {
           </div>
         </div>
       </div>
-      <div className="flex flex-col items-center rounded-xl bg-warning px-4 py-2 text-white">
+      <div className="flex flex-col items-center rounded-xl bg-warning px-4 py-2 text-warning-foreground">
         <span className="text-[10px] uppercase tracking-wide opacity-85">
           Bắt đầu sau
         </span>

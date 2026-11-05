@@ -3,6 +3,8 @@
 // kênh liên hệ. Mỗi thay đổi có ngày hiệu lực; đặt chung hoặc riêng từng quán.
 // Quán thấy giá trị đang áp dụng và thông báo thay đổi sắp tới ở /quan-ly.
 
+import { StateScreen } from "@/components/AppStates";
+import { SkeletonList } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,7 +88,7 @@ function ParamCard({
 
   return (
     <article
-      className="rounded-xl border bg-card p-4"
+      className="surface-card p-4"
       data-ocid={`platform_settings.${def.key}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -112,7 +114,7 @@ function ParamCard({
         )}
       </div>
 
-      <p className="mt-3 text-lg font-bold">
+      <p className="num mt-3 text-lg font-bold">
         {inherits
           ? formatParam(def.key, global.current?.value ?? "")
           : formatParam(def.key, own.current?.value ?? "")}
@@ -129,7 +131,7 @@ function ParamCard({
           {own.upcoming.map((v) => (
             <li
               key={String(v.effectiveFrom)}
-              className="flex items-center justify-between gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"
+              className="flex items-center justify-between gap-2 rounded-lg border border-warning/45 bg-warning/15 px-3 py-2 text-sm text-warning-foreground"
             >
               <span>
                 Từ {formatVnDate(v.effectiveFrom)}:{" "}
@@ -250,7 +252,7 @@ export default function PlatformSettings() {
         <Label htmlFor="platform-settings-scope">Áp dụng cho</Label>
         <select
           id="platform-settings-scope"
-          className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+          className="h-11 w-full rounded-md border border-input bg-card px-3 text-sm focus-ring"
           value={scope}
           onChange={(e) => setScope(e.target.value)}
         >
@@ -268,15 +270,16 @@ export default function PlatformSettings() {
         )}
       </div>
 
-      {q.isLoading && (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
-        </p>
-      )}
+      {q.isLoading && <SkeletonList count={4} avatar={false} />}
       {q.isError && (
-        <p className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-          {q.error instanceof Error ? q.error.message : "Lỗi tải cài đặt"}
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="error"
+          title="Lỗi tải cài đặt"
+          description={q.error instanceof Error ? q.error.message : undefined}
+          primaryAction={{ label: "Thử lại", onClick: () => void q.refetch() }}
+          className="surface-card"
+        />
       )}
       {q.data && (
         <div className="space-y-3">

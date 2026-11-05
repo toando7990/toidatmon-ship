@@ -3,8 +3,10 @@
 // edit callback. UI tiếng Việt.
 
 import type { MenuItem } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { MenuItemForm } from "@/components/MenuItemForm";
 import { MenuItemTable } from "@/components/MenuItemTable";
+import { SkeletonTable } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useMenus } from "@/hooks/useQueries";
-import { Loader2, Pencil, Plus, UtensilsCrossed } from "lucide-react";
+import { Pencil, Plus, UtensilsCrossed } from "lucide-react";
 import { useState } from "react";
 
 export function MenuManager() {
@@ -67,58 +69,39 @@ export function MenuManager() {
 
       <div className="mt-6" data-ocid="menu.content">
         {menusQuery.isLoading ? (
-          <div
-            className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-            data-ocid="menu.loading_state"
-          >
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Đang tải danh sách món…
-          </div>
+          <SkeletonTable rows={5} cols={4} ocid="menu.loading_state" />
         ) : menusQuery.isError ? (
-          <div
-            className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5 p-10 text-center"
-            data-ocid="menu.error_state"
-          >
-            <p className="font-display text-lg font-semibold text-foreground">
-              Không tải được danh sách món
-            </p>
-            <p className="max-w-md text-sm text-muted-foreground">
-              {(menusQuery.error as Error)?.message ?? "Vui lòng thử lại sau."}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => menusQuery.refetch()}
-              data-ocid="menu.retry_button"
-            >
-              Thử lại
-            </Button>
-          </div>
+          <StateScreen
+            layout="inline"
+            variant="error"
+            title="Không tải được danh sách món"
+            description={
+              (menusQuery.error as Error)?.message ?? "Vui lòng thử lại sau."
+            }
+            primaryAction={{
+              label: "Thử lại",
+              onClick: () => void menusQuery.refetch(),
+              ocid: "menu.retry_button",
+            }}
+            ocid="menu.error_state"
+            className="surface-card"
+          />
         ) : (menusQuery.data ?? []).length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/20 p-12 text-center"
-            data-ocid="menu.empty_state"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <UtensilsCrossed className="h-6 w-6" aria-hidden="true" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="font-display text-lg font-semibold text-foreground">
-                Chưa có món nào
-              </p>
-              <p className="max-w-md text-sm text-muted-foreground">
-                Bắt đầu bằng cách thêm món đầu tiên cho nhà hàng.
-              </p>
-            </div>
-            <Button
-              type="button"
-              onClick={handleOpenCreate}
-              data-ocid="menu.empty.add_button"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Thêm món
-            </Button>
-          </div>
+          <StateScreen
+            layout="inline"
+            variant="empty"
+            icon={UtensilsCrossed}
+            title="Chưa có món nào"
+            description="Bắt đầu bằng cách thêm món đầu tiên cho nhà hàng."
+            primaryAction={{
+              label: "Thêm món",
+              icon: Plus,
+              onClick: handleOpenCreate,
+              ocid: "menu.empty.add_button",
+            }}
+            ocid="menu.empty_state"
+            className="surface-card"
+          />
         ) : (
           <MenuItemTable
             items={menusQuery.data ?? []}

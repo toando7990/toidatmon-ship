@@ -13,6 +13,7 @@ import type {
 import { type EffectiveParam, currentValue } from "@/lib/platform-params";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 export interface Ctx {
@@ -65,7 +66,7 @@ export function ContactLinks({ params }: { params: EffectiveParam[] }) {
       {phone && (
         <a
           href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-          className="flex min-h-[44px] items-center rounded-xl bg-primary px-4 text-sm font-extrabold text-primary-foreground"
+          className="btn btn-primary font-extrabold"
         >
           Gọi {phone}
         </a>
@@ -75,7 +76,7 @@ export function ContactLinks({ params }: { params: EffectiveParam[] }) {
           href={zaloHref}
           target="_blank"
           rel="noreferrer"
-          className="flex min-h-[44px] items-center rounded-xl border px-4 text-sm font-extrabold"
+          className="btn btn-outline font-extrabold"
         >
           Nhắn Zalo
         </a>
@@ -90,25 +91,33 @@ export function BigButton({
   variant = "primary",
   disabled,
   type = "button",
+  busy,
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: "primary" | "outline" | "dark";
   disabled?: boolean;
   type?: "button" | "submit";
+  /** Đang xử lý: hiện vòng quay + khoá nút. */
+  busy?: boolean;
 }) {
   return (
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
       className={cn(
-        "flex h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-extrabold transition-opacity disabled:opacity-50",
-        variant === "primary" && "bg-primary text-primary-foreground",
-        variant === "dark" && "bg-foreground text-background",
-        variant === "outline" && "border bg-card",
+        "btn btn-lg w-full",
+        variant === "primary" && "btn-primary",
+        variant === "dark" && "btn-dark",
+        variant === "outline" && "btn-outline",
+        busy && "is-busy",
       )}
     >
+      {busy && (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+      )}
       {children}
     </button>
   );
@@ -133,15 +142,12 @@ export function Switch({
       aria-label={label}
       disabled={disabled}
       onClick={onToggle}
-      className={cn(
-        "relative h-9 w-[60px] shrink-0 rounded-full transition-colors disabled:opacity-50",
-        on ? "bg-green-700" : "bg-stone-300",
-      )}
+      className="switch-track h-9 w-[60px]"
     >
       <span
         className={cn(
-          "absolute top-1 h-7 w-7 rounded-full bg-white transition-all",
-          on ? "left-7" : "left-1",
+          "switch-thumb left-1 top-1 h-7 w-7",
+          on ? "translate-x-6" : "translate-x-0",
         )}
       />
     </button>
@@ -153,12 +159,7 @@ export function Card({
   className,
 }: { children: ReactNode; className?: string }) {
   return (
-    <section
-      className={cn(
-        "flex flex-col gap-3 rounded-2xl border bg-card p-4",
-        className,
-      )}
-    >
+    <section className={cn("surface-card flex flex-col gap-3 p-4", className)}>
       {children}
     </section>
   );

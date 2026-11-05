@@ -5,12 +5,13 @@
 //       đối tác · Kiểm duyệt nội dung · Báo cáo sàn.
 // Máy bị thu hồi → báo rõ, cho kích hoạt lại bằng mã mới.
 
+import { StateScreen } from "@/components/AppStates";
+import { PageSkeleton } from "@/components/Skeletons";
 import { TdmIcon } from "@/components/TdmLogo";
 import { OpsConsole } from "@/components/san/OpsConsole";
 import { PartnerDevConsole } from "@/components/san/PartnerDevConsole";
 import { ReportConsole } from "@/components/san/ReportConsole";
 import { SupportConsole } from "@/components/san/SupportConsole";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCanister } from "@/lib/canister";
 import { usePageTitle } from "@/lib/page-title";
@@ -23,11 +24,11 @@ import {
   hasPlatformDeviceApi,
   platformCredential,
 } from "@/lib/platform-devices";
+import { cn } from "@/lib/utils";
 import DishGroupsAdmin from "@/pages/DishGroupsAdmin";
 import PayoutsAdmin from "@/pages/PayoutsAdmin";
-import { RoleChip } from "@/pages/PlatformDevicesAdmin";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Loader2, LogOut } from "lucide-react";
+import { KeyRound, Loader2, LogOut, RefreshCw, ShieldX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -82,28 +83,38 @@ function Activate({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-col gap-4 px-4 py-10">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <TdmIcon className="h-14 w-14" />
-        <h1 className="text-xl font-extrabold">Kích hoạt máy nhân viên sàn</h1>
-        <p className="text-sm text-muted-foreground">
-          Nhập mã admin Tôi Đặt Món cấp cho máy này (hạn 24 giờ, dùng 1 lần).
-        </p>
-      </div>
+    <StateScreen
+      variant={revoked ? "forbidden" : "signin"}
+      icon={revoked ? ShieldX : KeyRound}
+      title="Kích hoạt máy nhân viên sàn"
+      description="Nhập mã admin Tôi Đặt Món cấp cho máy này (hạn 24 giờ, dùng 1 lần)."
+      ocid={revoked ? "san.revoked_state" : "san.activate_state"}
+    >
       {revoked && (
-        <p className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm text-primary">
+        <p
+          className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-left text-sm text-destructive"
+          role="alert"
+          data-ocid="san.revoked_notice"
+        >
           Máy này đã bị thu hồi hoặc khoá không còn hợp lệ. Xin admin mã mới để
           kích hoạt lại.
         </p>
       )}
       {ready && !hasPlatformDeviceApi(actor) && (
-        <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <p
+          className="badge-warning mt-4 rounded-lg border p-3 text-left text-sm"
+          aria-live="polite"
+          data-ocid="san.updating_notice"
+        >
           Hệ thống đang cập nhật — thử lại sau ít phút.
         </p>
       )}
-      <form onSubmit={submit} className="flex flex-col gap-3">
+      <form onSubmit={submit} className="mt-6 flex flex-col gap-4 text-left">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="san-code" className="text-sm font-bold">
+          <label
+            htmlFor="san-code"
+            className="text-sm font-semibold text-foreground"
+          >
             Mã kích hoạt
           </label>
           <Input
@@ -112,12 +123,15 @@ function Activate({
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="XXXX-XXXX"
             autoComplete="off"
-            className="h-12 text-center font-mono text-xl tracking-widest"
+            className="h-12 rounded-md bg-card text-center font-mono text-xl tracking-widest"
             data-ocid="san.activate_code"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="san-name" className="text-sm font-bold">
+          <label
+            htmlFor="san-name"
+            className="text-sm font-semibold text-foreground"
+          >
             Tên người dùng máy
           </label>
           <Input
@@ -125,12 +139,16 @@ function Activate({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="VD: Nguyễn Văn Hậu"
-            className="h-12"
+            className="h-12 rounded-md bg-card"
             maxLength={60}
+            data-ocid="san.activate_name.input"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="san-phone" className="text-sm font-bold">
+          <label
+            htmlFor="san-phone"
+            className="text-sm font-semibold text-foreground"
+          >
             SĐT (tuỳ chọn)
           </label>
           <Input
@@ -138,13 +156,18 @@ function Activate({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             inputMode="tel"
-            className="h-12"
+            className="h-12 rounded-md bg-card"
             maxLength={20}
+            data-ocid="san.activate_phone.input"
           />
         </div>
-        <Button
+        <button
           type="submit"
-          className="h-12 text-base"
+          className={cn(
+            "btn btn-primary btn-lg mt-1 w-full",
+            busy && "is-busy",
+          )}
+          aria-busy={busy || undefined}
           disabled={
             !ready ||
             busy ||
@@ -154,14 +177,29 @@ function Activate({
           data-ocid="san.activate_submit"
         >
           {busy ? (
-            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <KeyRound className="mr-1.5 h-4 w-4" />
+            <KeyRound className="h-4 w-4" aria-hidden="true" />
           )}
           Kích hoạt
-        </Button>
+        </button>
       </form>
-    </div>
+    </StateScreen>
+  );
+}
+
+/** Nhãn vai trò theo token thương hiệu (thay màu riêng từng vai trò). */
+function StaffRoleChip({ role }: { role: PlatformDeviceView["role"] }) {
+  const r = ROLE_INFO[role];
+  const Icon = r.icon;
+  return (
+    <span
+      className="badge-lime inline-flex h-8 min-w-0 max-w-[45vw] items-center gap-1.5 rounded-full border px-3 text-xs font-semibold"
+      data-ocid="san.role_chip"
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span className="truncate">{r.name}</span>
+    </span>
   );
 }
 
@@ -228,26 +266,63 @@ export default function PlatformStaff() {
 
   return (
     <div className="min-h-screen bg-background" data-ocid="san.page">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2.5 border-b bg-card px-3.5 md:px-5">
-        <TdmIcon className="h-8 w-8" />
-        <b className="min-w-0 flex-1 truncate text-primary">
-          Tôi Đặt Món · Sàn
-        </b>
-        {device && <RoleChip role={device.role} />}
-        {device && (
-          <button
-            type="button"
-            onClick={logout}
-            aria-label="Gỡ máy"
-            title="Gỡ máy"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        )}
+      <header className="app-header shadow-subtle">
+        <div className="flex h-14 items-center gap-2.5 px-3.5 md:px-5">
+          <TdmIcon className="h-8 w-8 shrink-0" />
+          <span className="min-w-0 flex-1 truncate font-display text-base font-bold tracking-tight text-primary">
+            Tôi Đặt Món · Sàn
+          </span>
+          {device && <StaffRoleChip role={device.role} />}
+          {device && (
+            <button
+              type="button"
+              onClick={logout}
+              aria-label="Gỡ máy"
+              title="Gỡ máy"
+              className="icon-btn-bordered hover:bg-destructive/10 hover:text-destructive"
+              data-ocid="san.logout_button"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </header>
 
-      {!credential || revoked ? (
+      {credential && actor && !isFetching && !hasPlatformDeviceApi(actor) ? (
+        <StateScreen
+          variant="warning"
+          title="Hệ thống đang cập nhật — thử lại sau ít phút."
+          primaryAction={{
+            label: "Thử lại",
+            icon: RefreshCw,
+            onClick: () => window.location.reload(),
+            ocid: "san.updating_retry_button",
+          }}
+          ocid="san.updating_state"
+        />
+      ) : credential && meQ.isError ? (
+        <StateScreen
+          variant="error"
+          title="Không tải được thông tin máy"
+          description={
+            meQ.error instanceof Error ? meQ.error.message : undefined
+          }
+          primaryAction={{
+            label: "Thử lại",
+            icon: RefreshCw,
+            onClick: () => void meQ.refetch(),
+            busy: meQ.isFetching,
+            ocid: "san.error_retry_button",
+          }}
+          secondaryAction={{
+            label: "Gỡ máy",
+            icon: LogOut,
+            onClick: logout,
+            ocid: "san.error_logout_button",
+          }}
+          ocid="san.error_state"
+        />
+      ) : !credential || revoked ? (
         <Activate
           revoked={revoked}
           onDone={() => {
@@ -257,14 +332,14 @@ export default function PlatformStaff() {
           }}
         />
       ) : !device ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <PageSkeleton ocid="san.loading_state" cards={4} />
       ) : (
         <main className="mx-auto w-full max-w-6xl px-4 py-4 md:px-6">
-          <div className="mb-3">
-            <h1 className="text-lg font-extrabold">{greeting(device.name)}</h1>
-            <p className="text-[13px] text-muted-foreground">
+          <div className="mb-4">
+            <h1 className="font-display text-xl font-bold tracking-tight text-foreground">
+              {greeting(device.name)}
+            </h1>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
               {device.note || device.deviceId} · {ROLE_INFO[device.role].name}
             </p>
           </div>

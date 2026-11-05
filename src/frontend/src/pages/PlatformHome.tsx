@@ -6,7 +6,9 @@
 // → giỏ được chuyển sang /<slug>/ (lib/platform-feed.ts, CartHandoff) và
 // CreateOrder.tsx nạp lại giỏ đó. Mỗi đơn chỉ giao từ một quán.
 
+import { StateScreen } from "@/components/AppStates";
 import { PlatformFrame } from "@/components/PlatformFrame";
+import { SkeletonGrid } from "@/components/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +49,7 @@ import {
   LocateFixed,
   Minus,
   Plus,
+  RotateCw,
   Search,
   Store,
   UtensilsCrossed,
@@ -114,14 +117,14 @@ const DishCard = memo(function DishCard({
   return (
     <article
       className={cn(
-        "flex flex-col overflow-hidden rounded-xl border bg-card",
+        "surface-card surface-card-hover flex flex-col overflow-hidden",
         !dish.open && "opacity-70",
       )}
       data-ocid="platform_home.dish_card"
     >
       <a
         href={`/${dish.tenantSlug}/`}
-        className="relative flex h-28 items-center justify-center bg-muted sm:h-36"
+        className="focus-ring relative flex aspect-[4/3] items-center justify-center bg-muted"
         aria-label={`Xem quán ${dish.tenantName}`}
       >
         {url ? (
@@ -138,62 +141,62 @@ const DishCard = memo(function DishCard({
           />
         )}
         {dish.hasPromo && dish.open && (
-          <span className="absolute left-2 top-2 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+          <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground shadow-subtle">
             Khuyến mại
           </span>
         )}
         {!dish.open && (
-          <span className="absolute left-2 top-2 rounded-md bg-foreground/80 px-1.5 py-0.5 text-[11px] font-semibold text-background">
+          <span className="absolute left-2 top-2 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background">
             Đang đóng cửa
           </span>
         )}
         {rank != null && (
           <span
-            className="absolute right-2 top-2 flex items-center gap-0.5 rounded-md bg-[var(--tdm-lime)] px-1.5 py-0.5 text-[11px] font-extrabold text-[var(--tdm-olive)]"
+            className="num absolute right-2 top-2 flex items-center gap-0.5 rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-foreground shadow-subtle"
             data-ocid="platform_home.best_seller_badge"
           >
             <Flame className="h-3 w-3" aria-hidden="true" />#{rank}
           </span>
         )}
       </a>
-      <div className="flex flex-1 flex-col gap-0.5 p-2.5">
-        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-tight">
+      <div className="flex flex-1 flex-col gap-0.5 p-3">
+        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-tight text-foreground">
           {dish.name}
         </h3>
         <a
           href={`/${dish.tenantSlug}/`}
-          className="truncate text-xs text-muted-foreground hover:underline"
+          className="truncate rounded-sm text-xs text-muted-foreground hover:text-primary hover:underline focus-ring"
         >
           {dish.tenantName}
           {dish.distanceKm != null && ` · ${formatKm(dish.distanceKm)}`}
         </a>
         {dish.sold >= 3 && (
-          <span className="text-[11px] font-semibold text-[var(--tdm-olive)]">
-            Đã bán {dish.sold} tuần này
+          <span className="text-[11px] font-semibold text-secondary-foreground">
+            Đã bán <span className="num">{dish.sold}</span> tuần này
           </span>
         )}
-        <div className="mt-1 flex items-center justify-between gap-1">
-          <span className="text-[15px] font-extrabold">
+        <div className="mt-auto flex items-center justify-between gap-1 pt-1.5">
+          <span className="num text-base font-bold text-foreground">
             {formatVnd(dish.price)}
           </span>
           {qty > 0 ? (
-            <span className="flex items-center rounded-xl border border-primary">
+            <span className="flex items-center rounded-md border border-primary bg-primary/5">
               <button
                 type="button"
                 aria-label={`Bớt ${dish.name}`}
                 onClick={() => onRemove(dish)}
-                className="flex h-9 w-8 items-center justify-center text-primary"
+                className="focus-ring flex h-10 w-9 items-center justify-center rounded-md text-primary transition-smooth hover:bg-primary/10"
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <span className="min-w-[1.25rem] text-center text-sm font-bold">
+              <span className="num min-w-[1.25rem] text-center text-sm font-bold">
                 {qty}
               </span>
               <button
                 type="button"
                 aria-label={`Thêm ${dish.name}`}
                 onClick={() => onAdd(dish)}
-                className="flex h-9 w-8 items-center justify-center text-primary"
+                className="focus-ring flex h-10 w-9 items-center justify-center rounded-md text-primary transition-smooth hover:bg-primary/10"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -204,7 +207,7 @@ const DishCard = memo(function DishCard({
               aria-label={`Thêm ${dish.name}`}
               disabled={!dish.open}
               onClick={() => onAdd(dish)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:pointer-events-none disabled:opacity-40"
+              className="btn btn-outline h-11 min-h-0 w-11 px-0 text-primary hover:bg-primary hover:text-primary-foreground"
               data-ocid="platform_home.add_button"
             >
               <Plus className="h-5 w-5" />
@@ -222,7 +225,8 @@ export default function PlatformHome() {
   );
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
-  const { dishes, groups, loading, tenantCount } = usePlatformCatalog(location);
+  const { dishes, groups, loading, error, tenantCount } =
+    usePlatformCatalog(location);
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -474,6 +478,7 @@ export default function PlatformHome() {
     return results.filter((d) => !inStrip.has(d.key));
   }, [results, bestSellers, showBest]);
   const visible = listed.slice(0, limit);
+  const hasCartBar = !!cart && cartCount > 0;
 
   return (
     <PlatformFrame
@@ -482,7 +487,7 @@ export default function PlatformHome() {
           type="button"
           onClick={locate}
           disabled={locating}
-          className="flex min-h-[44px] items-center gap-1.5 rounded-xl px-2 text-sm font-semibold hover:bg-card/50"
+          className="btn min-h-[44px] px-2.5 text-foreground hover:bg-muted"
           data-ocid="platform_home.locate_button"
         >
           <LocateFixed className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -494,19 +499,26 @@ export default function PlatformHome() {
         </button>
       }
     >
-      <div className="pb-24" data-ocid="platform_home.page">
+      <div
+        className={hasCartBar ? "pb-fixed-bar" : "pb-6"}
+        data-ocid="platform_home.page"
+      >
         {locError && (
-          <p className="mx-auto max-w-6xl px-4 pt-2 text-xs text-destructive">
+          <p
+            className="page-container pt-2 text-xs font-medium text-destructive"
+            role="alert"
+            data-ocid="platform_home.locate_error_state"
+          >
             {locError}
           </p>
         )}
 
-        <div className="sticky top-0 z-20 border-b bg-card/95 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2.5 px-4 py-2.5">
+        <div className="sticky top-0 z-20 border-b border-border bg-card shadow-subtle">
+          <div className="page-container flex flex-col gap-2.5 py-3">
             <label
               className={cn(
-                "flex min-h-[48px] items-center gap-2 rounded-2xl border-2 bg-muted pl-3 pr-1.5",
-                searching ? "border-foreground" : "border-transparent",
+                "flex min-h-[48px] items-center gap-2 rounded-lg border bg-background pl-3 pr-1.5 transition-smooth focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/30",
+                searching ? "border-primary" : "border-input",
               )}
             >
               <Search
@@ -518,7 +530,7 @@ export default function PlatformHome() {
                   type="button"
                   onClick={() => setCategory(null)}
                   aria-label={`Bỏ nhóm ${categoryLabel}`}
-                  className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-foreground pl-2.5 pr-2 text-[13px] font-semibold text-background"
+                  className="chip chip-active focus-ring h-8 pl-2.5 pr-2 text-[13px]"
                 >
                   <span className="max-w-[9rem] truncate">{categoryLabel}</span>
                   <X className="h-3.5 w-3.5" />
@@ -547,14 +559,15 @@ export default function PlatformHome() {
                     inputRef.current?.focus();
                   }}
                   aria-label="Xoá từ khoá"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-border"
+                  className="icon-btn h-9 w-9 shrink-0 rounded-full bg-muted"
+                  data-ocid="platform_home.clear_search_button"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
             </label>
 
-            <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
+            <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:-mx-6 sm:px-6">
               {chips
                 .filter((c) => c.id !== category)
                 .map((c) => (
@@ -562,7 +575,7 @@ export default function PlatformHome() {
                     key={c.id}
                     type="button"
                     onClick={() => setCategory(c.id)}
-                    className="h-9 shrink-0 rounded-full border bg-card px-3.5 text-sm font-semibold hover:bg-muted"
+                    className="chip focus-ring"
                     data-ocid="platform_home.group_chip"
                   >
                     {c.label}
@@ -583,11 +596,10 @@ export default function PlatformHome() {
                     setFilters((p) => ({ ...p, [f.key]: !p[f.key] }))
                   }
                   className={cn(
-                    "flex h-9 shrink-0 items-center gap-1 rounded-lg border px-3 text-[13px] font-semibold",
-                    filters[f.key]
-                      ? "border-[var(--tdm-lime)] bg-[var(--tdm-lime-soft)] text-[var(--tdm-olive)]"
-                      : "bg-card hover:bg-muted",
+                    "chip focus-ring text-[13px]",
+                    filters[f.key] && "chip-active",
                   )}
+                  data-ocid={`platform_home.filter_${f.key}.toggle`}
                 >
                   {filters[f.key] && <Check className="h-3.5 w-3.5" />}
                   {f.label}
@@ -607,7 +619,7 @@ export default function PlatformHome() {
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setQuery(r)}
-                    className="h-8 rounded-full border bg-card px-2.5 text-[13px]"
+                    className="chip focus-ring h-8 px-3 text-[13px] font-medium"
                   >
                     {r}
                   </button>
@@ -619,7 +631,7 @@ export default function PlatformHome() {
                     clearRecentSearches();
                     setRecent([]);
                   }}
-                  className="h-8 px-1.5 text-xs text-muted-foreground underline"
+                  className="focus-ring h-8 rounded-md px-1.5 text-xs font-semibold text-muted-foreground underline hover:text-primary"
                 >
                   Xoá
                 </button>
@@ -636,7 +648,7 @@ export default function PlatformHome() {
                       key={s}
                       type="button"
                       onClick={() => setQuery(s)}
-                      className="h-8 rounded-full border border-dashed bg-card px-2.5 text-[13px]"
+                      className="chip focus-ring h-8 border-dashed px-3 text-[13px] font-medium"
                     >
                       {s}
                     </button>
@@ -647,19 +659,18 @@ export default function PlatformHome() {
           </div>
         </div>
 
-        <main className="mx-auto max-w-6xl px-4 pt-4">
+        <main className="page-container pt-5">
           {showBest && (
-            <section className="mb-5" data-ocid="platform_home.best_sellers">
-              <div className="mb-2 flex items-center gap-1.5">
-                <Flame
-                  className="h-5 w-5 text-[var(--tdm-red)]"
-                  aria-hidden="true"
-                />
-                <h2 className="text-base font-extrabold md:text-lg">
+            <section className="mb-6" data-ocid="platform_home.best_sellers">
+              <div className="mb-2.5 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                  <Flame className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <h2 className="text-base font-bold md:text-lg">
                   Bán chạy tuần này
                 </h2>
               </div>
-              <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-6 sm:px-6">
                 {bestSellers.map((d) => (
                   <div key={d.key} className="w-[9.5rem] shrink-0 sm:w-44">
                     <DishCard
@@ -674,11 +685,16 @@ export default function PlatformHome() {
               </div>
             </section>
           )}
-          <div className="mb-2.5 flex items-baseline justify-between gap-2">
-            <h1 className="text-base font-extrabold md:text-xl">{title}</h1>
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h1 className="min-w-0 truncate text-lg font-bold md:text-xl">
+              {title}
+            </h1>
             {!loading && (
               <span className="shrink-0 text-[13px] text-muted-foreground">
-                {listed.length} món
+                <span className="num font-semibold text-foreground">
+                  {listed.length}
+                </span>{" "}
+                món
               </span>
             )}
           </div>
@@ -687,63 +703,80 @@ export default function PlatformHome() {
             <a
               key={d.tenantId}
               href={`/${d.tenantSlug}/`}
-              className="mb-2.5 flex items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5"
+              className="surface-card surface-card-hover focus-ring mb-3 flex items-center gap-3 px-3 py-2.5"
               data-ocid="platform_home.store_hit"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Store className="h-5 w-5" aria-hidden="true" />
               </span>
-              <span className="flex flex-1 flex-col">
+              <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-xs text-muted-foreground">
                   Quán khớp từ khoá
                 </span>
-                <span className="text-[15px] font-bold">{d.tenantName}</span>
+                <span className="truncate font-display text-[15px] font-bold">
+                  {d.tenantName}
+                </span>
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </a>
           ))}
 
           {loading && dishes.length === 0 ? (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {Array.from({ length: 8 }, (_, i) => i).map((i) => (
-                <div
-                  key={i}
-                  className="h-56 animate-pulse rounded-xl border bg-card"
-                />
-              ))}
+            <div data-ocid="platform_home.loading_state">
+              <SkeletonGrid
+                count={10}
+                className="gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+              />
             </div>
+          ) : error && dishes.length === 0 ? (
+            <StateScreen
+              variant="error"
+              layout="inline"
+              className="surface-card"
+              title="Chưa tải được danh sách món"
+              description="Kiểm tra kết nối mạng rồi thử lại."
+              primaryAction={{
+                label: "Thử lại",
+                icon: RotateCw,
+                onClick: () => window.location.reload(),
+                ocid: "platform_home.retry_button",
+              }}
+              ocid="platform_home.error_state"
+            />
           ) : results.length === 0 ? (
-            <div
-              className="flex flex-col items-center gap-2.5 rounded-2xl border border-dashed bg-card px-4 py-8 text-center"
-              data-ocid="platform_home.empty_state"
-            >
-              <p className="font-bold">
-                {tenantCount === 0
+            <StateScreen
+              variant={tenantCount === 0 ? "empty" : "notFound"}
+              icon={tenantCount === 0 ? Store : undefined}
+              layout="inline"
+              className="surface-card border-dashed shadow-none"
+              title={
+                tenantCount === 0
                   ? "Chưa có quán nào mở bán"
-                  : "Chưa có món khớp"}
-              </p>
-              {tenantCount > 0 && (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Thử bỏ bớt bộ lọc hoặc gõ ngắn hơn, vd “bún”.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery("");
-                      setCategory(null);
-                      setFilters({ open: false, cheap: false, promo: false });
-                    }}
-                    className="h-11 rounded-xl border px-4 text-sm font-bold text-primary"
-                  >
-                    Xoá tìm kiếm và bộ lọc
-                  </button>
-                </>
-              )}
-            </div>
+                  : "Chưa có món khớp"
+              }
+              description={
+                tenantCount > 0
+                  ? "Thử bỏ bớt bộ lọc hoặc gõ ngắn hơn, vd “bún”."
+                  : undefined
+              }
+              primaryAction={
+                tenantCount > 0
+                  ? {
+                      label: "Xoá tìm kiếm và bộ lọc",
+                      onClick: () => {
+                        setQuery("");
+                        setCategory(null);
+                        setFilters({ open: false, cheap: false, promo: false });
+                      },
+                      ocid: "platform_home.reset_button",
+                    }
+                  : undefined
+              }
+              ocid="platform_home.empty_state"
+            />
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {visible.map((d) => (
                   <DishCard
                     key={d.key}
@@ -756,11 +789,11 @@ export default function PlatformHome() {
                 ))}
               </div>
               {listed.length > limit && (
-                <div className="mt-4 flex justify-center">
+                <div className="mt-5 flex justify-center">
                   <button
                     type="button"
                     onClick={() => setLimit((l) => l + PAGE_SIZE)}
-                    className="h-11 rounded-xl border bg-card px-5 text-sm font-bold"
+                    className="btn btn-outline px-5"
                     data-ocid="platform_home.load_more"
                   >
                     Xem thêm món ({listed.length - limit})
@@ -772,25 +805,32 @@ export default function PlatformHome() {
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             Bạn có quán ăn?{" "}
-            <a href="/dang-ky-doi-tac" className="font-semibold text-primary">
+            <a
+              href="/dang-ky-doi-tac"
+              className="focus-ring rounded-sm font-semibold text-primary hover:underline"
+              data-ocid="platform_home.partner_signup_link"
+            >
               Đăng ký làm đối tác
             </a>
           </p>
         </main>
 
-        {cart && cartCount > 0 && (
-          <div className="fixed inset-x-0 bottom-16 z-30 p-3 md:bottom-0">
+        {hasCartBar && cart && (
+          <div
+            className="fixed-bar !bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))] !pb-3 md:!bottom-0 md:!pb-[calc(var(--safe-bottom)+0.75rem)]"
+            data-ocid="platform_home.checkout_panel"
+          >
             <button
               type="button"
               onClick={checkout}
-              className="mx-auto flex h-14 w-full max-w-xl items-center justify-between rounded-2xl bg-primary px-4 text-primary-foreground shadow-lg"
+              className="btn btn-primary mx-auto h-12 w-full max-w-xl justify-between rounded-lg px-4"
               data-ocid="platform_home.checkout_bar"
             >
-              <span className="flex flex-col items-start leading-tight">
-                <span className="text-[15px] font-bold">
+              <span className="flex min-w-0 flex-col items-start leading-tight">
+                <span className="num text-[15px] font-bold">
                   {cartCount} món · {formatVnd(cartTotal)}
                 </span>
-                <span className="max-w-[12rem] truncate text-xs opacity-90">
+                <span className="max-w-[12rem] truncate text-xs font-medium opacity-90">
                   {cart.tenantName}
                 </span>
               </span>

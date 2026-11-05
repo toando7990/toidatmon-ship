@@ -1,114 +1,80 @@
 # Design Brief
 
 ## Direction
-
-Bún Bò Huế 65 Ship — Vietnamese restaurant-chain shipping & payment tool (UI tiếng Việt) with enterprise role-based device management, now extended to a multi-partner (tenant) platform: each partner owns its own brand, logo, restaurant chain and menu under a `toidatmon.com` subdomain.
+Tôi Đặt Món — multi-partner Vietnamese food ordering platform (UI tiếng Việt); brand pages at `toidatmon.vn/<slug>`, plus platform home, partner console `/quan-ly`, staff `/san`, admin `/admin/*`.
 
 ## Tone
-
-Modern operational console, not rustic food app — warm vermillion brand accent on a warm neutral base, plus a dedicated cooler-neutral enterprise surface for admin/accounting/promo screens; clean, data-dense, legible. Partner branding is applied as a thin, additive layer so the core design language never changes.
+Confident operations console wearing a fresh street-food brand: brick red authority, lime freshness, white paper surfaces, zero rustic clichés.
 
 ## Differentiation
-
-A shipping app that feels like a confident operations console wearing a Vietnamese food brand — vivid vermillion primary, functional status colors, large driver touch targets, dense legible enterprise tables.
+One brand system everywhere — brick red drives every action, lime marks every "active/selected" state (chips, nav indicator, counts).
 
 ## Color Palette
-| Token        | OKLCH (light)  | OKLCH (dark)  | Role                              |
-| ------------ | -------------- | ------------- | --------------------------------- |
-| background   | 0.97 0.012 75  | 0.16 0.015 50 | Warm cream / warm charcoal        |
-| foreground   | 0.2 0.02 50    | 0.93 0.012 60 | Deep warm ink / soft warm white   |
-| card         | 0.99 0.008 75  | 0.2 0.018 50  | Elevated surface                  |
-| primary      | 0.55 0.22 28   | 0.68 0.2 32   | Vivid vermillion — brand CTA      |
-| accent       | 0.55 0.22 28   | 0.68 0.2 32   | Same as primary (single accent)   |
-| secondary    | 0.94 0.018 75  | 0.24 0.02 50  | Subtle surfaces, secondary btns   |
-| muted        | 0.94 0.015 75  | 0.24 0.02 50  | Backgrounds, disabled             |
-| success      | 0.55 0.16 150  | 0.65 0.16 150 | Paid status (green)               |
-| info         | 0.5 0.16 245   | 0.6 0.16 245  | Shipping status (blue)            |
-| warning      | 0.72 0.16 70   | 0.78 0.16 70  | Pending status (amber)            |
-| destructive  | 0.5 0.22 25    | 0.6 0.22 25   | Cancelled status (red)            |
-### Enterprise surface (`.bbh-enterprise-theme`)
+| Token | OKLCH light | OKLCH dark | Role |
+| --- | --- | --- | --- |
+| background | 0.975 0.008 100 | 0.17 0.012 60 | Warm paper / warm charcoal |
+| foreground | 0.235 0.028 60 | 0.94 0.01 95 | Deep brown ink |
+| card / popover | 1 0 0 | 0.21 0.014 60 | Surfaces |
+| primary | 0.472 0.139 30.7 (#9A3426) | 0.64 0.15 33 | Đỏ gạch — CTAs, active text, focus ring |
+| accent | 0.814 0.153 117.9 (#BACF50) | 0.82 0.15 118 | Lime — fills only; text on it = accent-foreground olive 0.27 |
+| secondary | 0.952 0.035 114 | 0.27 0.035 118 | Lime-soft surface, olive text |
+| muted | 0.955 0.008 95 | 0.25 0.012 60 | Quiet fills, table headers, skeleton |
+| success / warning / info / destructive | 0.52 0.13 152 / 0.77 0.15 72 / 0.5 0.12 240 / 0.55 0.2 22 | brighter | Status only |
+| border / input | 0.905 / 0.88 | 0.31 / 0.34 | Hairlines |
 
-| Token        | OKLCH (light)  | Role                              |
-| ------------ | -------------- | --------------------------------- |
-| background   | 0.972 0.006 240 | Cool neutral base for admin      |
-| card         | 0.995 0.004 240 | Crisp elevated surface           |
-| primary      | 0.53 0.21 28   | Vermillion brand CTA             |
-| success      | 0.52 0.15 150  | Paid / confirmed status          |
-| warning      | 0.72 0.15 75   | Pending / awaiting payment       |
-| info         | 0.5 0.15 250   | Lookup / in-progress status      |
+- Contrast: white on brick ΔL 0.52; olive 0.27 on lime ΔL 0.54. Never put lime text on light surfaces, never white text on lime.
+- Legacy classes `.bbh-order-theme/.bbh-verify-theme/.bbh-enterprise-theme/.tdm-theme` now inherit `:root` (no overrides). `--tdm-red/--tdm-lime/--tdm-lime-soft/--tdm-olive` are oklch aliases.
+- Tenant `--brand-*` default to unified tokens; partners override only on `.brand-scope`.
+
 ## Typography
+- Display: Space Grotesk — headings (h1–h4 auto), KPI values, prices (`.num` = tabular figures)
+- Body: Plus Jakarta Sans — all UI text. Mono: JetBrains Mono — order IDs, codes, slugs
+- No serif anywhere (Tailwind `font-display` fallback is sans-serif)
+- Scale: page h1 `text-2xl md:text-3xl font-bold`, section h2 `text-lg font-semibold`, label `.section-label`, body `text-sm`/`text-base`
 
-- Display: Space Grotesk — headings, KPI numbers, brand wordmark
-- Body: Plus Jakarta Sans — UI labels, forms, tables (full Vietnamese diacritics)
-- Mono: JetBrains Mono — order IDs, activation codes, amount columns
-- Scale: hero `text-4xl md:text-5xl font-bold tracking-tight`, h2 `text-2xl md:text-3xl font-semibold`, label `text-xs font-semibold tracking-wider uppercase`, body `text-base`, mono IDs `font-mono text-sm`
 ## Elevation & Depth
+Borders first, warm-tinted shadows second: `shadow-subtle` (header), `shadow-panel` (cards), `shadow-panel-hover`, `shadow-elevated` (dialogs/sheets), `shadow-bar` (bottom bars), `shadow-cta` (primary floating cart), `shadow-qr`.
 
-Layered surfaces via `bg-card` on `bg-background`, subtle borders over heavy shadows; `shadow-panel` for enterprise cards, `shadow-elevated` only for popovers/modals/QR card. No glow shadows.
+## Shape & Spacing Scale
+- Radius: `rounded-sm` 8px chips-in-inputs, `rounded-md` 10px buttons/inputs, `rounded-lg` 12px small cards/logo slot, `rounded-xl` 16px cards/KPI/toolbars, `rounded-2xl` 20px state cards/sheets, `rounded-full` pills/chips/avatars
+- Spacing: page `px-4 sm:px-6` (`.page-container`), card `p-4`, section gap `space-y-6`, table rows `py-2.5`
+- Touch targets ≥ 44px (`.tap-target`); buttons h-10 default, h-11 on mobile primary
+
 ## Structural Zones
+| Zone | Background | Border | Notes |
+| --- | --- | --- | --- |
+| Header | `bg-card` (`.app-header` / `.brand-header`) | `border-b` | Sticky, safe-top; menu = icon button `.icon-btn` on mobile |
+| Content | `bg-background` | — | Cards `bg-card`; alternate sections `bg-muted/40` |
+| Sidebar (admin/console desktop) | `bg-sidebar` | `border-r` | Active item `bg-sidebar-accent` + primary text |
+| Bottom nav (mobile) | `bg-card` `.bottom-nav` | `border-t` + `shadow-bar` | Active `.bottom-nav-item-active`: primary text + lime top bar |
+| Fixed action/cart bar | `bg-card` `.fixed-bar` or `bg-primary` CTA | `border-t` | Sits above nav with `.bottom-above-nav` |
+| Footer | `bg-muted/50` `.brand-footer` | `border-t` | Compact |
 
-| Zone       | Background      | Border           | Notes                                  |
-| ---------- | --------------- | ---------------- | -------------------------------------- |
-| Header     | `bg-card`       | `border-b`       | Sticky, brand wordmark + nav           |
-| Content    | `bg-background` | —                | Alternating `bg-muted/30` per section  |
-| Sidebar    | `bg-sidebar`    | `border-r`       | Enterprise role nav (Thanh toán, Kế toán, Báo cáo) |
-| Footer     | `bg-muted/40`   | `border-t`       | Compact, optional on mobile            |
-| QR screen  | `bg-background` | —                | Full-bleed, centered QR, no chrome     |
-| Partner header lockup | `var(--brand-surface)` | `border-b` | `.brand-header`; logo slot + partner display name + `.brand-partner-chip` |
-| Partner notice | `bg-background` | — | `.partner-notice` centered card for unknown/hidden partner — never blank |
-
-### Tenant branding layer (multi-partner)
-
-| Token | Default | Role |
-| ----- | ------- | ---- |
-| `--brand-primary` | `var(--primary)` | Partner brand color; overridden at runtime |
-| `--brand-primary-foreground` | `var(--primary-foreground)` | Text/icon on partner brand color |
-| `--brand-accent` | `var(--accent)` | Partner accent rule / highlights |
-| `--brand-surface` | `var(--card)` | Partner-branded header surface |
-| `--brand-surface-foreground` | `var(--card-foreground)` | Text on partner surface |
-| `--brand-on-surface-muted` | `var(--muted-foreground)` | Partner subname / secondary text |
-| `--brand-ring` | `var(--ring)` | Focus ring inside partner scope |
-| `--brand-logo-size` / `--brand-lockup-gap` | `2.5rem` / `0.75rem` | Header lockup geometry |
-
-- Defaults alias the existing brand tokens → with no partner brand set, the current look is unchanged.
-- A partner's brand is applied by setting `--brand-*` on a `.brand-scope` wrapper (inline style or scoped class); descendants use `--brand-*` only.
-- Never a blank screen: unknown or hidden slug renders `.partner-notice` with the requested slug in `.partner-notice-slug` and a link home.
-- Header lockup: `.brand-lockup` + `.brand-logo-slot` (image, or `.brand-logo-fallback` monogram from the partner name) + `.brand-name` / `.brand-subname` + `.brand-accent-rule`.
-## Spacing & Rhythm
-
-Mobile-first: 16px base padding, 24px section gaps; enterprise tables compact 12px row padding; QR screen 32px breathing room; touch targets min 44px on driver flows.
 ## Component Patterns
+- Buttons: primary `bg-primary text-primary-foreground rounded-md hover:bg-primary/90`; secondary `bg-secondary text-secondary-foreground`; outline `border bg-card`; lime only for "selected/new" accents. Busy → `.is-busy` + spinner, disabled → `opacity-50`
+- Focus: `ring-2 ring-ring ring-offset-2` (`.focus-ring`) on every interactive element
+- Inputs: `h-10 rounded-md border-input bg-card`, focus `border-primary ring-ring/30`
+- Switches: checked `bg-primary`, unchecked `bg-input`
+- Cards: `.surface-card` (+ `.surface-card-hover`); KPI `.ent-kpi`; toolbar `.ent-toolbar`
+- Chips: `.chip` / `.chip-active` (lime fill, olive text). Badges: `badge-success/warning/info/destructive/brand/lime` on `ent-pill`
+- Tables: `.ent-th` (muted header), `.ent-td`, `.ent-table-row`; numbers `.num`, IDs `font-mono`
+- Skeleton: `.skeleton`, `.skeleton-text`, `.skeleton-title`, `.skeleton-circle`, inside `.skeleton-card` — replaces every "Đang tải…"
+- State screens (sign-in, no-access, empty, error, partner notice): `.state-screen > .state-card` (or `.state-inline`) → `.state-icon[-muted|-warning|-destructive|-success]` → `.state-title` → `.state-desc` → `.state-actions` (primary + outline)
 
-- Buttons: primary `bg-primary text-primary-foreground rounded-md`, hover darkens 8%; secondary `bg-secondary`; status confirmations use status colors directly
-- Cards: `bg-card rounded-lg border border-border shadow-panel`, 16-20px padding
-- Badges: pill `rounded-full border px-2.5 py-0.5 text-xs font-semibold` with `badge-success/warning/info/destructive` utilities
-- Tables: `bg-card` header `bg-muted/50`, mono font for ID + amount columns, status badge per row
-- Forms: labels `text-sm font-medium`, inputs `bg-input rounded-md`, focus ring `ring-primary`
-- QR: centered `bg-card rounded-2xl p-6 shadow-elevated`, code fills 70% viewport on mobile
-## Enterprise Screens (`.bbh-enterprise-theme`)
+## Mobile
+- `--header-h` 3.5rem, `--bottom-nav-h` 4rem, `--fixed-bar-h` 4.5rem, `--safe-bottom/--safe-top` from env()
+- Offsets: `.pb-bottom-nav`, `.pb-fixed-bar`, `.pb-fixed-stack`, `.pb-safe`, `.pt-safe`, `.top-header`
+- Never stack two fixed bars without `.bottom-above-nav` + `.pb-fixed-stack`
 
-- KPI cards (`.ent-kpi`): `bg-card border shadow-panel`, `font-display` value + small label, `animate-kpi-in`
-- Tables (`.ent-table-row/.ent-th/.ent-td`): compact rows, `hover:bg-muted/40`, mono order IDs, per-row status pill
-- Toolbar (`.ent-toolbar`): filter/search/action bar on `bg-card` with `shadow-panel`
-- Payment queue: success pill for paid, warning pill for awaiting, primary confirm action
-- Accounting lookup: shows order + payment verification image (`.badge-info` in-progress)
-- Promo/sales reporting: `--chart-*` colors, KPI row + dense table
 ## Motion
+- Entrance `fade-rise` 200ms, `kpi-in` 300ms, `row-in` 250ms, sheets `sheet-up` 220ms
+- Hover/press `transition-smooth` 200ms; skeleton `shimmer` 1.4s (off for reduced motion)
+- OTP error `otp-shake`; success `pulse-soft`
 
-- Entrance: fade + rise, `kpi-in` 300ms for KPI cards, `row-in` 250ms staggered for table rows
-- Hover: `transition-smooth` (250ms), primary buttons darken, cards lift `shadow-panel → shadow-panel-hover`
-- QR scan success: brief `animate-pulse-soft` on confirmation badge
-- Polling status: subtle `animate-pulse` on pending badges only
 ## Constraints
-- All UI labels in Vietnamese (Thanh toán, Kế toán, Báo cáo bán hàng & KM, Hàng đợi, Hoá đơn, Tra cứu đơn)
-- Enterprise roles: Hàng đợi thanh toán, Kế toán, Báo cáo bán hàng & KM only — no extra roles
-- Menu/restaurant edit stays admin-only; enterprise roles scoped to their attached restaurant
-- Status colors are functional only (green=paid, blue=shipping, amber=pending, red=cancelled) — never decorative
-- No purple gradients, no full-page gradient backgrounds, no glow shadows
-- Token-only styling — never raw hex/rgb in components
-- Partner branding overrides `--brand-*` only — never rewrite core tokens or the enterprise theme
-- Partner header must always show the partner's logo slot + display name; unknown/hidden slug must render `.partner-notice`, never a blank screen
-- Vietnamese language UI; partner slug shown as `<slug>.toidatmon.com`
-- No partner self-registration UI and no cross-partner aggregate dashboards
+- Vietnamese UI; keep all routes, copy and features; no new features or backend changes
+- Token-only styling; no raw hex/rgb in components; no gradients beyond `bg-gradient-primary` on hero CTA
+- Status colors are functional only; brick red never used for errors in place of `destructive`
+
 ## Signature Detail
-The vermillion primary (`0.55 0.22 28`) tuned from Vietnamese flag red into an operational CTA, paired with a warm cream base for ordering and a cooler-neutral `.bbh-enterprise-theme` for admin/accounting surfaces — enterprise screens feel professional and legible while the brand stays unmistakably Bún Bò Huế 65. The multi-partner layer keeps that identity as the default and lets each partner's brand recolor only the header lockup and accent through `--brand-*`, so a partner storefront feels native to the platform rather than a separate app.
+The lime "active bar" — a 4px lime pill marking the selected bottom-nav tab, chip and accent rule — the one fresh note against disciplined brick red and white.

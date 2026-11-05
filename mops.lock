@@ -1,11 +1,11 @@
 {
   "version": 3,
-  "mopsTomlDepsHash": "b62a4acc52591c5441d027f998b5d0f553404563f3dfb678fa12d8c67d528e39",
+  "mopsTomlDepsHash": "b43ff3349fbf7b8ad525b1859fb314fd41f67d85b554f2a2d12434e73a4c90b5",
   "deps": {
     "base": "0.16.0",
-    "caffeine-integrations-mail-client": "0.3.0",
+    "caffeine-integrations-mail-client": "0.7.0",
     "caffeineai-authorization": "1.0.1",
-    "caffeineai-email": "0.2.1",
+    "caffeineai-email": "0.5.0",
     "caffeineai-lints": "0.1.1",
     "caffeineai-oql": "0.4.0",
     "core": "2.6.2",
@@ -19,17 +19,17 @@
   "graph": {
     "base@0.11.1": {},
     "base@0.16.0": {},
-    "caffeine-integrations-mail-client@0.3.0": {
+    "caffeine-integrations-mail-client@0.7.0": {
       "core": "2.6.0",
-      "ic": "4.2.0",
+      "ic": "5.0.0",
       "serde-core": "0.2.1"
     },
     "caffeineai-authorization@1.0.1": {
       "core": "2.5.0",
       "identity-attributes": "0.4.0"
     },
-    "caffeineai-email@0.2.1": {
-      "caffeine-integrations-mail-client": "0.3.0",
+    "caffeineai-email@0.5.0": {
+      "caffeine-integrations-mail-client": "0.7.0",
       "core": "2.6.0"
     },
     "caffeineai-lints@0.1.1": {},
@@ -43,6 +43,9 @@
     "core@2.6.0": {},
     "core@2.6.2": {},
     "ic@4.2.0": {
+      "core": "2.5.0"
+    },
+    "ic@5.0.0": {
       "core": "2.5.0"
     },
     "identity-attributes@0.4.0": {
@@ -118,23 +121,32 @@
       "base@0.16.0/src/TrieMap.mo": "f09aab78476ffd158f8ab789e0692ad61aa9b1f4ac6ff3af30cdac5f5c30a7e4",
       "base@0.16.0/src/TrieSet.mo": "9c8c1821582b344de6f3910f417527ec0b565876eb2d9da09455af05117ed45a"
     },
-    "caffeine-integrations-mail-client@0.3.0": {
-      "caffeine-integrations-mail-client@0.3.0/README.md": "63957d8fbe19eaca992fad57f9265a2a373c3ec453ba09b43cda1c4d06f9d130",
-      "caffeine-integrations-mail-client@0.3.0/mops.toml": "a5ef77f7d6a45a95e30c8036fa5ae63ba0261b45c99e109cf9d94eaa2a690b1a",
-      "caffeine-integrations-mail-client@0.3.0/src/Apis/MailV2Api.mo": "bffda95c6e90cd02d8989f2ca85a9b032caf9de9fd89c46973a72beff47b82b9",
-      "caffeine-integrations-mail-client@0.3.0/src/Config.mo": "f52600e776f5b14d7e31cdafe7063f5213d6f0baab73077549a08e2adc5cef95",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2Attachment.mo": "7d3c6a0f6251afffae91f9dbde658405c16ab05fbce84e43c438b432782eae51",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2AttachmentEncoding.mo": "22f5c303faac2cfa0eff98e5a7945717b816caf34fc65dd8d1ebd7b5676b1a1d",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2BroadcastBody.mo": "35baba1936af8cff1f166b3c6f31e94d8bad76e39d42cbab59b86cfb7ce8e92f",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2BroadcastRecipient.mo": "7959484b33a63480f9c0c8d03c8ca49edaada4bca89ee5ab133e650af914e1b3",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2BroadcastResponse.mo": "395713f79ce20ab2817631320fc0c5efe37d49cea689c0b7ffcc7e0db0b8b1ac",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2BroadcastSubType.mo": "0f5439ea3e38efd9cc39289e33d15bba54d512fbd390620ddc303e4619cfd671",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2Error.mo": "558388ea75ca94b2ff4373bbde6f6510145e1764701c37619589535d0d4b72fa",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2ErrorDetail.mo": "ee2e78e763c220acd75779067c55ca24f99db28ed5131177bfb3a9844d196e5e",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2ErrorDetailType.mo": "e0c9439114f4581ef82123728ceaf114ea458e877b76ec950d47cecb8047db49",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2SendBody.mo": "e1e7c89f1e30e76f7f81cf5f7cb14aee203648f47a59e379aef055009901467e",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2SendResponse.mo": "8583bc00da99292f93e70b1418e4c39d3e4d0b32364be3c08dd68baa86b88af2",
-      "caffeine-integrations-mail-client@0.3.0/src/Models/MailV2SendResponseStatus.mo": "ba958f8fb38f32aed9c28042f9d8ba5a04879b31b426731ac287a9ea887fe83d"
+    "caffeine-integrations-mail-client@0.7.0": {
+      "caffeine-integrations-mail-client@0.7.0/README.md": "249b28fe57945884a15623339d1704e0c4be0bdd839e22ccade4d2aab40157f0",
+      "caffeine-integrations-mail-client@0.7.0/mops.toml": "9de5fbc736e6b2abbf6f08f20de6c12adddd07299bc158b9a10d09483abefd87",
+      "caffeine-integrations-mail-client@0.7.0/src/Apis/MailV2Api.mo": "898729245e0a8e2a1b0a50c19f4adb0de1d37f408b77daef27e86ff23251e4f6",
+      "caffeine-integrations-mail-client@0.7.0/src/Config.mo": "36d22c750c89378657d795000ec541ad0ff634c076d7c3588e060450fd28171c",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2Attachment.mo": "245b37d7200249841663cd7bddad685490be53e1868a64557b38e1c575004ea7",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2BroadcastBody.mo": "efa56d1b7f6599757a6ffd1e1c71da9855fb5e1f979445371897a76e6a85d79d",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2BroadcastHeader.mo": "7a833fb9755495335e944fef18f6af2f1d665aaaffa909b3759144dac18cf3c6",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2BroadcastRecipient.mo": "8b36780a1e1faae2b11f3573bbb073b2a86a0ea2d83a743eeb69ee2f3c07238d",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2BroadcastResponse.mo": "a2d291c449361eac808c8b0f92be6db1266c4c1336088dca394bb753418bcec8",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2CalendarAttendee.mo": "e2cce3ea821fd4216c1099ae9d222fdb8614120db099663862897e4b7881752d",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2CalendarEvent.mo": "c181fd1419876dddf9525801884a96b709e5b741a3f6e0e9f0918e34992bc0a5",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2CalendarEventBody.mo": "901bf83dfbd90c20221fff6f5206a3c3cdeb26baae465c9d0489ae7b4f4ddff2",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2Error.mo": "6c7a5ad5ca0f1d32476ba9085a083c2fa94c2f8f57c9dc621a4a00ce737f1dfd",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2ErrorDetail.mo": "3d4d2818def369dad7dce82d7a0a551ee0e56dc97768a83e0a00c0865623753a",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2Organizer.mo": "0e42334449f385abac8a1b3f092426c306445ea7182f87c90ffd9b3b9a4c9249",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2SendBody.mo": "6337c2f90e7c1a6381297c860843ea910dd43aa590f54629897e325ac597e32e",
+      "caffeine-integrations-mail-client@0.7.0/src/Models/MailV2SendResponse.mo": "62a1f05978d4a3d5aa996f19eb4dcf09a8a92ec03f808e1c443912a4390b66ec",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2AttachmentEncoding.mo": "568ff5c04f135add435f2818c636b7c5321af551c59be45f8c791a872f1da9f9",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2BroadcastHeaderName.mo": "2bada4fdf6af0e03335d3f35f93a1cefbaeecbfc583e979a346983aad40b0153",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2BroadcastSubType.mo": "55d33bafc5c579efecebe340c6c67cafddb3c3e88149210f7170918151507f79",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2CalendarEventMethod.mo": "d8dc2394316734a886cad8d1cbc36a0422261b3834547e2f13919e54b97d6b70",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2CalendarEventRole.mo": "bb6370dd57c0b2e1f1abb3780425055bf25c75b1acb90ba40178668e3c14a5ca",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2ErrorCode.mo": "b933f86ee85af35beaa18080df9306ed921aaef0f9c382bb1d611f490dc9706c",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2ErrorType.mo": "e73946f17bf279ca32b6914712d62c673cf9d9c5859315387bc05226ea266a3c",
+      "caffeine-integrations-mail-client@0.7.0/src/Values/MailV2SendStatus.mo": "75cae4ffd309d46c238de833d8712e5202cf63c13dcadca5fde1e8ff983b336f"
     },
     "caffeineai-authorization@1.0.1": {
       "caffeineai-authorization@1.0.1/README.md": "7df09c051d9943be6cab58bfc0a208425b1d48512ae7f73b898dfed86ec6fd85",
@@ -148,11 +160,10 @@
       "caffeineai-authorization@1.0.1/src/MixinAuthorization.mo": "2fb1834b4f239c9f7eba746cdc3af3359903cb2002caa3e3969683ddf4c2a309",
       "caffeineai-authorization@1.0.1/src/access-control.mo": "fc5e3a6d16aedd165b16241f6302c8358a997cb3b58635e46533ba8c738f4f40"
     },
-    "caffeineai-email@0.2.1": {
-      "caffeineai-email@0.2.1/README.md": "7bc10bb86dc7b577268d48cdcc2f877ea8cbc15ee9af57199232121ad242159b",
-      "caffeineai-email@0.2.1/mops.toml": "ed2e06dd882f626aec1aaf9cbda2ba0310a89a0570b9eb28a5e3785e0f96872d",
-      "caffeineai-email@0.2.1/src/emailClient.mo": "453f51e599a69a9ef480e7ad506344c831d32443c86113af9fc24e5fb3cacf70",
-      "caffeineai-email@0.2.1/src/emailService.mo": "789ff9fe602991267ff872bea66531cce0c7b430c18162e2e2225f5ff9dfdfc5"
+    "caffeineai-email@0.5.0": {
+      "caffeineai-email@0.5.0/README.md": "7bc10bb86dc7b577268d48cdcc2f877ea8cbc15ee9af57199232121ad242159b",
+      "caffeineai-email@0.5.0/mops.toml": "1a2196d6aae181e5cdb95ffc6f8a65cd68fbf366606ad23c78954d7d4678b3e5",
+      "caffeineai-email@0.5.0/src/emailClient.mo": "01e8ef1fe74aa9c27be1b44599874c9c58d152976cb8ecade18acf0566a5e653"
     },
     "caffeineai-lints@0.1.1": {
       "caffeineai-lints@0.1.1/README.md": "c0ac968c7d377cf7fd564b2cc2d211ba68055100e2a3c4152498fa11d6411e15",

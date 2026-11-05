@@ -1,11 +1,13 @@
 // TanStack Router with Vietnamese routes. Admin routes gated by II auth + admin role.
 
 import { type DeviceRole, EnterpriseRole } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { EnterpriseActivationForm } from "@/components/EnterpriseActivationForm";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Layout } from "@/components/Layout";
 import { MovedToConsole, readStoredDevice } from "@/components/MovedToConsole";
 import { PlatformFrame } from "@/components/PlatformFrame";
+import { PageSkeleton } from "@/components/Skeletons";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth, useEnterpriseRole } from "@/hooks/useAuth";
 import { useTenantId } from "@/hooks/useQueries";
@@ -46,7 +48,6 @@ import Profile from "@/pages/Profile";
 import { PromoManagerPage } from "@/pages/PromoManagerPage";
 import RestaurantManager from "@/pages/RestaurantManager";
 import {
-  Link,
   Outlet,
   RouterProvider,
   createRootRouteWithContext,
@@ -54,6 +55,7 @@ import {
   createRouter,
   useRouterState,
 } from "@tanstack/react-router";
+import { Home, LogIn } from "lucide-react";
 import { useState } from "react";
 
 // Admin gate component — redirects unauthenticated/non-admin users.
@@ -63,53 +65,35 @@ function AdminGate({ children }: { children: React.ReactNode }) {
 
   if (isInitializing || isAdminLoading) {
     return (
-      <section
-        className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6"
-        data-ocid="admin.loading_state"
-      >
-        <p className="text-sm text-muted-foreground">Đang kiểm tra quyền…</p>
-      </section>
+      <PageSkeleton ocid="admin.loading_state" label="Đang kiểm tra quyền…" />
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <section
-        className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6"
-        data-ocid="admin.login_state"
-      >
-        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
-          Yêu cầu đăng nhập
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Vui lòng đăng nhập bằng Internet Identity để truy cập khu vực quản lý.
-        </p>
-        <button
-          type="button"
-          onClick={login}
-          data-ocid="admin.login_button"
-          className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-        >
-          Đăng nhập Internet Identity
-        </button>
-      </section>
+      <StateScreen
+        variant="signin"
+        ocid="admin.login_state"
+        title="Yêu cầu đăng nhập"
+        description="Vui lòng đăng nhập bằng Internet Identity để truy cập khu vực quản lý."
+        primaryAction={{
+          label: "Đăng nhập Internet Identity",
+          icon: LogIn,
+          onClick: login,
+          ocid: "admin.login_button",
+        }}
+      />
     );
   }
 
   if (!isAdmin) {
     return (
-      <section
-        className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6"
-        data-ocid="admin.unauthorized_state"
-      >
-        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
-          Không có quyền truy cập
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Tài khoản của bạn không có vai trò quản trị. Vui lòng liên hệ quản trị
-          viên.
-        </p>
-      </section>
+      <StateScreen
+        variant="forbidden"
+        ocid="admin.unauthorized_state"
+        title="Không có quyền truy cập"
+        description="Tài khoản của bạn không có vai trò quản trị. Vui lòng liên hệ quản trị viên."
+      />
     );
   }
 
@@ -156,12 +140,10 @@ function EnterpriseGate({
 
   if (isAdminLoading || isEnterpriseRoleLoading) {
     return (
-      <section
-        className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6"
-        data-ocid="enterprise.loading_state"
-      >
-        <p className="text-sm text-muted-foreground">Đang kiểm tra quyền…</p>
-      </section>
+      <PageSkeleton
+        ocid="enterprise.loading_state"
+        label="Đang kiểm tra quyền…"
+      />
     );
   }
 
@@ -222,19 +204,18 @@ function EnterpriseGate({
   // Device activated but bound to a role NOT in the allowed set — block.
   if (!enterpriseRole || !allowedRoles.includes(enterpriseRole)) {
     return (
-      <section
-        className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6"
-        data-ocid="enterprise.unauthorized_state"
-      >
-        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
-          Không có quyền truy cập
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Thiết bị của bạn không được gắn vai trò phù hợp để dùng{" "}
-          <span className="font-semibold text-foreground">{moduleTitle}</span>.
-          Vui lòng liên hệ quản trị viên.
-        </p>
-      </section>
+      <StateScreen
+        variant="forbidden"
+        ocid="enterprise.unauthorized_state"
+        title="Không có quyền truy cập"
+        description={
+          <>
+            Thiết bị của bạn không được gắn vai trò phù hợp để dùng{" "}
+            <span className="font-semibold text-foreground">{moduleTitle}</span>
+            . Vui lòng liên hệ quản trị viên.
+          </>
+        }
+      />
     );
   }
 
@@ -280,12 +261,7 @@ function TenantGate({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <section
-        className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6"
-        data-ocid="tenant.loading_state"
-      >
-        <p className="text-sm text-muted-foreground">Đang tải đối tác…</p>
-      </section>
+      <PageSkeleton ocid="tenant.loading_state" label="Đang tải đối tác…" />
     );
   }
 
@@ -657,7 +633,13 @@ const enterpriseManagementRoute = createRoute({
 // Internet Identity vẫn mở được trang cũ.
 function EnterpriseRoute() {
   const { isAuthenticated, isInitializing } = useAuth();
-  if (isInitializing) return null;
+  if (isInitializing)
+    return (
+      <PageSkeleton
+        ocid="enterprise.loading_state"
+        label="Đang kiểm tra quyền…"
+      />
+    );
   if (!isAuthenticated) {
     return (
       <MovedToConsole
@@ -686,25 +668,18 @@ function EnterpriseRoute() {
 // screen. Vietnamese copy with a way back to the storefront.
 function NotFoundNotice() {
   return (
-    <section
-      className="mx-auto w-full max-w-2xl px-4 py-16 text-center md:px-6"
-      data-ocid="route.not_found"
-    >
-      <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-        Không tìm thấy trang
-      </h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Đường dẫn bạn truy cập không tồn tại hoặc đã được thay đổi. Vui lòng
-        quay về trang chủ để tiếp tục.
-      </p>
-      <Link
-        to="/"
-        data-ocid="route.not_found.home_button"
-        className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-      >
-        Về trang chủ
-      </Link>
-    </section>
+    <StateScreen
+      variant="notFound"
+      ocid="route.not_found"
+      title="Không tìm thấy trang"
+      description="Đường dẫn bạn truy cập không tồn tại hoặc đã được thay đổi. Vui lòng quay về trang chủ để tiếp tục."
+      primaryAction={{
+        label: "Về trang chủ",
+        icon: Home,
+        to: "/",
+        ocid: "route.not_found.home_button",
+      }}
+    />
   );
 }
 

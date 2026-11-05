@@ -18,6 +18,7 @@
 //      gì), hiện địa chỉ đang chọn + nút "Sửa"/"Thêm địa chỉ khác".
 
 import { MapPicker } from "@/components/MapPicker";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   Select,
   SelectContent,
@@ -34,7 +35,7 @@ import { listCustomerAddresses } from "@/lib/vps-client";
 import type { CustomerAddress } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Loader2, MapPin, Pencil, Plus } from "lucide-react";
+import { MapPin, Pencil, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface DeliveryAddressSelectorProps {
@@ -117,13 +118,12 @@ export function DeliveryAddressSelector({
 
   if (verifiedEmail && addressesQuery.isLoading) {
     return (
-      <div
-        className="flex items-center gap-2 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground"
-        data-ocid="delivery_address_selector.loading_state"
-      >
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Đang tải địa chỉ…
-      </div>
+      <SkeletonList
+        count={1}
+        avatar
+        label="Đang tải địa chỉ…"
+        ocid="delivery_address_selector.loading_state"
+      />
     );
   }
 

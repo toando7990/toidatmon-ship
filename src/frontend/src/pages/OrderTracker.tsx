@@ -7,8 +7,10 @@
 // Nút "Tải hoá đơn" tải Bkav PDF qua VPS /order/:id/invoice. UI tiếng Việt.
 
 import type { Restaurant } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { ChangeRestaurantDialog } from "@/components/ChangeRestaurantDialog";
 import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
+import { SkeletonList } from "@/components/Skeletons";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DeliveryTrackingPanel } from "@/components/delivery/DeliveryTrackingPanel";
 import { useOrderStatus } from "@/hooks/useOrderStatus";
@@ -193,20 +195,19 @@ export default function OrderTracker({ shopName }: { shopName?: string } = {}) {
         className="mx-auto w-full max-w-3xl px-4 py-10 md:px-6"
         data-ocid="order_tracker.missing_id_state"
       >
-        <h1 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
-          Theo dõi đơn
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Không tìm thấy mã đơn hàng. Vui lòng chọn một đơn từ danh sách.
-        </p>
-        <Link
-          to="/track"
-          data-ocid="order_tracker.back_link"
-          className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Xem danh sách đơn
-        </Link>
+        <StateScreen
+          layout="inline"
+          variant="notFound"
+          title="Theo dõi đơn"
+          description="Không tìm thấy mã đơn hàng. Vui lòng chọn một đơn từ danh sách."
+          primaryAction={{
+            label: "Xem danh sách đơn",
+            icon: ArrowLeft,
+            to: "/track",
+            ocid: "order_tracker.back_link",
+          }}
+          className="surface-card"
+        />
       </section>
     );
   }
@@ -262,65 +263,45 @@ export default function OrderTracker({ shopName }: { shopName?: string } = {}) {
 
       {/* Loading state */}
       {isLoading && (
-        <div
-          className="mt-6 flex flex-col items-center justify-center rounded-lg border border-border bg-card p-10 text-center"
-          data-ocid="order_tracker.loading_state"
-          aria-busy="true"
-          aria-live="polite"
-        >
-          <Loader2
-            className="h-8 w-8 animate-spin text-primary"
-            aria-hidden="true"
-          />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Đang tải trạng thái đơn…
-          </p>
-        </div>
+        <SkeletonList
+          count={2}
+          avatar={false}
+          label="Đang tải trạng thái đơn…"
+          ocid="order_tracker.loading_state"
+          className="mt-6"
+        />
       )}
 
       {/* Error state */}
       {isError && (
-        <div
-          className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-center"
-          data-ocid="order_tracker.error_state"
-          role="alert"
-        >
-          <AlertCircle
-            className="mx-auto h-8 w-8 text-destructive"
-            aria-hidden="true"
-          />
-          <p className="mt-3 font-medium text-destructive">
-            Không tải được trạng thái đơn
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : "Lỗi không xác định."}
-          </p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            data-ocid="order_tracker.retry_button"
-            className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-          >
-            Thử lại
-          </button>
-        </div>
+        <StateScreen
+          layout="inline"
+          variant="error"
+          title="Không tải được trạng thái đơn"
+          description={
+            error instanceof Error ? error.message : "Lỗi không xác định."
+          }
+          primaryAction={{
+            label: "Thử lại",
+            onClick: () => void refetch(),
+            ocid: "order_tracker.retry_button",
+          }}
+          ocid="order_tracker.error_state"
+          className="surface-card mt-6"
+        />
       )}
 
       {/* Empty / not found */}
       {!isLoading && !isError && !data && (
-        <div
-          className="mt-6 rounded-lg border border-dashed border-border bg-card/50 p-10 text-center"
-          data-ocid="order_tracker.empty_state"
-        >
-          <FileText
-            className="mx-auto h-10 w-10 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <p className="mt-3 font-medium">Không tìm thấy đơn hàng</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Đơn hàng có thể chưa được tạo hoặc mã không hợp lệ.
-          </p>
-        </div>
+        <StateScreen
+          layout="inline"
+          variant="notFound"
+          icon={FileText}
+          title="Không tìm thấy đơn hàng"
+          description="Đơn hàng có thể chưa được tạo hoặc mã không hợp lệ."
+          ocid="order_tracker.empty_state"
+          className="surface-card mt-6"
+        />
       )}
 
       {/* Main content — status realtime */}
@@ -478,10 +459,11 @@ export function OrderStatusView({
                 <p className="text-xs text-muted-foreground">
                   QR nhận hàng — đưa cho tài xế mang tới quán
                 </p>
-                <div className="rounded-lg bg-white p-2">
+                <div className="overflow-hidden rounded-lg border border-border">
                   <QRCodeCanvas
                     value={`${window.location.origin}/${tenantSlug}/driver?scan_order=${encodeURIComponent(order.orderId)}&scan_code=${encodeURIComponent(order.pickupCode)}`}
-                    size={160}
+                    size={176}
+                    marginSize={2}
                   />
                 </div>
               </div>

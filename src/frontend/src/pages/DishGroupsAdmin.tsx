@@ -396,7 +396,7 @@ export default function DishGroupsAdmin({
       </p>
 
       {ready && !apiReady && (
-        <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="badge-warning mb-4 rounded-lg border px-3 py-2 text-sm">
           Hệ thống đang cập nhật — chức năng nhóm món có sau lần build kế tiếp.
         </p>
       )}

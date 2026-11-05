@@ -11,6 +11,8 @@
 // giá online được). Không tính phí theo đơn tại quầy. VPS kiểm máy + gói quầy.
 
 import { type MenuItem, type Order, PaymentStatus } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
+import { Skeleton } from "@/components/Skeletons";
 import { usePromotionCountdown } from "@/hooks/usePromotionCountdown";
 import {
   useCurrentPromotion,
@@ -61,6 +63,7 @@ import {
   Minus,
   Plus,
   Search,
+  UtensilsCrossed,
   X,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
@@ -68,6 +71,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 type Step = "pick" | "cart" | "qr" | "cash" | "done";
+
+const TILE_SKELETONS = Array.from({ length: 9 }, (_, i) => `tile-${i}`);
 
 interface Placed {
   orderId: string;
@@ -110,19 +115,19 @@ function Tile({
       aria-label={`Thêm ${item.name}`}
       data-ocid="counter_sell.tile"
       className={cn(
-        "relative flex min-h-[84px] flex-col justify-between gap-1 rounded-2xl border bg-card p-2.5 text-left active:scale-[0.98]",
+        "relative flex min-h-[84px] flex-col justify-between gap-1 rounded-xl border bg-card p-2.5 text-left shadow-subtle transition-smooth focus-ring active:scale-[0.98]",
         qty > 0 && "border-primary ring-2 ring-primary/30",
       )}
     >
       {qty > 0 && (
-        <span className="absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-extrabold text-primary-foreground">
+        <span className="num absolute -right-1.5 -top-1.5 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
           {qty}
         </span>
       )}
       <span className="line-clamp-2 text-[14px] font-bold leading-tight">
         {item.name}
       </span>
-      <span className="text-[13px] font-semibold text-muted-foreground">
+      <span className="num text-[13px] font-semibold text-muted-foreground">
         {formatVnd(item.price)}
       </span>
     </button>
@@ -164,12 +169,12 @@ function CartPanel({
   return (
     <div className="flex h-full flex-col gap-3" data-ocid="counter_sell.cart">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-extrabold">Đơn tại quầy</h2>
+        <h2 className="font-display text-lg font-bold">Đơn tại quầy</h2>
         {onClose ? (
           <button
             type="button"
             onClick={onClose}
-            className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-primary"
+            className="min-h-[44px] rounded-md px-3 text-sm font-bold text-primary transition-smooth hover:bg-primary/10 focus-ring"
           >
             Chọn thêm món
           </button>
@@ -178,7 +183,7 @@ function CartPanel({
             <button
               type="button"
               onClick={onClear}
-              className="min-h-[44px] rounded-xl px-3 text-sm font-bold text-muted-foreground"
+              className="min-h-[44px] rounded-md px-3 text-sm font-bold text-muted-foreground transition-smooth hover:text-destructive focus-ring"
             >
               Xoá hết
             </button>
@@ -201,7 +206,7 @@ function CartPanel({
               <span className="truncate text-[15px] font-bold">
                 {l.item.name}
               </span>
-              <span className="text-[13px] text-muted-foreground">
+              <span className="num text-[13px] text-muted-foreground">
                 {formatVnd(l.amount)}
               </span>
             </span>
@@ -209,16 +214,16 @@ function CartPanel({
               type="button"
               aria-label={`Bớt ${l.item.name}`}
               onClick={() => onQty(l.item.itemId, -1)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border"
+              className="icon-btn-bordered"
             >
               <Minus className="h-4 w-4" />
             </button>
-            <span className="w-6 text-center font-extrabold">{l.qty}</span>
+            <span className="num w-6 text-center font-bold">{l.qty}</span>
             <button
               type="button"
               aria-label={`Thêm ${l.item.name}`}
               onClick={() => onQty(l.item.itemId, 1)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border"
+              className="icon-btn-bordered"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -237,10 +242,10 @@ function CartPanel({
             aria-pressed={dineIn === o.v}
             onClick={() => onDineIn(o.v)}
             className={cn(
-              "h-11 rounded-xl border text-sm font-extrabold",
+              "h-11 rounded-md border text-sm font-bold transition-smooth focus-ring",
               dineIn === o.v
-                ? "border-foreground bg-foreground text-background"
-                : "bg-card",
+                ? "border-transparent bg-accent text-accent-foreground"
+                : "bg-card hover:bg-muted",
             )}
           >
             {o.label}
@@ -253,23 +258,23 @@ function CartPanel({
         onChange={(e) => onNote(e.target.value)}
         placeholder="Ghi chú cho bếp (không bắt buộc)"
         aria-label="Ghi chú cho bếp"
-        className="h-11 rounded-xl border bg-background px-3 text-[15px]"
+        className="h-11 rounded-md border border-input bg-background px-3 text-[15px] focus-ring"
       />
 
       <dl className="flex flex-col gap-1 text-[15px]">
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Tiền món</dt>
-          <dd>{formatVnd(subtotal)}</dd>
+          <dd className="num">{formatVnd(subtotal)}</dd>
         </div>
         {discount > 0 && (
           <div className="flex justify-between text-primary">
             <dt>Giờ vàng</dt>
-            <dd>−{formatVnd(discount)}</dd>
+            <dd className="num">−{formatVnd(discount)}</dd>
           </div>
         )}
-        <div className="flex justify-between text-xl font-extrabold">
-          <dt>Khách trả</dt>
-          <dd>{formatVnd(total)}</dd>
+        <div className="flex justify-between text-xl font-bold">
+          <dt className="font-display">Khách trả</dt>
+          <dd className="num">{formatVnd(total)}</dd>
         </div>
       </dl>
       <div className="grid grid-cols-2 gap-2">
@@ -279,7 +284,10 @@ function CartPanel({
           title={qrEnabled ? undefined : "Quán chưa cài tài khoản nhận tiền"}
           onClick={() => onPay("qr")}
           data-ocid="counter_sell.pay_qr"
-          className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-primary text-base font-extrabold text-primary-foreground disabled:opacity-50"
+          className={cn(
+            "btn btn-primary h-14 whitespace-normal px-2 text-base font-bold leading-tight",
+            busy && "is-busy",
+          )}
         >
           {busy && <Loader2 className="h-4 w-4 animate-spin" />}
           Chuyển khoản QR
@@ -289,7 +297,7 @@ function CartPanel({
           disabled={busy || lines.length === 0}
           onClick={() => onPay("cash")}
           data-ocid="counter_sell.pay_cash"
-          className="flex h-14 items-center justify-center rounded-2xl bg-foreground text-base font-extrabold text-background disabled:opacity-50"
+          className="btn btn-dark h-14 text-base font-bold"
         >
           Tiền mặt
         </button>
@@ -586,14 +594,15 @@ export function CounterSell({
             <p className="text-sm text-muted-foreground">
               Đơn #{code} · cho khách quét để chuyển khoản
             </p>
-            <p className="text-4xl font-extrabold">{formatVnd(total)}</p>
-            <div className="flex h-[260px] w-[260px] items-center justify-center rounded-2xl border bg-white p-3">
+            <p className="num text-4xl font-bold">{formatVnd(total)}</p>
+            {/* Nền trắng cố định: vùng lặng của mã QR để máy quét đọc được. */}
+            <div className="flex h-[260px] w-[260px] items-center justify-center rounded-xl border bg-white p-3 shadow-subtle">
               {qr ? (
                 <QRCodeCanvas value={qr} size={232} level="M" />
               ) : qrError ? (
                 <p className="text-sm text-destructive">{qrError}</p>
               ) : (
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Skeleton className="h-[232px] w-[232px]" />
               )}
             </div>
             {qr && !photoConfirm && (
@@ -605,8 +614,8 @@ export function CounterSell({
             {qr && photoConfirm && (
               <label
                 className={cn(
-                  "flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary text-base font-extrabold text-primary-foreground",
-                  photoBusy && "pointer-events-none opacity-60",
+                  "btn btn-primary btn-lg h-14 w-full cursor-pointer whitespace-normal",
+                  photoBusy && "is-busy",
                 )}
                 data-ocid="counter_sell.photo_confirm"
               >
@@ -632,7 +641,7 @@ export function CounterSell({
             <button
               type="button"
               onClick={() => setStep("cash")}
-              className="h-12 w-full rounded-2xl border text-base font-extrabold"
+              className="btn btn-outline btn-lg w-full"
             >
               Đổi sang tiền mặt
             </button>
@@ -644,7 +653,7 @@ export function CounterSell({
             <p className="text-sm text-muted-foreground">
               Đơn #{code} · thu tiền mặt
             </p>
-            <p className="text-4xl font-extrabold">{formatVnd(total)}</p>
+            <p className="num text-4xl font-bold">{formatVnd(total)}</p>
             <p className="self-start text-sm font-bold">Khách đưa</p>
             <div className="grid w-full grid-cols-2 gap-2">
               {cashSuggestions(total).map((v) => (
@@ -655,10 +664,12 @@ export function CounterSell({
                     setGiven(v);
                     setCustomGiven("");
                   }}
+                  aria-pressed={given === v}
                   className={cn(
-                    "h-12 rounded-xl border text-base font-extrabold",
-                    given === v &&
-                      "border-foreground bg-foreground text-background",
+                    "num h-12 rounded-md border text-base font-bold transition-smooth focus-ring",
+                    given === v
+                      ? "border-transparent bg-accent text-accent-foreground"
+                      : "bg-card hover:bg-muted",
                   )}
                 >
                   {v === total ? "Vừa đủ" : formatVnd(v)}
@@ -674,13 +685,13 @@ export function CounterSell({
               }}
               placeholder="Số khác…"
               aria-label="Số tiền khách đưa"
-              className="h-12 w-full rounded-xl border bg-background px-3 text-center text-lg"
+              className="num h-12 w-full rounded-md border border-input bg-background px-3 text-center text-lg focus-ring"
             />
-            <div className="flex w-full items-baseline justify-between rounded-2xl bg-muted px-4 py-3">
+            <div className="flex w-full items-baseline justify-between rounded-xl bg-muted px-4 py-3">
               <span className="font-bold">Trả lại khách</span>
               <span
                 className={cn(
-                  "text-2xl font-extrabold",
+                  "num text-2xl font-bold",
                   change < 0 && "text-destructive",
                 )}
               >
@@ -696,7 +707,10 @@ export function CounterSell({
               disabled={busy || (givenValue > 0 && change < 0)}
               onClick={confirmCash}
               data-ocid="counter_sell.cash_done"
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground disabled:opacity-50"
+              className={cn(
+                "btn btn-primary btn-lg h-14 w-full text-lg",
+                busy && "is-busy",
+              )}
             >
               {busy && <Loader2 className="h-5 w-5 animate-spin" />}
               Đã thu tiền
@@ -704,7 +718,7 @@ export function CounterSell({
             <button
               type="button"
               onClick={() => setStep(qr ? "qr" : "cart")}
-              className="h-11 w-full text-sm font-bold text-muted-foreground"
+              className="min-h-[44px] w-full rounded-md text-sm font-bold text-muted-foreground transition-smooth hover:text-foreground focus-ring"
             >
               Quay lại
             </button>
@@ -713,10 +727,10 @@ export function CounterSell({
 
         {step === "done" && (
           <>
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-700">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-success/15 text-success">
               <Check className="h-9 w-9" strokeWidth={3} />
             </span>
-            <p className="text-3xl font-extrabold">Đã thu {formatVnd(total)}</p>
+            <p className="num text-3xl font-bold">Đã thu {formatVnd(total)}</p>
             <p className="text-[15px] text-muted-foreground">
               Đơn #{code} · {dineIn ? "Ăn tại quán" : "Mang về"}
               {paidBy === "cash" && givenValue > total
@@ -724,12 +738,15 @@ export function CounterSell({
                 : ""}
             </p>
             {salesPromo?.active && salesPromo.enabledCounter && placed && (
-              <div className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left">
-                <QRCodeCanvas
-                  value={`${window.location.origin}${basePath()}/claim/${placed.orderId}`}
-                  size={88}
-                  level="M"
-                />
+              <div className="flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left">
+                {/* Nền trắng cố định cho mã QR (vùng lặng khi quét). */}
+                <span className="shrink-0 rounded-md bg-white p-1">
+                  <QRCodeCanvas
+                    value={`${window.location.origin}${basePath()}/claim/${placed.orderId}`}
+                    size={88}
+                    level="M"
+                  />
+                </span>
                 <span className="text-sm">
                   Khách quét bằng điện thoại để <b>tích điểm khách quen</b> và
                   nhận phiếu giảm giá lần sau.
@@ -739,7 +756,7 @@ export function CounterSell({
             <button
               type="button"
               onClick={printTicket}
-              className="h-12 w-full rounded-2xl border text-base font-extrabold"
+              className="btn btn-outline btn-lg w-full"
             >
               In phiếu bếp
             </button>
@@ -747,7 +764,7 @@ export function CounterSell({
               type="button"
               onClick={resetAll}
               data-ocid="counter_sell.new_order"
-              className="h-14 w-full rounded-2xl bg-primary text-lg font-extrabold text-primary-foreground"
+              className="btn btn-primary btn-lg h-14 w-full text-lg"
             >
               Đơn mới
             </button>
@@ -761,7 +778,7 @@ export function CounterSell({
               toast.success(`Đơn #${code} chờ thu tiền ở tab Đơn`);
               resetAll();
             }}
-            className="text-sm font-bold text-muted-foreground underline"
+            className="min-h-[44px] rounded-md px-2 text-sm font-bold text-muted-foreground underline transition-smooth hover:text-foreground focus-ring"
           >
             Khách trả sau (thu ở tab Đơn)
           </button>
@@ -803,22 +820,32 @@ export function CounterSell({
 
   return (
     <div className="flex gap-4" data-ocid="counter_sell.page">
-      <section className="min-w-0 flex-1 pb-24 md:pb-4">
-        <div className="sticky top-[57px] z-10 -mx-4 flex flex-col gap-2 bg-background px-4 pb-2 pt-1">
-          <label className="flex h-11 items-center gap-2 rounded-xl border bg-card px-3">
+      <section
+        className={cn(
+          "min-w-0 flex-1 md:pb-4",
+          count > 0 && step === "pick" && "pb-fixed-bar",
+        )}
+      >
+        <div
+          className="sticky z-10 -mx-4 flex flex-col gap-2 bg-background px-4 pb-2 pt-1"
+          style={{ top: "calc(var(--header-h) + var(--safe-top))" }}
+        >
+          <label className="flex h-11 items-center gap-2 rounded-md border border-input bg-card px-3 transition-smooth focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/30">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm món, vd: bbh"
               aria-label="Tìm món"
-              className="h-full flex-1 bg-transparent text-[15px] outline-none"
+              className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none"
+              data-ocid="counter_sell.search_input"
             />
             {query && (
               <button
                 type="button"
                 aria-label="Xoá tìm kiếm"
                 onClick={() => setQuery("")}
+                className="-mr-1 flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-ring"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -831,11 +858,10 @@ export function CounterSell({
                   key={c ?? "*"}
                   type="button"
                   onClick={() => setCategory(c)}
+                  aria-pressed={category === c}
                   className={cn(
-                    "h-9 shrink-0 rounded-full border px-3.5 text-sm font-bold",
-                    category === c
-                      ? "border-foreground bg-foreground text-background"
-                      : "bg-card",
+                    "chip focus-ring",
+                    category === c && "chip-active",
                   )}
                 >
                   {c ?? "Tất cả"}
@@ -844,7 +870,7 @@ export function CounterSell({
             </div>
           )}
           {promoLine && (
-            <p className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1.5 text-[13px] font-semibold text-primary">
+            <p className="flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1.5 text-[13px] font-semibold text-primary">
               <Flame className="h-4 w-4 shrink-0" />
               <span className="truncate">{promoLine}</span>
             </p>
@@ -852,14 +878,34 @@ export function CounterSell({
         </div>
 
         {isLoading && (
-          <p className="py-8 text-center text-muted-foreground">
-            Đang tải món…
-          </p>
+          <div
+            className="grid grid-cols-3 gap-2 md:grid-cols-4 xl:grid-cols-5"
+            aria-busy="true"
+            data-ocid="counter_sell.loading_state"
+          >
+            <span className="sr-only">Đang tải món…</span>
+            {TILE_SKELETONS.map((id) => (
+              <div
+                key={id}
+                className="flex min-h-[84px] flex-col justify-between rounded-xl border bg-card p-2.5"
+                aria-hidden="true"
+              >
+                <Skeleton className="h-3.5 w-4/5" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
         )}
         {!isLoading && tiles.length === 0 && (
-          <p className="py-8 text-center text-muted-foreground">
-            {query ? "Không thấy món phù hợp." : "Chưa có món nào đang bán."}
-          </p>
+          <StateScreen
+            variant="empty"
+            layout="inline"
+            icon={query ? Search : UtensilsCrossed}
+            title={
+              query ? "Không thấy món phù hợp." : "Chưa có món nào đang bán."
+            }
+            ocid="counter_sell.empty_state"
+          />
         )}
         <div className="grid grid-cols-3 gap-2 md:grid-cols-4 xl:grid-cols-5">
           {tiles.map((m) => (
@@ -874,31 +920,47 @@ export function CounterSell({
       </section>
 
       {/* Máy tính bảng / máy quầy: giỏ cố định bên phải */}
-      <aside className="sticky top-[72px] hidden h-[calc(100vh-170px)] w-[340px] shrink-0 rounded-2xl border bg-card p-4 md:block">
+      <aside
+        className="sticky hidden w-[340px] shrink-0 rounded-xl border bg-card p-4 shadow-panel md:block"
+        style={{
+          top: "calc(var(--header-h) + var(--safe-top) + 0.75rem)",
+          height:
+            "calc(100dvh - var(--header-h) - var(--safe-top) - var(--bottom-nav-h) - var(--safe-bottom) - 1.5rem)",
+        }}
+      >
         {cartPanel()}
       </aside>
 
-      {/* Điện thoại: thanh thanh toán + giỏ trượt lên */}
+      {/* Điện thoại: thanh thanh toán (ngay trên thanh tab + vùng an toàn) + giỏ trượt lên */}
       {count > 0 && step === "pick" && (
-        <div className="fixed inset-x-0 bottom-[68px] z-30 px-3 md:hidden">
+        <div className="bottom-above-nav fixed inset-x-0 z-30 px-3 pb-2 md:hidden">
           <button
             type="button"
             onClick={() => setStep("cart")}
             data-ocid="counter_sell.open_cart"
-            className="flex h-14 w-full items-center justify-between rounded-2xl bg-primary px-4 text-primary-foreground shadow-lg"
+            className="flex w-full items-center justify-between gap-3 rounded-lg bg-primary px-4 text-primary-foreground shadow-bar transition-smooth focus-ring active:scale-[0.99]"
+            style={{ height: "calc(var(--fixed-bar-h) - 1rem)" }}
           >
-            <span className="font-bold">
+            <span className="num min-w-0 truncate font-semibold">
               {count} món · {formatVnd(subtotal - discount)}
             </span>
-            <span className="text-lg font-extrabold">Thanh toán</span>
+            <span className="shrink-0 font-display text-lg font-bold">
+              Thanh toán
+            </span>
           </button>
         </div>
       )}
       {step === "cart" && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-black/40 md:hidden">
+        <div className="fixed inset-0 z-50 flex flex-col md:hidden">
+          <div
+            className="absolute inset-0 bg-foreground opacity-40"
+            aria-hidden="true"
+          />
           <section
             aria-label="Giỏ hàng tại quầy"
-            className="mt-auto flex max-h-[92vh] flex-col rounded-t-3xl bg-background p-4 pb-6"
+            className="relative mt-auto flex max-h-[92dvh] flex-col rounded-t-2xl bg-background px-4 pt-4 shadow-bar"
+            style={{ paddingBottom: "calc(var(--safe-bottom) + 1.5rem)" }}
+            data-ocid="counter_sell.cart_sheet"
           >
             {cartPanel(() => setStep("pick"))}
           </section>

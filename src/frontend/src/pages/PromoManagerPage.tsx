@@ -6,7 +6,9 @@
 // /admin/theo-doi-km) mở trang này, lọc sẵn đúng loại.
 
 import type { Promotion, RegistrationPromo, SalesPromo } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { PromotionForm } from "@/components/PromotionForm";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   KIND_STYLE,
   KindBadge,
@@ -74,7 +76,7 @@ import type {
   RegistrationPromoInput,
   SalesPromoInput,
 } from "@/lib/canister";
-import { ChevronDown, Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -538,20 +540,20 @@ export function PromoManagerPage({
       </div>
 
       {loading ? (
-        <p
-          className="mt-10 flex items-center justify-center gap-2 text-sm text-muted-foreground"
-          data-ocid="promo.loading"
-        >
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Đang tải…
-        </p>
+        <SkeletonList
+          count={3}
+          avatar={false}
+          ocid="promo.loading"
+          className="mt-6"
+        />
       ) : loadError ? (
-        <p
-          className="mt-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
-          role="alert"
-        >
-          Không tải được danh sách: {errMsg(loadError, "lỗi mạng")}
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="error"
+          title="Không tải được danh sách"
+          description={errMsg(loadError, "lỗi mạng")}
+          className="surface-card mt-6"
+        />
       ) : (
         <>
           {/* Điện thoại: dải vuốt ngang để danh sách hiện sớm. */}

@@ -20,9 +20,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 const STATUS: Record<string, { label: string; tone: string }> = {
-  pending: { label: "Chờ duyệt", tone: "bg-amber-100 text-amber-800" },
-  needsInfo: { label: "Chờ bổ sung", tone: "bg-blue-100 text-blue-800" },
-  approved: { label: "Đã duyệt", tone: "bg-emerald-100 text-emerald-800" },
+  pending: { label: "Chờ duyệt", tone: "badge-warning" },
+  needsInfo: { label: "Chờ bổ sung", tone: "badge-info" },
+  approved: { label: "Đã duyệt", tone: "badge-success" },
   rejected: { label: "Từ chối", tone: "bg-muted text-foreground/70" },
 };
 

@@ -3,6 +3,8 @@
 // bổ sung hoặc từ chối kèm ghi chú.
 
 import { DeviceRole } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
+import { SkeletonList } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { generateActivationCode, useCanister } from "@/lib/canister";
@@ -90,10 +92,10 @@ const FILTERS: { key: ApplicationStatus | null; label: string }[] = [
 ];
 
 const BADGE: Record<ApplicationStatus, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  needsInfo: "bg-blue-100 text-blue-800",
-  approved: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
+  pending: "badge-warning",
+  needsInfo: "badge-info",
+  approved: "badge-success",
+  rejected: "badge-destructive",
 };
 
 function fmtDate(ns: bigint): string {
@@ -136,10 +138,7 @@ function ApplicationCard({ app }: { app: PartnerApplication }) {
   const closed = app.status === "approved";
 
   return (
-    <article
-      className="rounded-xl border bg-card"
-      data-ocid="partner_applications.item"
-    >
+    <article className="surface-card" data-ocid="partner_applications.item">
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 p-4 text-left"
@@ -152,10 +151,7 @@ function ApplicationCard({ app }: { app: PartnerApplication }) {
           </span>
         </span>
         <span
-          className={cn(
-            "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
-            BADGE[app.status],
-          )}
+          className={cn("ent-pill shrink-0 font-medium", BADGE[app.status])}
         >
           {STATUS_LABEL[app.status]}
         </span>
@@ -276,32 +272,32 @@ export default function PartnerApplications() {
             key={f.label}
             type="button"
             onClick={() => setFilter(f.key)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-sm",
-              filter === f.key
-                ? "border-primary bg-primary/10 font-medium text-primary"
-                : "hover:bg-muted",
-            )}
+            className={cn("chip", filter === f.key && "chip-active")}
           >
             {f.label}
           </button>
         ))}
       </div>
 
-      {q.isLoading && (
-        <p className="text-sm text-muted-foreground">Đang tải…</p>
-      )}
+      {q.isLoading && <SkeletonList count={3} avatar={false} />}
       {q.error && (
-        <p className="text-sm text-destructive">
-          {q.error instanceof Error
-            ? q.error.message
-            : "Không tải được danh sách"}
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="error"
+          title="Không tải được danh sách"
+          description={q.error instanceof Error ? q.error.message : undefined}
+          primaryAction={{ label: "Thử lại", onClick: () => void q.refetch() }}
+          className="surface-card"
+        />
       )}
       {q.data && q.data.length === 0 && (
-        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Chưa có đơn nào.
-        </p>
+        <StateScreen
+          layout="inline"
+          variant="empty"
+          icon={ClipboardList}
+          title="Chưa có đơn nào."
+          className="surface-card"
+        />
       )}
       <div className="space-y-3">
         {q.data?.map((a) => (

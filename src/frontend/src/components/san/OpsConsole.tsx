@@ -37,9 +37,9 @@ function StatusPill({ o }: { o: OpsOrder }) {
     if (d.allFailed || d.status === "cancelled" || d.status === "failed") {
       tone = "bg-primary/10 text-primary";
     } else if (d.status === "finding") {
-      tone = "bg-amber-100 text-amber-800";
+      tone = "badge-warning";
     } else {
-      tone = "bg-emerald-100 text-emerald-800";
+      tone = "badge-success";
     }
   }
   return (

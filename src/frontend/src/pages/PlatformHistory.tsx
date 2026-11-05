@@ -2,8 +2,10 @@
 // quán (theo email đã xác thực), lọc theo quán, nút "Đặt lại" chuyển đúng món
 // sang trang đặt của quán đó.
 
+import { StateScreen } from "@/components/AppStates";
 import { EmailVerificationDialog } from "@/components/EmailVerificationDialog";
 import { PlatformFrame } from "@/components/PlatformFrame";
+import { SkeletonList } from "@/components/Skeletons";
 import { listTenants, useCanister } from "@/lib/canister";
 import { formatVnd, saveCartHandoff } from "@/lib/platform-feed";
 import { cn } from "@/lib/utils";
@@ -11,7 +13,7 @@ import { getVerifiedEmail } from "@/lib/verification-storage";
 import { getOrderHistory } from "@/lib/vps-client";
 import type { VpsHistoryOrder } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { History, Loader2, RotateCcw, ShieldCheck, Store } from "lucide-react";
+import { History, RotateCcw, ShieldCheck, Store } from "lucide-react";
 import { useMemo, useState } from "react";
 
 function dateLabel(ms: number) {
@@ -27,10 +29,13 @@ function dateLabel(ms: number) {
 
 function statusOf(o: VpsHistoryOrder): { label: string; cls: string } {
   if (o.bookingStatus === "cancelled")
-    return { label: "Đã huỷ", cls: "bg-stone-200 text-stone-600" };
+    return {
+      label: "Đã huỷ",
+      cls: "border-border bg-muted text-muted-foreground",
+    };
   if (o.paymentStatus === "paid")
-    return { label: "Đã giao", cls: "bg-green-100 text-green-800" };
-  return { label: "Chưa thanh toán", cls: "bg-amber-100 text-amber-900" };
+    return { label: "Đã giao", cls: "badge-success" };
+  return { label: "Chưa thanh toán", cls: "badge-warning" };
 }
 
 export default function PlatformHistory() {
@@ -93,21 +98,18 @@ export default function PlatformHistory() {
         </h1>
 
         {!email ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-12 text-center">
-            <ShieldCheck className="h-10 w-10 text-muted-foreground" />
-            <p className="font-bold">Xác thực email để xem lịch sử</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Nhập email bạn dùng khi đặt món, nhận mã qua email. Xem được đơn ở
-              mọi quán, trên mọi máy.
-            </p>
-            <button
-              type="button"
-              onClick={() => setVerifyOpen(true)}
-              className="flex min-h-[44px] items-center rounded-xl bg-primary px-5 font-bold text-primary-foreground"
-            >
-              Xác thực email
-            </button>
-          </div>
+          <StateScreen
+            layout="inline"
+            variant="signin"
+            icon={ShieldCheck}
+            title="Xác thực email để xem lịch sử"
+            description="Nhập email bạn dùng khi đặt món, nhận mã qua email. Xem được đơn ở mọi quán, trên mọi máy."
+            primaryAction={{
+              label: "Xác thực email",
+              onClick: () => setVerifyOpen(true),
+            }}
+            className="surface-card"
+          />
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
@@ -128,12 +130,7 @@ export default function PlatformHistory() {
                     key={id ?? "*"}
                     type="button"
                     onClick={() => setShop(id)}
-                    className={cn(
-                      "h-9 shrink-0 rounded-full border px-3.5 text-sm font-semibold",
-                      shop === id
-                        ? "border-foreground bg-foreground text-background"
-                        : "bg-card",
-                    )}
+                    className={cn("chip", shop === id && "chip-active")}
                   >
                     {id
                       ? (tenantById.get(id)?.name ?? id)
@@ -149,27 +146,26 @@ export default function PlatformHistory() {
               </p>
             )}
 
-            {historyQ.isLoading && (
-              <p className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải…
-              </p>
-            )}
+            {historyQ.isLoading && <SkeletonList count={3} avatar={false} />}
             {historyQ.isError && orders.length === 0 && (
-              <p className="py-8 text-center text-sm text-destructive">
-                Không tải được lịch sử.{" "}
-                <button
-                  type="button"
-                  className="font-semibold underline"
-                  onClick={() => historyQ.refetch()}
-                >
-                  Thử lại
-                </button>
-              </p>
+              <StateScreen
+                layout="inline"
+                variant="error"
+                title="Không tải được lịch sử."
+                primaryAction={{
+                  label: "Thử lại",
+                  icon: RotateCcw,
+                  onClick: () => void historyQ.refetch(),
+                }}
+              />
             )}
             {historyQ.isSuccess && orders.length === 0 && (
-              <p className="py-8 text-center text-muted-foreground">
-                Chưa có đơn nào với email này.
-              </p>
+              <StateScreen
+                layout="inline"
+                variant="empty"
+                icon={History}
+                title="Chưa có đơn nào với email này."
+              />
             )}
 
             {shown.map((o) => {
@@ -181,7 +177,7 @@ export default function PlatformHistory() {
               return (
                 <article
                   key={o.orderId}
-                  className="flex flex-col gap-2 rounded-2xl border bg-card p-4"
+                  className="surface-card flex flex-col gap-2 p-4"
                   data-ocid="platform_history.order"
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -194,25 +190,20 @@ export default function PlatformHistory() {
                         {dateLabel(o.createdAt)}
                       </span>
                     </span>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-xs font-bold",
-                        st.cls,
-                      )}
-                    >
+                    <span className={cn("ent-pill shrink-0 font-bold", st.cls)}>
                       {st.label}
                     </span>
                   </div>
                   <p className="line-clamp-2 text-[15px]">{summary}</p>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-lg font-extrabold">
+                    <span className="num text-lg font-extrabold">
                       {formatVnd(o.amount)}
                     </span>
                     {t && (
                       <button
                         type="button"
                         onClick={() => reorder(o)}
-                        className="flex min-h-[40px] items-center gap-1.5 rounded-xl border px-3 text-sm font-bold hover:border-primary hover:text-primary"
+                        className="btn btn-outline min-h-[40px] px-3 font-bold hover:border-primary hover:text-primary"
                         data-ocid="platform_history.reorder"
                       >
                         <RotateCcw className="h-4 w-4" /> Đặt lại

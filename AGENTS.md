@@ -10,6 +10,17 @@
 - Full data isolation between partners
 - Central admin creates partners
 - Vietnamese language UI
+- Một hệ màu thương hiệu duy nhất: đỏ gạch #9A3426 và xanh lime #BACF50
+- Kiểu chữ Plus Jakarta Sans và Space Grotesk, không dùng chữ có chân
+- Giữ nguyên mọi tính năng, dữ liệu, đường dẫn và nội dung tiếng Việt
+
+## Accepted Requirements
+
+- Một hệ màu thương hiệu duy nhất cho mọi khu vực: đỏ gạch #9A3426 và xanh lime #BACF50
+- Thống nhất kiểu chữ Plus Jakarta Sans và Space Grotesk, không còn chữ có chân; bo góc, đổ bóng, khoảng cách dùng chung
+- Nút, thẻ, công tắc, ô nhập, thanh điều hướng dưới cùng hình dạng ở trang khách, trang chủ nền tảng, /quan-ly, /san và admin
+- Thay 'Đang tải…' bằng khung chờ (skeleton); màn hình đăng nhập, không có quyền, trống, lỗi dùng chung một mẫu
+- Tối ưu điện thoại: nút menu dạng biểu tượng, vùng an toàn cho thanh dưới, trang đặt món không bị phần cố định chồng nhau, trang Kế toán và Hàng đợi thanh toán canh lề đúng
 
 ## Verified Commands
 
@@ -19,14 +30,6 @@
 
 ## Learnings
 
-- The VPS worker (vps-worker/) has no test runner and is not exercised by any test lane; its cron selection window, bkav.js parseProxyResponse, bkav-proxy normalizeSoapFault, bkav_logs raw write, and invoiceId/pdfUrl recording are unverified by the suite.
-- pnpm fix (biome) reformats src/frontend/src/__tests__/AccountingPage.failed-invoice.test.tsx on every run; revert it with git checkout so the tester-owned test file stays untouched.
-- The BKAV invoice fix spans vps-worker/ (cron window, parseProxyResponse, normalizeSoapFault, bkav_logs raw write) and the frontend AccountingPage; vps-worker has no test runner and is not exercised by any lane, so its behavior is verified only by source reading.
-- The BKAV fault path spans two files: bkav-proxy/server.js normalizeSoapFault emits '<R><E>FAULT:code | reason</E></R>' and bkav.js parseProxyResponse splits on the first ' | ' — read both together to confirm no 'UNKNOWN' placeholder.
-- The same-day invoice cron window (created_at >= startOfTodayUtc7 plus invoice_status='none') is what guarantees old stuck/failed orders are never rescanned.
-- The manual reissue path in enterprise-actions.js accepts orders back to the previous working day, but the cron only scans same-day orders, so a yesterday-created order queued for reissue stays 'none' — this is the explicitly out-of-scope old-order path.
-- src/frontend/env.json holds literal 'undefined' placeholders by design; Caffeine injects real values at deploy time, so a local build failing the env-json-precheck is expected and must not be 'fixed' in source.
-- The BKAV decrypt failure ('wrong final block length') is fixed in vps-worker/bkav-proxy/server.js: decryptBkavResponse now returns { xml, label } and tryDecryptVariants attempts valid AES-256-CBC variants (padding none, hex key/iv, double-base64) before giving up.
 - On decrypt failure the proxy emits '<R><E>DECRYPT_ERROR:<reason></E></R>' (empty payload arrives as 'DECRYPT_ERROR:EMPTY_PAYLOAD | ...') instead of returning raw ciphertext; parseProxyResponse in vps-worker/src/lib/bkav.js must keep matching DECRYPT_ERROR/EMPTY_PAYLOAD or the real reason degrades to PARSE_FAILED.
 - parseProxyResponse marker branch order must stay FAULT: -> PROXY_ERROR -> DECRYPT_ERROR: -> EMPTY_PAYLOAD -> empty -> ExecCommandResult -> direct JSON -> PARSE_FAILED so specific markers are never shadowed.
 - The proxy is not importable into any test lane (standalone CommonJS systemd service, no exports, import-time HTTP listener); only the worker's parseProxyResponse contract is pinned by src/frontend/src/__tests__/bkav-proxy-response-contract.test.ts.
@@ -46,3 +49,9 @@
 - The draft canister has no menu/restaurant rows for the default partner bunbohue65, so the ordering page shows its empty state on the draft — a data condition, not a rendering bug.
 - Partner console phase 2: sold-out is per restaurant (soldOutItems key "tenantId|itemId|restaurantId", "" = all; listSoldOutTodayAt / setItemSoldOutAt), menu order is stored per tenant (menuOrder, applied in listMenus/getMenu/getMenuForRestaurant), owner recovery code stores only SHA-256 of the normalized 12-char code (recoverOwnerDevice), and partner change requests (bank/legal/brand/counterPlan) are applied by the admin page via existing admin APIs before decideChangeRequest marks them approved.
 - Partner console phase 3: per-restaurant hours/pause live in restaurantOps (mixins/restaurant-ops-api.mo; hasHours=false falls back to tenant StoreHours; pausedUntil 0 = until reopened); isStoreOpen moved there and means "tenant not paused and any visible restaurant open"; VPS create.js checks isRestaurantOpen for online orders. DeviceRole gained #restaurantManager (migration 20261016) and every role logs into /quan-ly (ROLE_TABS in PartnerConsole.tsx); /driver, /counter, /enterprise/management show MovedToConsole. Frontend maps keyed by DeviceRole must be Record<string,…> so new binding variants still compile.
+- Unified design system: index.css :root holds the single brick red + lime brand; legacy theme classes (.bbh-order-theme, .bbh-enterprise-theme, .tdm-theme) now inherit root tokens; --brand-* tokens wrap oklch(var(--x)) and tenantBrandStyle returns {} so partner brandColor no longer overrides the palette.
+- Shared UI: components/Skeletons.tsx (Skeleton, SkeletonLines, SkeletonCard, SkeletonList, SkeletonGrid, SkeletonTable, PageSkeleton) and components/AppStates.tsx StateScreen (variant signin|forbidden|empty|error|notFound|warning) replace inline loading text and gate screens; ErrorBoundary sits outside RouterProvider so its actions must be onClick.
+- --bbh-gold was remapped to lime; never use text-[oklch(var(--bbh-gold))] for text on white. foreground/card/background/border tokens have no <alpha-value>, so bg-card/95 or bg-foreground/90 break.
+- Fixed bars: shared .bottom-nav is z-40 with safe-area; .fixed-bar sets bottom-0, lift it above the mobile nav with max-md:!bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))]; mobile sheets inside main need z-50. index.html viewport has viewport-fit=cover.
+- Run frontend tests with npx vitest run --environment jsdom inside src/frontend; plain vitest fails with document/localStorage undefined.
+- ActivationCodeForm.tsx (~line 121) still shows a visible 'Dang tai' placeholder on its restaurant select.

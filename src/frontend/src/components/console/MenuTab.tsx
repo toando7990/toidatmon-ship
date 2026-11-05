@@ -5,6 +5,7 @@
 // Hết món chỉ có hiệu lực trong hôm nay (sáng mai tự "Còn" lại).
 
 import type { MenuItem, Restaurant } from "@/backend";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   BigButton,
   type Ctx,
@@ -325,7 +326,7 @@ function ItemSheet({
   const priceNum = Number(priceText) || 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/45">
       <section
         aria-label={item ? "Sửa món" : "Thêm món"}
         className="flex max-h-[94vh] w-full max-w-md flex-col gap-3.5 overflow-y-auto rounded-t-3xl bg-background p-5"
@@ -570,8 +571,8 @@ function ItemSheet({
         </div>
         {item &&
           (confirmDel ? (
-            <div className="flex flex-col gap-2 rounded-2xl border border-red-200 bg-red-50 p-3">
-              <p className="text-sm font-bold text-red-800">
+            <div className="flex flex-col gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-3">
+              <p className="text-sm font-bold text-destructive">
                 Xoá hẳn “{item.name}”? Muốn tạm ngừng bán thì tắt “Hiện cho
                 khách” thay vì xoá.
               </p>
@@ -586,7 +587,7 @@ function ItemSheet({
                   type="button"
                   disabled={busy}
                   onClick={() => void remove()}
-                  className="h-12 rounded-2xl bg-red-700 text-base font-extrabold text-white"
+                  className="h-12 rounded-2xl bg-destructive text-base font-extrabold text-destructive-foreground transition-smooth hover:bg-destructive/90 disabled:opacity-60"
                 >
                   Xoá món
                 </button>
@@ -596,7 +597,7 @@ function ItemSheet({
             <button
               type="button"
               onClick={() => setConfirmDel(true)}
-              className="py-2 text-sm font-bold text-red-700"
+              className="py-2 text-sm font-bold text-destructive"
             >
               Xoá món này
             </button>
@@ -830,7 +831,7 @@ export function MenuTab({ ctx }: { ctx: Ctx }) {
       )}
 
       {menuQ.isLoading && (
-        <p className="py-6 text-center text-muted-foreground">Đang tải món…</p>
+        <SkeletonList count={4} avatar label="Đang tải món…" />
       )}
       {menuQ.isSuccess && all.length === 0 && (
         <p className="rounded-2xl border border-dashed py-8 text-center text-muted-foreground">
@@ -909,14 +910,14 @@ export function MenuTab({ ctx }: { ctx: Ctx }) {
                         </span>
                       )}
                       {!m.visible && (
-                        <span className="rounded-md bg-stone-200 px-1.5 text-[12px] font-bold text-stone-700">
+                        <span className="rounded-md bg-muted px-1.5 text-[12px] font-bold text-muted-foreground">
                           Đang ẩn với khách
                         </span>
                       )}
                       {soldHere.map((e) => (
                         <span
                           key={e.restaurantId || "all"}
-                          className="rounded-md bg-red-100 px-1.5 text-[12px] font-bold text-red-800"
+                          className="badge-destructive rounded-md px-1.5 text-[12px] font-bold"
                         >
                           {e.restaurantId
                             ? `Hết tại ${restName(e.restaurantId)}`
@@ -940,16 +941,14 @@ export function MenuTab({ ctx }: { ctx: Ctx }) {
                     }
                     className={cn(
                       "flex h-9 min-w-[76px] items-center gap-1.5 rounded-full pl-1 pr-2.5 text-[13px] font-extrabold disabled:opacity-50",
-                      on
-                        ? "bg-green-100 text-green-800"
-                        : "bg-stone-200 text-stone-600",
+                      on ? "badge-success" : "bg-muted text-muted-foreground",
                     )}
                     data-ocid="console.soldout_toggle"
                   >
                     <span
                       className={cn(
                         "h-7 w-7 rounded-full",
-                        on ? "bg-green-700" : "bg-stone-400",
+                        on ? "bg-success" : "bg-muted-foreground/40",
                       )}
                     />
                     {on ? "Còn" : "Hết"}

@@ -33,21 +33,23 @@ if (legacy) window.location.replace(legacy);
 // validated. Rendered into #root before React mounts so the user never sees a
 // blank white page. Uses inline styles (not Tailwind) because index.css may
 // not have loaded yet and we must not depend on the design system being ready.
+// Colors/fonts are the literal brand values (brick red #9A3426, lime #BACF50,
+// Plus Jakarta Sans / Space Grotesk) so this edge screen matches the palette.
 function renderEnvError(message: string) {
   const root = document.getElementById("root");
   if (!root) return;
   root.innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:#faf8f3;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
-      <div style="max-width:32rem;width:100%;background:#fff;border:1px solid #e6e0d4;border-radius:0.75rem;padding:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:#f7f8f0;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+      <div style="max-width:32rem;width:100%;background:#fff;border:1px solid #e3e6d6;border-top:4px solid #BACF50;border-radius:0.75rem;padding:2rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="width:2.5rem;height:2.5rem;border-radius:9999px;background:#b91c1c;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;flex-shrink:0;">!</div>
-          <h1 style="font-size:1.25rem;font-weight:700;color:#1a1a1a;margin:0;">Không thể khởi động ứng dụng</h1>
+          <div style="width:2.5rem;height:2.5rem;border-radius:9999px;background:#9A3426;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;flex-shrink:0;">!</div>
+          <h1 style="font-family:'Space Grotesk','Plus Jakarta Sans',system-ui,sans-serif;font-size:1.25rem;font-weight:700;color:#1f2414;margin:0;">Không thể khởi động ứng dụng</h1>
         </div>
-        <p style="color:#525252;line-height:1.6;margin:0 0 1.25rem;">${message}</p>
+        <p style="color:#555a48;line-height:1.6;margin:0 0 1.25rem;">${message}</p>
         <button
           type="button"
           data-ocid="env_error.retry_button"
-          style="background:#b91c1c;color:#fff;border:none;border-radius:0.5rem;padding:0.625rem 1.25rem;font-size:0.95rem;font-weight:600;cursor:pointer;"
+          style="background:#9A3426;color:#fff;border:none;border-radius:0.5rem;padding:0.625rem 1.25rem;font-family:inherit;font-size:0.95rem;font-weight:600;cursor:pointer;"
         >
           Tải lại trang
         </button>

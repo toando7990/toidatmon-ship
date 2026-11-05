@@ -10,13 +10,95 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface Application {
+  'status' : ApplicationStatus,
+  'applicationId' : ApplicationId,
+  'createdAt' : Timestamp,
+  'tenantId' : string,
+  'adminNote' : string,
+  'updatedAt' : Timestamp,
+  'input' : ApplicationInput,
+}
+export type ApplicationId = string;
+export interface ApplicationInput {
+  'bankAccountNumber' : string,
+  'agreedDataProcessing' : boolean,
+  'usesEInvoice' : boolean,
+  'contactName' : string,
+  'desiredSlug' : string,
+  'bankAccountHolder' : string,
+  'storeAddress' : string,
+  'businessType' : BusinessType,
+  'representativeName' : string,
+  'registrationNumber' : string,
+  'bankName' : string,
+  'legalName' : string,
+  'confirmedAccurate' : boolean,
+  'cuisine' : string,
+  'contactEmail' : string,
+  'agreedTerms' : boolean,
+  'brandName' : string,
+  'headOfficeAddress' : string,
+  'agreedTaxWithholding' : boolean,
+  'taxCode' : string,
+  'contactPhone' : string,
+  'branchCount' : bigint,
+}
+export type ApplicationStatus = { 'pending' : null } |
+  { 'approved' : null } |
+  { 'rejected' : null } |
+  { 'needsInfo' : null };
+export interface ApplicationStatusView {
+  'status' : ApplicationStatus,
+  'desiredSlug' : string,
+  'applicationId' : ApplicationId,
+  'createdAt' : Timestamp,
+  'adminNote' : string,
+  'updatedAt' : Timestamp,
+  'brandName' : string,
+}
 export type BookingStatus = { 'cancelled' : null } |
   { 'pending' : null } |
   { 'completed' : null } |
   { 'shipping' : null } |
   { 'pickedUp' : null } |
   { 'confirmed' : null };
+export type BusinessType = { 'householdBusiness' : null } |
+  { 'company' : null } |
+  { 'individual' : null };
 export interface Cell { 'value' : Value, 'name' : string }
+export interface ChangeRequest {
+  'status' : ChangeStatus,
+  'requestId' : string,
+  'kind' : string,
+  'note' : string,
+  'createdAt' : bigint,
+  'createdBy' : string,
+  'tenantId' : TenantId,
+  'adminNote' : string,
+  'decidedAt' : bigint,
+  'payload' : string,
+}
+export type ChangeStatus = { 'pending' : null } |
+  { 'approved' : null } |
+  { 'rejected' : null };
+export interface CounterPaymentAccount {
+  'bankBin' : string,
+  'merchantId' : string,
+  'bankName' : string,
+  'vaAccountNumber' : string,
+  'enabled' : boolean,
+  'updatedAt' : Timestamp,
+  'accountName' : string,
+}
+export interface DayHours {
+  'openMin' : bigint,
+  'open' : boolean,
+  'closeMin' : bigint,
+}
+export type Decision = { 'reject' : null } |
+  { 'approve' : null } |
+  { 'requestInfo' : null };
 export interface Device {
   'active' : boolean,
   'activatedAt' : bigint,
@@ -32,6 +114,7 @@ export type DeviceId = string;
 export type DeviceRole = { 'accounting' : null } |
   { 'paymentQueue' : null } |
   { 'admin' : null } |
+  { 'restaurantManager' : null } |
   { 'salesPromoReporting' : null } |
   { 'cashier' : null } |
   { 'tenantAdmin' : null } |
@@ -39,6 +122,20 @@ export type DeviceRole = { 'accounting' : null } |
 export interface DiscountTier {
   'discountAmount' : bigint,
   'minOrderValue' : bigint,
+}
+export interface DishGroup {
+  'active' : boolean,
+  'sortOrder' : bigint,
+  'name' : string,
+  'keywords' : Array<string>,
+  'updatedAt' : bigint,
+  'groupId' : string,
+}
+export interface EffectiveParam {
+  'key' : string,
+  'upcoming' : [] | [ParamVersion],
+  'current' : [] | [ParamVersion],
+  'overridden' : boolean,
 }
 export type Email = string;
 export type EnterpriseRole = { 'accounting' : null } |
@@ -59,10 +156,17 @@ export type Error = { 'FrontendOriginsNotConfigured' : null } |
   { 'UntrustedSsoSource' : { 'domain' : string } } |
   { 'MissingField' : string } |
   { 'FrontendOriginMismatch' : { 'got' : string, 'expected' : Array<string> } };
+export interface HiddenItem { 'at' : bigint, 'by' : string, 'reason' : string }
 export type Hmac = string;
 export type InvoiceStatus = { 'none' : null } |
   { 'invoiced' : null } |
   { 'failed' : null };
+export interface KitchenNote {
+  'at' : Timestamp,
+  'note' : string,
+  'orderId' : string,
+  'dineIn' : boolean,
+}
 export interface MenuEntry { 'itemId' : string, 'menu' : MenuItem }
 export interface MenuItem {
   'itemId' : string,
@@ -118,6 +222,11 @@ export interface OrderItem {
   'vatRate' : bigint,
   'unitName' : string,
 }
+export interface OrderPrep {
+  'readyAt' : Timestamp,
+  'orderId' : string,
+  'handedAt' : Timestamp,
+}
 export interface OrderStatus {
   'paymentStatus' : PaymentStatus,
   'tingeeQrCode' : string,
@@ -127,6 +236,40 @@ export interface OrderStatus {
   'pdfUrl' : string,
   'tingeeQrId' : string,
   'invoiceStatus' : InvoiceStatus,
+}
+export interface ParamEntry {
+  'key' : string,
+  'scope' : string,
+  'versions' : Array<ParamVersion>,
+}
+export interface ParamVersion {
+  'value' : string,
+  'note' : string,
+  'setAt' : Timestamp,
+  'effectiveFrom' : Timestamp,
+}
+export interface PartnerBank {
+  'branch' : string,
+  'bankName' : string,
+  'updatedAt' : bigint,
+  'updatedBy' : string,
+  'accountNumber' : string,
+  'accountHolder' : string,
+}
+export interface PartnerProfile {
+  'contactName' : string,
+  'businessType' : BusinessType,
+  'representativeName' : string,
+  'registrationNumber' : string,
+  'updatedAt' : bigint,
+  'updatedBy' : string,
+  'contactEmail' : string,
+}
+export interface PartnerSettings {
+  'joinPlatformPromo' : boolean,
+  'counterPlan' : boolean,
+  'updatedAt' : Timestamp,
+  'paused' : boolean,
 }
 export type PaymentStatus = { 'expired' : null } |
   { 'paid' : null } |
@@ -145,6 +288,31 @@ export interface PendingActivationEntry {
   'code' : string,
   'activation' : PendingActivation,
 }
+export interface PlatformActivation {
+  'expiresAt' : bigint,
+  'code' : string,
+  'note' : string,
+  'createdAt' : bigint,
+  'role' : PlatformRole,
+}
+export interface PlatformDeviceView {
+  'active' : boolean,
+  'lastSeenAt' : bigint,
+  'activatedAt' : bigint,
+  'name' : string,
+  'note' : string,
+  'role' : PlatformRole,
+  'deviceId' : string,
+  'phone' : string,
+}
+export type PlatformRole = { 'ops' : null } |
+  { 'accounting' : null } |
+  { 'moderator' : null } |
+  { 'support' : null } |
+  { 'partnerDev' : null } |
+  { 'viewer' : null };
+export type PrepStage = { 'handed' : null } |
+  { 'ready' : null };
 export interface Promotion {
   'tiers' : Array<DiscountTier>,
   'active' : boolean,
@@ -191,43 +359,108 @@ export interface RestaurantMenuOverrideEntry {
   'restaurantId' : string,
   'overrides' : Array<[string, bigint]>,
 }
+export interface RestaurantOps {
+  'week' : Array<DayHours>,
+  'tenantId' : TenantId,
+  'updatedAt' : bigint,
+  'hasHours' : boolean,
+  'paused' : boolean,
+  'pausedUntil' : bigint,
+}
+export interface RestaurantStatus {
+  'opensAt' : bigint,
+  'restaurantId' : string,
+  'state' : string,
+  'closesAt' : bigint,
+  'pausedUntil' : bigint,
+}
 export type Result = { 'ok' : Order } |
   { 'err' : string };
 export type Result_1 = { 'ok' : SalesPromo } |
   { 'err' : string };
-export type Result_10 = { 'ok' : Array<RegistrationPromo> } |
+export type Result_10 = { 'ok' : ParamVersion } |
   { 'err' : string };
-export type Result_11 = { 'ok' : Array<Promotion> } |
+export type Result_11 = { 'ok' : PartnerProfile } |
   { 'err' : string };
-export type Result_12 = { 'ok' : [] | [Voucher] } |
+export type Result_12 = { 'ok' : PartnerSettings } |
   { 'err' : string };
-export type Result_13 = { 'ok' : boolean } |
+export type Result_13 = { 'ok' : PartnerBank } |
   { 'err' : string };
-export type Result_14 = { 'ok' : OrderStatus } |
+export type Result_14 = { 'ok' : bigint } |
   { 'err' : string };
-export type Result_15 = { 'ok' : PendingActivation } |
+export type Result_15 = { 'ok' : KitchenNote } |
   { 'err' : string };
-export type Result_16 = {
-    'ok' : { 'discountAmount' : bigint, 'promotionCode' : string }
-  } |
+export type Result_16 = { 'ok' : CounterPaymentAccount } |
   { 'err' : string };
-export type Result_18 = { 'ok' : null } |
-  { 'err' : Error };
+export type Result_17 = { 'ok' : DishGroup } |
+  { 'err' : string };
+export type Result_18 = { 'ok' : Device } |
+  { 'err' : string };
+export type Result_19 = { 'ok' : Application } |
+  { 'err' : string };
 export type Result_2 = { 'ok' : Restaurant } |
+  { 'err' : string };
+export type Result_20 = { 'ok' : string } |
+  { 'err' : string };
+export type Result_22 = { 'ok' : OrderPrep } |
+  { 'err' : string };
+export type Result_23 = { 'ok' : Array<Device> } |
+  { 'err' : string };
+export type Result_24 = { 'ok' : Array<SalesPromo> } |
+  { 'err' : string };
+export type Result_25 = { 'ok' : Array<RegistrationPromo> } |
+  { 'err' : string };
+export type Result_26 = { 'ok' : Array<Promotion> } |
+  { 'err' : string };
+export type Result_27 = { 'ok' : Array<ParamEntry> } |
+  { 'err' : string };
+export type Result_28 = { 'ok' : Array<PlatformDeviceView> } |
+  { 'err' : string };
+export type Result_29 = { 'ok' : Array<PlatformActivation> } |
   { 'err' : string };
 export type Result_3 = { 'ok' : RegistrationPromo } |
   { 'err' : string };
+export type Result_30 = { 'ok' : Array<[string, PartnerProfile]> } |
+  { 'err' : string };
+export type Result_31 = { 'ok' : Array<[string, PartnerBank]> } |
+  { 'err' : string };
+export type Result_32 = { 'ok' : Array<Application> } |
+  { 'err' : string };
+export type Result_33 = { 'ok' : Array<ChangeRequest> } |
+  { 'err' : string };
+export type Result_34 = {
+    'ok' : { 'sig' : string, 'principal' : string, 'expiresAt' : bigint }
+  } |
+  { 'err' : string };
+export type Result_35 = { 'ok' : [] | [Voucher] } |
+  { 'err' : string };
+export type Result_36 = { 'ok' : boolean } |
+  { 'err' : string };
+export type Result_37 = { 'ok' : OrderStatus } |
+  { 'err' : string };
+export type Result_38 = { 'ok' : PendingActivation } |
+  { 'err' : string };
+export type Result_39 = { 'ok' : PlatformActivation } |
+  { 'err' : string };
 export type Result_4 = { 'ok' : Promotion } |
   { 'err' : string };
+export type Result_40 = {
+    'ok' : { 'discountAmount' : bigint, 'promotionCode' : string }
+  } |
+  { 'err' : string };
+export type Result_42 = { 'ok' : PlatformDeviceView } |
+  { 'err' : string };
+export type Result_43 = { 'ok' : null } |
+  { 'err' : Error };
 export type Result_5 = { 'ok' : MenuItem } |
   { 'err' : string };
 export type Result_6 = { 'ok' : bigint } |
   { 'err' : string };
-export type Result_7 = { 'ok' : null } |
+export type Result_7 = { 'ok' : ChangeRequest } |
   { 'err' : string };
-export type Result_8 = { 'ok' : Device } |
+export type Result_8 = { 'ok' : null } |
   { 'err' : string };
-export type Result_9 = { 'ok' : Array<SalesPromo> } |
+export type Result_9 = { 'ok' : RestaurantOps } |
   { 'err' : string };
 export interface Result__1 { 'hasMore' : boolean, 'rows' : Array<Array<Cell>> }
 export interface SalesPromo {
@@ -246,6 +479,7 @@ export interface SalesPromo {
 export interface SalesTier { 'minSales' : bigint, 'voucherValue' : bigint }
 export type SendCodeResult = { 'ok' : null } |
   { 'err' : string };
+export interface SoldOutEntry { 'itemId' : string, 'restaurantId' : string }
 export interface StoreHours {
   'closeMinute' : bigint,
   'closeHour' : bigint,
@@ -305,9 +539,21 @@ export interface Voucher {
 }
 export interface _SERVICE {
   '_initialize_access_control' : ActorMethod<[], undefined>,
-  '_internet_identity_sign_in_finish' : ActorMethod<[], Result_18>,
+  '_internet_identity_sign_in_finish' : ActorMethod<[], Result_43>,
   '_internet_identity_sign_in_start' : ActorMethod<[], Uint8Array>,
-  'activateDevice' : ActorMethod<[string, DeviceId, string, string], Result_8>,
+  'activateDevice' : ActorMethod<[string, DeviceId, string, string], Result_18>,
+  'activateDeviceSecure' : ActorMethod<
+    [string, DeviceId, string, string, Uint8Array],
+    Result_18
+  >,
+  /**
+   * / Kích hoạt máy bằng mã (dùng 1 lần, hạn 24 giờ). tokenHash = SHA-256 của
+   * / khoá ngẫu nhiên sinh trên máy.
+   */
+  'activatePlatformDevice' : ActorMethod<
+    [string, string, string, string, Uint8Array],
+    Result_42
+  >,
   'addItem' : ActorMethod<
     [
       TenantId,
@@ -326,8 +572,8 @@ export interface _SERVICE {
     [TenantId, DeviceId, string, string, string, string, number, number],
     Result_2
   >,
-  'applyPromotion' : ActorMethod<[TenantId, string, bigint, Hmac], Result_16>,
-  'applyPromotionCounter' : ActorMethod<[TenantId, bigint, Hmac], Result_16>,
+  'applyPromotion' : ActorMethod<[TenantId, string, bigint, Hmac], Result_40>,
+  'applyPromotionCounter' : ActorMethod<[TenantId, bigint, Hmac], Result_40>,
   'applyVoucher' : ActorMethod<
     [TenantId, string, string, bigint, Hmac],
     Result_6
@@ -338,10 +584,22 @@ export interface _SERVICE {
     boolean
   >,
   'cancelOrder' : ActorMethod<[string, string], Result>,
+  'cancelPlatformActivation' : ActorMethod<[string], Result_8>,
+  /**
+   * / Admin: huỷ một thay đổi chưa tới ngày hiệu lực.
+   */
+  'cancelPlatformParamChange' : ActorMethod<
+    [string, string, Timestamp],
+    Result_8
+  >,
   'changeOrderRestaurant' : ActorMethod<[string, string, string], Result>,
   'claimOrderEmail' : ActorMethod<[string, string, string], Result>,
   'cleanupExpiredActivations' : ActorMethod<[], bigint>,
   'cleanupOrderByDevice' : ActorMethod<[string, string, string], Result>,
+  /**
+   * / Số nhà hàng / chi nhánh của từng đối tác (đang hiển thị + đang ẩn).
+   */
+  'countRestaurantsByTenant' : ActorMethod<[], Array<[string, bigint]>>,
   'countVouchersByProgram' : ActorMethod<[string, string], bigint>,
   'createOrder' : ActorMethod<
     [
@@ -369,6 +627,7 @@ export interface _SERVICE {
     ],
     Result
   >,
+  'createPlatformActivation' : ActorMethod<[PlatformRole, string], Result_39>,
   'createPromotion' : ActorMethod<
     [
       TenantId,
@@ -412,15 +671,24 @@ export interface _SERVICE {
       { 'err' : string }
   >,
   'deactivateExpiredPromotions' : ActorMethod<[Hmac], Result_6>,
-  'deleteItem' : ActorMethod<[TenantId, DeviceId, string], Result_7>,
-  'deletePromotion' : ActorMethod<[TenantId, string, string], Result_7>,
-  'deleteRegistrationPromo' : ActorMethod<[TenantId, string, string], Result_7>,
-  'deleteRestaurant' : ActorMethod<[TenantId, DeviceId, string], Result_7>,
-  'deleteSalesPromo' : ActorMethod<[TenantId, string, string], Result_7>,
+  /**
+   * / Admin: duyệt (sau khi đã áp dụng bằng các API admin) hoặc từ chối (bắt
+   * / buộc ghi lý do — đối tác xem được).
+   */
+  'decideChangeRequest' : ActorMethod<[string, boolean, string], Result_7>,
+  /**
+   * / Admin: xoá nhóm (bỏ luôn các món đã gán tay vào nhóm đó).
+   */
+  'deleteDishGroup' : ActorMethod<[string, string], Result_8>,
+  'deleteItem' : ActorMethod<[TenantId, DeviceId, string], Result_8>,
+  'deletePromotion' : ActorMethod<[TenantId, string, string], Result_8>,
+  'deleteRegistrationPromo' : ActorMethod<[TenantId, string, string], Result_8>,
+  'deleteRestaurant' : ActorMethod<[TenantId, DeviceId, string], Result_8>,
+  'deleteSalesPromo' : ActorMethod<[TenantId, string, string], Result_8>,
   'execute' : ActorMethod<[string], Result__1>,
   'generateActivationCode' : ActorMethod<
     [TenantId, RestaurantId, DeviceRole, DeviceId],
-    Result_15
+    Result_38
   >,
   'getApiDoc' : ActorMethod<[], string>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -431,27 +699,84 @@ export interface _SERVICE {
    * / core 2.6.1).
    */
   'getCanisterIdText' : ActorMethod<[], string>,
+  /**
+   * / Tài khoản nhận tiền QR tại quầy của quán (VPS đọc khi tạo QR; null = chưa có).
+   */
+  'getCounterPaymentAccount' : ActorMethod<
+    [TenantId],
+    [] | [CounterPaymentAccount]
+  >,
+  /**
+   * / Gói bán quầy: đã bật chưa, hạn tới đâu (0 = không hạn), còn hiệu lực không.
+   */
+  'getCounterPlan' : ActorMethod<
+    [TenantId],
+    { 'active' : boolean, 'enabled' : boolean, 'until' : Timestamp }
+  >,
   'getCurrentPromotion' : ActorMethod<[TenantId], [] | [Promotion]>,
   'getCurrentRegistrationPromo' : ActorMethod<
     [TenantId],
     [] | [RegistrationPromo]
   >,
   'getCurrentSalesPromo' : ActorMethod<[TenantId], [] | [SalesPromo]>,
+  /**
+   * / Phí đơn online của quán: phiên bản chung + riêng quán của các khoá phí.
+   */
+  'getFeeParamsForVps' : ActorMethod<[TenantId, string], Result_27>,
   'getItemImage' : ActorMethod<[string], [] | [Uint8Array]>,
   'getKmDailyCount' : ActorMethod<[TenantId, string], bigint>,
   'getKmUsageCount' : ActorMethod<[TenantId, string, string], bigint>,
   'getMenu' : ActorMethod<[TenantId], Array<MenuItem>>,
   'getMenuForRestaurant' : ActorMethod<[TenantId, string], Array<MenuItem>>,
   'getOrder' : ActorMethod<[string, string, string], Result>,
-  'getOrderStatus' : ActorMethod<[string, string], Result_14>,
+  'getOrderStatus' : ActorMethod<[string, string], Result_37>,
   'getOrdersByEmail' : ActorMethod<[string, string, string], Array<Order>>,
+  /**
+   * / Chủ đối tác: mã khôi phục đã tạo lúc nào (0 = chưa có / đã dùng).
+   */
+  'getOwnerRecoveryInfo' : ActorMethod<
+    [TenantId, string],
+    { 'createdAt' : bigint, 'createdBy' : string }
+  >,
+  'getPartnerApplicationStatus' : ActorMethod<
+    [string, string],
+    [] | [ApplicationStatusView]
+  >,
+  /**
+   * / Tài khoản của 1 đối tác: admin, Kế toán sàn, máy Chủ quán hoặc Kế toán của đối tác đó.
+   */
+  'getPartnerBank' : ActorMethod<[TenantId, string], [] | [PartnerBank]>,
+  /**
+   * / Thông tin thiết bị (vai trò, đối tác, chi nhánh) — để trang quản lý biết
+   * / hiện giao diện Chủ quán hay Nhân viên. null nếu không có / đã bị gỡ.
+   */
+  'getPartnerDevice' : ActorMethod<[DeviceId], [] | [Device]>,
+  /**
+   * / Tham số áp dụng cho 1 quán. Admin hoặc máy Chủ quán / Nhân viên của quán.
+   */
+  'getPartnerParams' : ActorMethod<[TenantId, string], Array<EffectiveParam>>,
+  /**
+   * / Cài đặt quán (công khai: trang đặt món cần biết quán có tạm nghỉ không).
+   * / counterPlan trả về là trạng thái ĐANG HIỆU LỰC (đã tính hạn gói).
+   */
+  'getPartnerSettings' : ActorMethod<[TenantId], PartnerSettings>,
   /**
    * / Query: return the paymentMode for `tenantId` as its canonical Text
    * / ("driver" or "customer"). Public — no caller gating; the value is not
    * / sensitive. A tenant with no explicit config returns the default "driver".
    */
   'getPaymentMode' : ActorMethod<[TenantId], string>,
+  /**
+   * / Máy (thẻ "deviceId~khoá") đang hoạt động → thông tin + vai trò; ngược
+   * / lại null. VPS dùng để phân quyền (lib/platform-guard.js).
+   */
+  'getPlatformDevice' : ActorMethod<[string], [] | [PlatformDeviceView]>,
   'getPromotionByCode' : ActorMethod<[TenantId, string], [] | [Promotion]>,
+  /**
+   * / Trạng thái hiện tại (đang nhận đơn / tạm nghỉ / ngoài giờ) của mọi nhà
+   * / hàng thuộc đối tác (cả nhà hàng đang ẩn).
+   */
+  'getRestaurantStatuses' : ActorMethod<[TenantId], Array<RestaurantStatus>>,
   'getRestaurants' : ActorMethod<[TenantId], Array<Restaurant>>,
   /**
    * / Query: return the storeHours config for `tenantId`. Public — no caller
@@ -470,19 +795,27 @@ export interface _SERVICE {
    */
   'getTenantBySlug' : ActorMethod<[string], [] | [Tenant]>,
   'getUpgradeState' : ActorMethod<[], UpgradeState>,
+  /**
+   * / Công khai: phiếu giảm giá thuộc chương trình nào ("" nếu không có).
+   * / VPS dùng để biết phiếu có thuộc khuyến mại chung do sàn tài trợ không.
+   */
+  'getVoucherProgram' : ActorMethod<[string], string>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isEmailVerified' : ActorMethod<[Email], boolean>,
-  'isPromotionUsed' : ActorMethod<[TenantId, string, string], Result_13>,
+  'isPromotionUsed' : ActorMethod<[TenantId, string, string], Result_36>,
   'isRegistrationPromoUsed' : ActorMethod<
     [TenantId, string, string],
-    Result_13
+    Result_36
   >,
-  'isSalesPromoUsed' : ActorMethod<[TenantId, string, string], Result_13>,
   /**
-   * / Query: return whether the store of `tenantId` is currently open based on
-   * / the current time. Public — the frontend calls this on both the driver and
-   * / customer flows to decide whether to block order placement and show a
-   * / waiting screen instead of allowing item selection.
+   * / Nhà hàng có đang nhận đơn không (VPS gọi khi tạo đơn online).
+   */
+  'isRestaurantOpen' : ActorMethod<[TenantId, string], boolean>,
+  'isSalesPromoUsed' : ActorMethod<[TenantId, string, string], Result_36>,
+  /**
+   * / Đối tác còn nhận đơn không: đang không tạm nghỉ toàn bộ VÀ có ít nhất 1
+   * / nhà hàng đang hiện cho khách đang nhận đơn. Đối tác chưa có nhà hàng nào
+   * / hiện thì dùng giờ chung như cũ.
    */
   'isStoreOpen' : ActorMethod<[TenantId], boolean>,
   'issueInvoiceByDevice' : ActorMethod<
@@ -491,15 +824,47 @@ export interface _SERVICE {
   >,
   'issueSalesBonus' : ActorMethod<
     [TenantId, string, string, string, bigint, Hmac],
-    Result_12
+    Result_35
   >,
+  'issueVpsAdminTicket' : ActorMethod<[], Result_34>,
+  /**
+   * / Admin: mọi yêu cầu (mới nhất trước).
+   */
+  'listChangeRequests' : ActorMethod<[], Result_33>,
   'listDevicesByRestaurant' : ActorMethod<
-    [TenantId, RestaurantId],
+    [TenantId, RestaurantId, string],
     Array<Device>
   >,
-  'listDevicesByRole' : ActorMethod<[TenantId, DeviceRole], Array<Device>>,
+  'listDevicesByRole' : ActorMethod<
+    [TenantId, DeviceRole, string],
+    Array<Device>
+  >,
+  /**
+   * / Gán tay: [(“tenantId|itemId”, groupId hoặc “-”)].
+   */
+  'listDishGroupAssignments' : ActorMethod<[], Array<[string, string]>>,
+  /**
+   * / Mọi nhóm món, xếp theo sortOrder (trang chủ chỉ dùng nhóm active).
+   */
+  'listDishGroups' : ActorMethod<[], Array<DishGroup>>,
+  'listHomeHidden' : ActorMethod<[], Array<[string, HiddenItem]>>,
+  /**
+   * / Ghi chú bếp các đơn trong 2 ngày gần nhất của 1 đối tác.
+   */
+  'listKitchenNotes' : ActorMethod<[TenantId], Array<KitchenNote>>,
   'listMenus' : ActorMethod<[TenantId], Array<MenuItem>>,
+  /**
+   * / Yêu cầu của 1 đối tác (Chủ đối tác hoặc admin), mới nhất trước.
+   */
+  'listMyChangeRequests' : ActorMethod<
+    [TenantId, string],
+    Array<ChangeRequest>
+  >,
   'listMyVouchers' : ActorMethod<[TenantId, string], Array<Voucher>>,
+  /**
+   * / Trạng thái bếp các đơn trong 2 ngày gần nhất của 1 đối tác.
+   */
+  'listOrderPrep' : ActorMethod<[TenantId], Array<OrderPrep>>,
   'listOrders' : ActorMethod<[string, string], Array<Order>>,
   /**
    * / Query: return today's paid orders for the driver pickup queue — orders with
@@ -510,16 +875,68 @@ export interface _SERVICE {
    * / with PII fields blanked, mirroring listPendingPaymentOrders gating.
    */
   'listPaidOrdersForPickup' : ActorMethod<[], Array<Order>>,
+  'listPartnerApplications' : ActorMethod<
+    [[] | [ApplicationStatus]],
+    { 'ok' : Array<Application> } |
+      { 'err' : string }
+  >,
+  'listPartnerApplicationsAs' : ActorMethod<
+    [string, [] | [ApplicationStatus]],
+    Result_32
+  >,
+  /**
+   * / Admin / máy sàn Kế toán: tài khoản của mọi đối tác.
+   */
+  'listPartnerBanks' : ActorMethod<[string], Result_31>,
+  /**
+   * / Admin hoặc máy cấp sàn (mọi vai trò) — sàn làm việc với đối tác.
+   */
+  'listPartnerProfiles' : ActorMethod<[string], Result_30>,
   'listPendingPaymentOrders' : ActorMethod<[string, string], Array<Order>>,
-  'listPromotions' : ActorMethod<[TenantId, string], Result_11>,
-  'listRegistrationPromos' : ActorMethod<[TenantId, string], Result_10>,
+  'listPlatformActivations' : ActorMethod<[], Result_29>,
+  'listPlatformDevices' : ActorMethod<[], Result_28>,
+  /**
+   * / Công khai (VPS đọc khi tạo đơn): [("tenantId|code", tài trợ từ lúc ns)].
+   */
+  'listPlatformFundedPromos' : ActorMethod<[], Array<[string, bigint]>>,
+  /**
+   * / Admin: mọi tham số (chung + riêng từng quán) kèm lịch sử.
+   */
+  'listPlatformParams' : ActorMethod<[], Result_27>,
+  'listPromotions' : ActorMethod<[TenantId, string], Result_26>,
+  'listRegistrationPromos' : ActorMethod<[TenantId, string], Result_25>,
+  /**
+   * / Giờ riêng + tạm nghỉ của các nhà hàng thuộc đối tác (nhà hàng chưa cài
+   * / gì thì không có trong danh sách — dùng giờ chung).
+   */
+  'listRestaurantOps' : ActorMethod<[TenantId], Array<[string, RestaurantOps]>>,
   'listRestaurants' : ActorMethod<[TenantId], Array<Restaurant>>,
-  'listSalesPromos' : ActorMethod<[TenantId, string], Result_9>,
+  'listSalesPromos' : ActorMethod<[TenantId, string], Result_24>,
+  /**
+   * / itemId các món báo hết hôm nay (công khai: trang đặt món ẩn các món này).
+   */
+  'listSoldOutToday' : ActorMethod<[TenantId], Array<string>>,
+  /**
+   * / Món hết hôm nay kèm nhà hàng (công khai: trang đặt món / bán quầy ẩn
+   * / món hết ở nhà hàng đang chọn).
+   */
+  'listSoldOutTodayAt' : ActorMethod<[TenantId], Array<SoldOutEntry>>,
+  /**
+   * / Xem (chỉ đọc) máy của 1 quán để hỗ trợ cài đặt.
+   */
+  'listTenantDevicesAs' : ActorMethod<[string, TenantId], Result_23>,
   /**
    * / Liệt kê đối tác. Công khai. activeOnly=true chỉ trả đối tác đang hoạt
    * / động (caller không phải admin luôn chỉ thấy đối tác đang hoạt động).
    */
   'listTenants' : ActorMethod<[boolean], Array<Tenant>>,
+  /**
+   * / Bếp báo "Làm xong món" (#ready) hoặc "Đã đưa cho tài xế / khách" (#handed).
+   */
+  'markOrderPrep' : ActorMethod<
+    [TenantId, DeviceId, string, PrepStage],
+    Result_22
+  >,
   'markPaymentExpired' : ActorMethod<[string, string], Result>,
   /**
    * / Admin/driver update: mark an order as #pickedUp (Tài xế đã nhận hàng).
@@ -530,18 +947,135 @@ export interface _SERVICE {
    */
   'markPickedUp' : ActorMethod<[string], Result>,
   'pruneOldOrdersNow' : ActorMethod<[string], Result_6>,
+  /**
+   * / Công khai: máy mới nhập mã khôi phục → thành máy Chủ đối tác (có khoá
+   * / bí mật như activateDeviceSecure). Mã dùng 1 lần rồi xoá.
+   */
+  'recoverOwnerDevice' : ActorMethod<
+    [TenantId, string, DeviceId, string, string, Uint8Array],
+    Result_18
+  >,
+  'releaseVoucher' : ActorMethod<[TenantId, string, string, Hmac], Result_20>,
+  /**
+   * / Sơ duyệt: chỉ được "yêu cầu bổ sung". Duyệt / từ chối vẫn là việc của admin.
+   */
+  'requestApplicationInfo' : ActorMethod<[string, string, string], Result_19>,
   'restoreUpgradeState' : ActorMethod<[Uint8Array], boolean>,
-  'revokeDevice' : ActorMethod<[TenantId, DeviceId, DeviceId], Result_8>,
+  'reviewPartnerApplication' : ActorMethod<
+    [string, Decision, string],
+    { 'ok' : Application } |
+      { 'err' : string }
+  >,
+  'revokeDevice' : ActorMethod<[TenantId, DeviceId, DeviceId], Result_18>,
+  /**
+   * / Thu hồi: máy mất quyền ngay ở canister; VPS nhớ tối đa 5 phút.
+   */
+  'revokePlatformDevice' : ActorMethod<[string], Result_8>,
+  /**
+   * / Admin: tạo mới hoặc sửa nhóm (groupId chữ thường không dấu, số, “-”).
+   */
+  'saveDishGroup' : ActorMethod<
+    [string, string, Array<string>, bigint, boolean, string],
+    Result_17
+  >,
   'schema' : ActorMethod<[], string>,
   'seedMenuItems' : ActorMethod<[TenantId, DeviceId], boolean>,
   'sendKmNotifyEmails' : ActorMethod<
     [Array<string>, string, string, Hmac],
-    Result_7
+    Result_8
   >,
   'sendVerificationCode' : ActorMethod<[Email], SendCodeResult>,
+  /**
+   * / Admin: đặt tài khoản nhận tiền QR tại quầy cho quán.
+   */
+  'setCounterPaymentAccount' : ActorMethod<
+    [TenantId, string, string, string, string, string, boolean],
+    Result_16
+  >,
+  /**
+   * / Bật/tắt gói bán tại quầy. CHỈ admin Tôi Đặt Món (sau khi quán trả phí).
+   */
+  'setCounterPlan' : ActorMethod<[TenantId, boolean], Result_12>,
+  /**
+   * / Admin: bật/tắt gói bán quầy kèm hạn (0 = không hạn).
+   */
+  'setCounterPlanUntil' : ActorMethod<[TenantId, boolean, Timestamp], Result_8>,
+  /**
+   * / Admin: gán tay 1 món vào nhóm. groupId "" = bỏ gán tay (về tự động),
+   * / "-" = không xếp vào nhóm nào.
+   */
+  'setDishGroupAssignment' : ActorMethod<
+    [TenantId, string, string, string],
+    Result_8
+  >,
+  'setHomeHidden' : ActorMethod<
+    [TenantId, string, boolean, string, string],
+    Result_8
+  >,
+  /**
+   * / Báo hết / còn món TẠI 1 nhà hàng (restaurantId "" = mọi nhà hàng).
+   * / Chủ đối tác: mọi nhà hàng. Nhân viên: chỉ nhà hàng của máy (máy không
+   * / gắn nhà hàng thì như cũ — mọi nhà hàng).
+   */
+  'setItemSoldOutAt' : ActorMethod<
+    [TenantId, DeviceId, string, string, boolean],
+    Result_8
+  >,
+  /**
+   * / Báo món hết trong hôm nay / còn lại. Chủ quán hoặc Nhân viên.
+   */
+  'setItemSoldOutToday' : ActorMethod<
+    [TenantId, DeviceId, string, boolean],
+    Result_8
+  >,
   'setItemVisible' : ActorMethod<
     [TenantId, DeviceId, string, boolean],
     Result_5
+  >,
+  /**
+   * / Tham gia khuyến mại chung. CHỈ Chủ quán.
+   */
+  'setJoinPlatformPromo' : ActorMethod<
+    [TenantId, DeviceId, boolean],
+    Result_12
+  >,
+  /**
+   * / Chủ đối tác: lưu thứ tự món hiện cho khách (itemId lạ / của đối tác
+   * / khác bị bỏ qua). Áp dụng cho listMenus / getMenu / getMenuForRestaurant.
+   */
+  'setMenuOrder' : ActorMethod<[TenantId, string, Array<string>], Result_8>,
+  /**
+   * / Máy quầy ghi "Ăn tại quán / Mang về" + ghi chú bếp cho đơn vừa tạo.
+   */
+  'setOrderKitchenNote' : ActorMethod<
+    [TenantId, DeviceId, string, boolean, string],
+    Result_15
+  >,
+  /**
+   * / Chủ đối tác: lưu mã khôi phục mới (máy tự sinh mã ngẫu nhiên, chỉ gửi
+   * / SHA-256 của mã đã chuẩn hoá — viết hoa, bỏ gạch). Mã cũ hết hiệu lực.
+   */
+  'setOwnerRecoveryHash' : ActorMethod<
+    [TenantId, string, Uint8Array],
+    Result_14
+  >,
+  /**
+   * / Admin: nhập / sửa tài khoản nhận tiền của đối tác. 1 tài khoản dùng cho
+   * / CẢ đối soát (sàn chuyển tiền) VÀ chuyển khoản tại quầy (khách quét QR ở
+   * / bất kỳ nhà hàng nào của đối tác → tiền về tài khoản đối tác).
+   * / bankBin: mã BIN VietQR của ngân hàng; counterQr: dùng cho QR tại quầy.
+   */
+  'setPartnerBank' : ActorMethod<
+    [TenantId, string, string, string, string, string, boolean],
+    Result_13
+  >,
+  /**
+   * / Tạm nghỉ / nhận đơn lại (mọi nhà hàng của đối tác). CHỈ Chủ đối tác.
+   */
+  'setPartnerPaused' : ActorMethod<[TenantId, DeviceId, boolean], Result_12>,
+  'setPartnerProfile' : ActorMethod<
+    [TenantId, BusinessType, string, string, string, string],
+    Result_11
   >,
   /**
    * / Admin-only update: set the paymentMode for `tenantId` to "driver" or
@@ -549,10 +1083,39 @@ export interface _SERVICE {
    * / #err if the caller is not an admin or the value is invalid. Mirrors
    * / setVpsSecret in mixins/secret-api.mo.
    */
-  'setPaymentMode' : ActorMethod<[TenantId, string], Result_7>,
+  'setPaymentMode' : ActorMethod<[TenantId, string], Result_8>,
+  /**
+   * / Admin: đặt giá trị. scope "" = chung, tenantId = riêng quán đó.
+   * / effectiveFrom (ns) trong quá khứ = áp dụng ngay. value "" = bỏ giá trị.
+   */
+  'setPlatformParam' : ActorMethod<
+    [string, string, string, Timestamp, string],
+    Result_10
+  >,
+  /**
+   * / Admin: đánh dấu / bỏ đánh dấu chương trình KM là "khuyến mại chung do sàn
+   * / tài trợ" (code: mã Giờ vàng / KM đăng ký / KM doanh số của đối tác).
+   */
+  'setPromoPlatformFunded' : ActorMethod<[TenantId, string, boolean], Result_8>,
+  /**
+   * / Đặt giờ nhận đơn theo ngày cho 1 nhà hàng. hasHours = false → dùng giờ
+   * / chung của đối tác.
+   */
+  'setRestaurantHours' : ActorMethod<
+    [TenantId, string, string, boolean, Array<DayHours>],
+    Result_9
+  >,
   'setRestaurantPriceOverride' : ActorMethod<
     [TenantId, DeviceId, string, string, bigint],
-    Result_7
+    Result_8
+  >,
+  /**
+   * / Tạm nghỉ / mở lại 1 hoặc nhiều nhà hàng. until: ns (0 = đến khi mở lại).
+   * / Mở lại (paused = false) cũng bỏ tạm nghỉ toàn bộ đối tác nếu máy là Chủ.
+   */
+  'setRestaurantsPaused' : ActorMethod<
+    [TenantId, string, Array<string>, boolean, bigint],
+    Result_8
   >,
   /**
    * / Admin-only update: set the store open/close hours for `tenantId`. Rejects
@@ -560,7 +1123,14 @@ export interface _SERVICE {
    * / the caller is not an admin. Mirrors setPaymentMode in
    * / mixins/payment-mode-config-api.mo.
    */
-  'setStoreHours' : ActorMethod<[TenantId, StoreHours], Result_7>,
+  'setStoreHours' : ActorMethod<[TenantId, StoreHours], Result_8>,
+  /**
+   * / Giờ mở cửa do Chủ quán tự đặt (setStoreHours cũ chỉ cho admin).
+   */
+  'setStoreHoursByDevice' : ActorMethod<
+    [TenantId, DeviceId, StoreHours],
+    Result_8
+  >,
   /**
    * / Bật/tắt đối tác. Admin trung tâm only.
    */
@@ -579,6 +1149,22 @@ export interface _SERVICE {
   'stopPromotion' : ActorMethod<[TenantId, string, string], Result_4>,
   'stopRegistrationPromo' : ActorMethod<[TenantId, string, string], Result_3>,
   'stopSalesPromo' : ActorMethod<[TenantId, string, string], Result_1>,
+  /**
+   * / Chủ đối tác gửi yêu cầu thay đổi. Tối đa 5 yêu cầu đang chờ / đối tác.
+   */
+  'submitChangeRequest' : ActorMethod<
+    [TenantId, string, string, string, string],
+    Result_7
+  >,
+  'submitPartnerApplication' : ActorMethod<
+    [ApplicationInput],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  /**
+   * / Ghi nhận "dùng gần nhất" (tối đa 5 phút/lần) — trang /san gọi khi mở.
+   */
+  'touchPlatformDevice' : ActorMethod<[string], [] | [PlatformDeviceView]>,
   'tryConsumeKmSlot' : ActorMethod<
     [TenantId, string, string, bigint, Hmac],
     Result_6

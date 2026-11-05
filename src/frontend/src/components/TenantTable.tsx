@@ -4,6 +4,7 @@
 // Responsive: card list trên mobile, table trên md+.
 // UI tiếng Việt.
 
+import { SkeletonTable } from "@/components/Skeletons";
 import type { PartnerEntry } from "@/hooks/usePartnerDirectory";
 import { BUSINESS_TYPE_LABEL } from "@/lib/partner-applications";
 import { partnerPath } from "@/lib/tenant";
@@ -131,12 +132,7 @@ export function TenantTable({
 }: TenantTableProps) {
   if (loading) {
     return (
-      <div
-        className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground"
-        data-ocid="tenant.table.loading_state"
-      >
-        Đang tải danh sách đối tác…
-      </div>
+      <SkeletonTable rows={4} cols={4} ocid="tenant.table.loading_state" />
     );
   }
 

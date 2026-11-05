@@ -1,5 +1,6 @@
 // Logo Tôi Đặt Món: xe đẩy có giỏ là cái TÔ ("Tôi" ≈ tô), nĩa + muỗng trong tô.
-// Màu: đỏ gạch #9A3426 + xanh cốm #BACF50 (file gốc: public/brand/*.svg).
+// Màu: đỏ gạch + xanh cốm. Mã hex chỉ dùng cho hình biểu tượng SVG (file gốc:
+// public/brand/*.svg); khung và chữ dùng token bg-accent / text-primary.
 
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -47,7 +48,7 @@ export function TdmIcon({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-[22%] bg-[#BACF50]",
+        "inline-flex shrink-0 items-center justify-center rounded-[22%] bg-accent",
         className,
       )}
     >
@@ -69,7 +70,7 @@ export function TdmLogo({
       <TdmIcon className={size === "sm" ? "h-8 w-8" : "h-9 w-9"} />
       <span
         className={cn(
-          "font-body font-extrabold tracking-tight text-[#9A3426]",
+          "font-display font-bold tracking-tight text-primary",
           size === "sm" ? "text-lg" : "text-xl",
         )}
       >

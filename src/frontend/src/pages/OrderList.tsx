@@ -2,10 +2,12 @@
 // Mobile-first grid: 1 cột mobile, 2 cột tablet, 3 cột desktop.
 // Mỗi đơn hiển thị qua OrderCard, link đến /track/:orderId.
 
+import { StateScreen } from "@/components/AppStates";
 import { OrderCard } from "@/components/OrderCard";
+import { SkeletonGrid } from "@/components/Skeletons";
 import { useOrders } from "@/hooks/useQueries";
-import { Link } from "@tanstack/react-router";
-import { PackageSearch } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PackageSearch, RefreshCw } from "lucide-react";
 
 // Khoá localStorage lưu danh sách orderId đã đặt từ chính trình duyệt này.
 // Ghi vào key này ngay sau khi đặt đơn thành công — xem CreateOrder.tsx.
@@ -51,84 +53,61 @@ export default function OrderList() {
           type="button"
           onClick={() => refetch()}
           disabled={isFetching}
+          aria-busy={isFetching || undefined}
           data-ocid="order_list.refresh_button"
-          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-smooth hover:bg-secondary disabled:opacity-50"
+          className="btn btn-outline"
         >
-          {isFetching ? "Đang tải…" : "Làm mới"}
+          <RefreshCw
+            className={cn("h-4 w-4", isFetching && "animate-spin")}
+            aria-hidden="true"
+          />
+          Làm mới
         </button>
       </header>
 
       {isLoading && (
-        <div
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          data-ocid="order_list.loading_state"
-          aria-busy="true"
-          aria-live="polite"
-        >
-          {Array.from({ length: 6 }, (_, i) => `skel-${i}`).map((id) => (
-            <div
-              key={id}
-              className="animate-pulse rounded-lg border border-border bg-card p-4"
-            >
-              <div className="h-3 w-24 rounded bg-muted" />
-              <div className="mt-2 h-5 w-32 rounded bg-muted" />
-              <div className="mt-3 h-4 w-20 rounded bg-muted" />
-              <div className="mt-4 flex gap-2">
-                <div className="h-5 w-20 rounded-full bg-muted" />
-                <div className="h-5 w-24 rounded-full bg-muted" />
-              </div>
-            </div>
-          ))}
+        <div data-ocid="order_list.loading_state" aria-live="polite">
+          <SkeletonGrid
+            count={6}
+            media={false}
+            className="grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3"
+          />
         </div>
       )}
 
       {isError && (
-        <div
-          className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-center"
-          data-ocid="order_list.error_state"
-          role="alert"
-        >
-          <p className="font-medium text-destructive">
-            Không tải được đơn hàng
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : "Lỗi không xác định."}
-          </p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            data-ocid="order_list.retry_button"
-            className="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-          >
-            Thử lại
-          </button>
-        </div>
+        <StateScreen
+          layout="inline"
+          variant="error"
+          title="Không tải được đơn hàng"
+          description={
+            error instanceof Error ? error.message : "Lỗi không xác định."
+          }
+          primaryAction={{
+            label: "Thử lại",
+            onClick: () => void refetch(),
+            ocid: "order_list.retry_button",
+          }}
+          ocid="order_list.error_state"
+          className="surface-card"
+        />
       )}
 
       {!isLoading && !isError && orders.length === 0 && (
-        <div
-          className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/50 px-6 py-16 text-center"
-          data-ocid="order_list.empty_state"
-        >
-          <PackageSearch
-            className="h-12 w-12 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <h2 className="mt-4 font-display text-lg font-semibold">
-            Chưa có đơn hàng nào
-          </h2>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Khi khách đặt hàng, đơn sẽ xuất hiện tại đây để bạn theo dõi trạng
-            thái thanh toán và giao hàng.
-          </p>
-          <Link
-            to="/"
-            data-ocid="order_list.empty_state.cta_link"
-            className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-          >
-            Tạo đơn mới
-          </Link>
-        </div>
+        <StateScreen
+          layout="inline"
+          variant="empty"
+          icon={PackageSearch}
+          title="Chưa có đơn hàng nào"
+          description="Khi khách đặt hàng, đơn sẽ xuất hiện tại đây để bạn theo dõi trạng thái thanh toán và giao hàng."
+          primaryAction={{
+            label: "Tạo đơn mới",
+            to: "/",
+            ocid: "order_list.empty_state.cta_link",
+          }}
+          ocid="order_list.empty_state"
+          className="surface-card"
+        />
       )}
 
       {!isLoading && !isError && orders.length > 0 && (

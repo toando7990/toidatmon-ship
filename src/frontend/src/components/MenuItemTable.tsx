@@ -4,6 +4,7 @@
 // UI tiếng Việt.
 
 import type { MenuItem } from "@/backend";
+import { SkeletonTable } from "@/components/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -190,15 +191,7 @@ export function MenuItemTable({
   }
 
   if (isLoading) {
-    return (
-      <div
-        className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-        data-ocid="menu.table.loading_state"
-      >
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Đang tải danh sách món…
-      </div>
-    );
+    return <SkeletonTable rows={5} cols={4} ocid="menu.table.loading_state" />;
   }
 
   if (isError) {

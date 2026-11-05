@@ -178,8 +178,12 @@ function CreateSheet({
                 className="flex items-center gap-4 rounded-2xl bg-foreground p-4 text-background"
                 data-ocid="platform_devices.created_code"
               >
-                <div className="shrink-0 rounded-lg bg-white p-1.5">
-                  <QRCodeSVG value={activationUrl(created.code)} size={84} />
+                <div className="shrink-0 rounded-lg bg-card p-1.5">
+                  <QRCodeSVG
+                    value={activationUrl(created.code)}
+                    size={84}
+                    marginSize={2}
+                  />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs opacity-75">
@@ -317,7 +321,7 @@ export default function PlatformDevicesAdmin() {
       </div>
 
       {ready && !apiReady && (
-        <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="mb-4 badge-warning rounded-lg border px-3 py-2 text-sm">
           Hệ thống đang cập nhật — chức năng thiết bị sàn có sau lần build kế
           tiếp.
         </p>
@@ -478,7 +482,7 @@ export default function PlatformDevicesAdmin() {
                           ? "text-muted-foreground"
                           : stale
                             ? "text-muted-foreground"
-                            : "text-emerald-700",
+                            : "text-success",
                       )}
                     >
                       <span
@@ -488,7 +492,7 @@ export default function PlatformDevicesAdmin() {
                             ? "bg-muted-foreground/40"
                             : stale
                               ? "bg-muted-foreground/50"
-                              : "bg-emerald-500",
+                              : "bg-success",
                         )}
                       />
                       {!d.active

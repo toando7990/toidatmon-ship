@@ -6,6 +6,8 @@
 
 import type { Device, Restaurant } from "@/backend";
 import { DeviceRole } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   BigButton,
   Card,
@@ -99,9 +101,9 @@ export function StatusChip({
     <span
       className={cn(
         "inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-0.5 text-xs font-extrabold",
-        status.state === "open" && "bg-green-100 text-green-800",
-        status.state === "paused" && "bg-amber-100 text-amber-900",
-        status.state === "closed" && "bg-stone-100 text-stone-600",
+        status.state === "open" && "badge-success",
+        status.state === "paused" && "badge-warning",
+        status.state === "closed" && "bg-muted text-muted-foreground",
       )}
       data-ocid="console.restaurant_status"
     >
@@ -183,7 +185,7 @@ export function PauseSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/45 sm:items-center"
       data-ocid="console.pause_sheet"
     >
       <section
@@ -202,7 +204,7 @@ export function PauseSheet({
           </button>
         </div>
         {ctx.settings?.paused && !onlyRestaurantId && (
-          <p className="rounded-xl bg-amber-50 p-3 text-sm font-bold text-amber-900">
+          <p className="badge-warning rounded-xl border p-3 text-sm font-bold">
             Đối tác đang tạm nghỉ toàn bộ. Bấm “Mở lại nhận đơn” để mở lại mọi
             nhà hàng.
           </p>
@@ -303,7 +305,7 @@ function PickRow({
           "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2",
           on
             ? "border-primary bg-primary text-primary-foreground"
-            : "border-stone-300",
+            : "border-input",
         )}
       >
         {on && <Check className="h-4 w-4" />}
@@ -367,18 +369,18 @@ export function PausePill({ ctx }: { ctx: Ctx }) {
         disabled={legacy.isPending}
         className={cn(
           "flex min-h-[44px] shrink-0 items-center gap-2 rounded-full border px-3.5 text-sm font-extrabold",
-          tone === "green" && "border-green-300 bg-green-50 text-green-800",
-          tone === "amber" && "border-amber-300 bg-amber-50 text-amber-900",
-          tone === "stone" && "border-stone-300 bg-stone-100 text-stone-600",
+          tone === "green" && "badge-success",
+          tone === "amber" && "badge-warning",
+          tone === "stone" && "border-border bg-muted text-muted-foreground",
         )}
         data-ocid="console.pause_toggle"
       >
         <span
           className={cn(
             "h-2.5 w-2.5 rounded-full",
-            tone === "green" && "bg-green-700",
-            tone === "amber" && "bg-amber-600",
-            tone === "stone" && "bg-stone-500",
+            tone === "green" && "bg-success",
+            tone === "amber" && "bg-warning",
+            tone === "stone" && "bg-muted-foreground",
           )}
         />
         {label}
@@ -581,13 +583,13 @@ const BRANCH_ROLES: {
   {
     role: DeviceRole.cashier,
     label: "Nhân viên",
-    chip: "bg-blue-100 text-blue-800",
+    chip: "badge-info",
     path: "quan-ly",
   },
   {
     role: DeviceRole.driver,
     label: "Giao nhận",
-    chip: "bg-cyan-100 text-cyan-800",
+    chip: "badge-success",
     path: "quan-ly",
   },
 ];
@@ -681,10 +683,14 @@ export function ManagerRestaurantTab({
   });
 
   if (!r) {
-    return (
-      <p className="py-8 text-center text-muted-foreground">
-        {restQ.isLoading ? "Đang tải…" : "Không tìm thấy nhà hàng của máy này"}
-      </p>
+    return restQ.isLoading ? (
+      <SkeletonList count={2} label="Đang tải…" />
+    ) : (
+      <StateScreen
+        variant="notFound"
+        layout="inline"
+        title="Không tìm thấy nhà hàng của máy này"
+      />
     );
   }
   const st = statusQ.data?.get(rid);
@@ -694,7 +700,7 @@ export function ManagerRestaurantTab({
   const info = (role: DeviceRole) =>
     BRANCH_ROLES.find((x) => x.role === role) ?? {
       label: "Quản lý nhà hàng",
-      chip: "bg-pink-100 text-pink-800",
+      chip: "badge-brand",
       path: "quan-ly",
     };
 
@@ -817,7 +823,7 @@ export function ManagerRestaurantTab({
               ))}
             </div>
             {code ? (
-              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center text-sm text-blue-900">
+              <div className="badge-info rounded-xl border p-3 text-center text-sm">
                 Trên máy mới, mở{" "}
                 <b>toidatmon.vn/{tenant?.slug ?? ctx.tenantId}/quan-ly</b> và
                 nhập mã
@@ -862,7 +868,7 @@ export function ManagerRestaurantTab({
         />
       )}
       {sheet === "hours" && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/45 sm:items-center">
           <section className="flex max-h-[94vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-t-3xl bg-background p-5 sm:rounded-3xl">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-extrabold">

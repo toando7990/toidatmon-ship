@@ -4,8 +4,10 @@
 
 import { type Device, DeviceRole } from "@/backend";
 import { ActivationCodeForm } from "@/components/ActivationCodeForm";
+import { StateScreen } from "@/components/AppStates";
 import { DeviceTable } from "@/components/DeviceTable";
 import { EnterpriseActivationCodeForm } from "@/components/EnterpriseActivationCodeForm";
+import { Skeleton, SkeletonTable } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -189,37 +191,42 @@ export function DeviceManager() {
           >
             Theo nhà hàng
           </label>
-          <Select
-            value={selectedRestaurant || "all"}
-            onValueChange={(v) => setSelectedRestaurant(v === "all" ? "" : v)}
-            disabled={restaurantsLoading}
-          >
-            <SelectTrigger
-              id="device-restaurant"
-              className="w-full sm:w-[260px]"
-              data-ocid="device.restaurant_select"
+          {restaurantsLoading ? (
+            <div aria-busy="true" data-ocid="device.restaurant_select">
+              <span className="sr-only">Đang tải…</span>
+              <Skeleton className="h-9 w-full sm:w-[260px]" />
+            </div>
+          ) : (
+            <Select
+              value={selectedRestaurant || "all"}
+              onValueChange={(v) => setSelectedRestaurant(v === "all" ? "" : v)}
             >
-              <SelectValue
-                placeholder={
-                  restaurantsLoading ? "Đang tải…" : "Tất cả nhà hàng"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" data-ocid="device.restaurant_option.all">
-                Tất cả nhà hàng
-              </SelectItem>
-              {restaurants?.map((r) => (
+              <SelectTrigger
+                id="device-restaurant"
+                className="w-full sm:w-[260px]"
+                data-ocid="device.restaurant_select"
+              >
+                <SelectValue placeholder="Tất cả nhà hàng" />
+              </SelectTrigger>
+              <SelectContent>
                 <SelectItem
-                  key={r.restaurantId}
-                  value={r.restaurantId}
-                  data-ocid={`device.restaurant_option.${r.restaurantId}`}
+                  value="all"
+                  data-ocid="device.restaurant_option.all"
                 >
-                  {r.name || r.restaurantId}
+                  Tất cả nhà hàng
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {restaurants?.map((r) => (
+                  <SelectItem
+                    key={r.restaurantId}
+                    value={r.restaurantId}
+                    data-ocid={`device.restaurant_option.${r.restaurantId}`}
+                  >
+                    {r.name || r.restaurantId}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -258,28 +265,16 @@ export function DeviceManager() {
       {/* Content */}
       <div className="mt-6" data-ocid="device.content">
         {restaurantsLoading && !restaurants ? (
-          <div
-            className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-            data-ocid="device.loading_state"
-          >
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Đang tải danh sách nhà hàng…
-          </div>
+          <SkeletonTable rows={4} cols={4} ocid="device.loading_state" />
         ) : !activeRestaurantId ? (
-          <Card data-ocid="device.empty_restaurant_state">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-display">
-                <Smartphone
-                  className="h-4 w-4 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                Chưa có nhà hàng
-              </CardTitle>
-              <CardDescription>
-                Thêm nhà hàng trước khi quản lý thiết bị.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <StateScreen
+            layout="inline"
+            variant="empty"
+            icon={Smartphone}
+            title="Chưa có nhà hàng"
+            description="Thêm nhà hàng trước khi quản lý thiết bị."
+            ocid="device.empty_restaurant_state"
+          />
         ) : (
           <Card data-ocid="device.table_card">
             <CardHeader>

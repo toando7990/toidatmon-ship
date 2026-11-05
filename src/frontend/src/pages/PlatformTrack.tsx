@@ -39,7 +39,7 @@ function Progress({ step, bad }: { step: number; bad: boolean }) {
           key={s}
           className={cn(
             "h-1.5 flex-1 rounded-full",
-            bad ? "bg-stone-200" : i <= step ? "bg-primary" : "bg-muted",
+            bad ? "bg-border" : i <= step ? "bg-primary" : "bg-muted",
           )}
         />
       ))}

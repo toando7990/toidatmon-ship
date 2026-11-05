@@ -52,8 +52,8 @@ function statusText(o: SupportOrder): { label: string; tone: string } {
   if (o.bookingStatus === "cancelled")
     return { label: "Đã huỷ", tone: "bg-muted text-foreground/70" };
   if (o.paymentStatus === "paid")
-    return { label: "Đã thanh toán", tone: "bg-emerald-100 text-emerald-800" };
-  return { label: "Chưa thanh toán", tone: "bg-amber-100 text-amber-800" };
+    return { label: "Đã thanh toán", tone: "badge-success" };
+  return { label: "Chưa thanh toán", tone: "badge-warning" };
 }
 
 function ComplaintForm({
@@ -218,7 +218,7 @@ function OrderCard({
           </span>
         )}
         {noShows > 0 && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
+          <span className="badge-warning rounded-full px-2 py-0.5 text-[11.5px] font-bold">
             SĐT này đã bỏ {noShows} đơn
           </span>
         )}

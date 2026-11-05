@@ -5,8 +5,9 @@
 // phát hành): còn hiệu lực (chưa dùng + trong hạn) / đã hết hạn (chưa
 // dùng nhưng quá hạn) / đã sử dụng.
 
+import { SkeletonList } from "@/components/Skeletons";
 import { useMyVouchers } from "@/hooks/useQueries";
-import { CheckCircle2, Clock, Loader2, Ticket, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Ticket, XCircle } from "lucide-react";
 
 function formatVnd(value: number): string {
   return new Intl.NumberFormat("vi-VN", {
@@ -40,12 +41,7 @@ export function VoucherListPanel({ email }: VoucherListPanelProps) {
   const today = vnDateKeyNow();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Đang tải…
-      </div>
-    );
+    return <SkeletonList count={3} label="Đang tải…" />;
   }
 
   if (isError) {
@@ -93,7 +89,7 @@ export function VoucherListPanel({ email }: VoucherListPanelProps) {
             data-ocid={`order_history.voucher.${v.code}`}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-lg font-bold text-[oklch(var(--bbh-gold))]">
+              <span className="font-mono text-lg font-bold text-primary">
                 {formatVnd(Number(v.value))}
               </span>
               {v.used ? (

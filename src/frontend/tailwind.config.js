@@ -80,7 +80,7 @@ export default {
         },
       },
       fontFamily: {
-        display: ["var(--font-display)", "serif"],
+        display: ["var(--font-display)", "sans-serif"],
         body: ["var(--font-body)", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
@@ -90,11 +90,14 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        xs: "0 1px 2px 0 rgba(0,0,0,0.05)",
-        elevated: "0 8px 24px -8px rgba(0,0,0,0.12), 0 2px 6px -2px rgba(0,0,0,0.08)",
-        qr: "0 12px 40px -12px rgba(216,67,30,0.25), 0 4px 12px -4px rgba(0,0,0,0.1)",
-        panel: "0 1px 2px 0 rgba(0,0,0,0.04), 0 1px 3px 0 rgba(0,0,0,0.05)",
-        "panel-hover": "0 4px 16px -4px rgba(0,0,0,0.10), 0 1px 3px 0 rgba(0,0,0,0.06)",
+        xs: "0 1px 2px 0 oklch(0.3 0.04 50 / 0.06)",
+        subtle: "0 1px 2px 0 oklch(0.3 0.04 50 / 0.05), 0 1px 1px 0 oklch(0.3 0.04 50 / 0.03)",
+        panel: "0 1px 2px 0 oklch(0.3 0.04 50 / 0.05), 0 2px 6px -2px oklch(0.3 0.04 50 / 0.06)",
+        "panel-hover": "0 6px 18px -6px oklch(0.3 0.04 50 / 0.14), 0 2px 4px -1px oklch(0.3 0.04 50 / 0.06)",
+        elevated: "0 12px 32px -10px oklch(0.3 0.04 50 / 0.18), 0 3px 8px -3px oklch(0.3 0.04 50 / 0.08)",
+        qr: "0 14px 40px -12px oklch(0.47 0.14 31 / 0.28), 0 4px 12px -4px oklch(0.3 0.04 50 / 0.1)",
+        bar: "0 -4px 16px -6px oklch(0.3 0.04 50 / 0.12)",
+        cta: "0 6px 16px -6px oklch(0.47 0.14 31 / 0.45)",
       },
       keyframes: {
         "accordion-down": {
@@ -150,6 +153,13 @@ export default {
           from: { transform: "translateX(100%)" },
           to: { transform: "translateX(-100%)" },
         },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
+        "sheet-up": {
+          from: { opacity: "0", transform: "translateY(12px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -163,6 +173,8 @@ export default {
         "kpi-in": "kpi-in 0.3s ease-out",
         "row-in": "row-in 0.25s ease-out",
         "promo-marquee": "promo-marquee 30s linear infinite",
+        shimmer: "shimmer 1.4s ease-in-out infinite",
+        "sheet-up": "sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)",
       },
     },
   },

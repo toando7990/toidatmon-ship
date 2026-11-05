@@ -16,8 +16,10 @@
 
 import { InvoiceStatus, PaymentStatus } from "@/backend";
 import { DeviceRole } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
 import { getDeviceId } from "@/components/EnterpriseActivationForm";
+import { SkeletonList, SkeletonTable } from "@/components/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +56,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   useActivateDevice,
   useGenerateActivationCode,
@@ -90,7 +93,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 // Đọc deviceId của thiết bị kế toán đã kích hoạt từ khoá localStorage thống
@@ -204,6 +207,179 @@ function invoiceBadgeClass(status: string): string {
   }
 }
 
+type HistoryOrder = Awaited<
+  ReturnType<typeof getEnterpriseHistory>
+>["orders"][number];
+
+// Hình dạng dùng chung cho nhãn nhóm lọc và chip lọc (≥44px trên điện thoại).
+const FILTER_LABEL = "section-label";
+const FILTER_CHIP = "chip min-h-[44px] md:min-h-0";
+
+function restaurantName(names: Map<string, string>, o: HistoryOrder): string {
+  return names.get(o.restaurantId) ?? o.restaurantId;
+}
+
+/** Trạng thái đơn + hình thức thanh toán — dùng cho cả bảng và thẻ. */
+function OrderStatus({ order, idx }: { order: HistoryOrder; idx: number }) {
+  const isCancelled = order.bookingStatus === "cancelled";
+  return (
+    <>
+      <span
+        className={`ent-pill ${isCancelled ? "badge-destructive" : "badge-success"}`}
+        data-ocid={`accounting.status_badge.${idx + 1}`}
+      >
+        {isCancelled ? "Đã huỷ" : "Đã thanh toán"}
+      </span>
+      {!isCancelled && paymentMethodLabel(order.paymentMethod) && (
+        <span
+          className="mt-1 block text-xs text-muted-foreground"
+          data-ocid={`accounting.payment_method.${idx + 1}`}
+        >
+          {paymentMethodLabel(order.paymentMethod)}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Trạng thái hoá đơn + lý do THẬT Bkav từ chối (invoiceError từ VPS) —
+ *  chỉ hiện cho đơn thất bại, để kế toán biết vì sao không phát hành được. */
+function OrderInvoice({
+  order,
+  idx,
+  errorClassName = "max-w-[240px]",
+}: {
+  order: HistoryOrder;
+  idx: number;
+  errorClassName?: string;
+}) {
+  return (
+    <>
+      <span
+        className={`ent-pill ${invoiceBadgeClass(order.invoiceStatus)}`}
+        data-ocid={`accounting.invoice_badge.${idx + 1}`}
+      >
+        {INVOICE_LABELS[order.invoiceStatus as InvoiceStatus] ??
+          order.invoiceStatus}
+      </span>
+      {order.invoiceStatus === InvoiceStatus.failed && order.invoiceError && (
+        <span
+          className={`mt-1 block break-words text-xs text-destructive ${errorClassName}`}
+          title={order.invoiceError}
+          data-ocid={`accounting.invoice_error.${idx + 1}`}
+        >
+          {order.invoiceError}
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Thao tác trên 1 đơn: Xoá / Phát hành lại / Xem PDF — giống nhau ở bảng
+ *  và thẻ điện thoại. Nút khoá kèm lý do; VPS vẫn kiểm tra lại toàn bộ. */
+function OrderActions({
+  order,
+  idx,
+  deletePending,
+  reissuePending,
+  openingPdf,
+  onDelete,
+  onReissue,
+  onViewPdf,
+  className,
+}: {
+  order: HistoryOrder;
+  idx: number;
+  deletePending: boolean;
+  reissuePending: boolean;
+  openingPdf: boolean;
+  onDelete: () => void;
+  onReissue: () => void;
+  onViewPdf: () => void;
+  className?: string;
+}) {
+  const isCancelled = order.bookingStatus === "cancelled";
+  const deleteReason = isCancelled ? deleteBlockedReason(order) : null;
+  const canReissue =
+    order.invoiceStatus === InvoiceStatus.failed &&
+    !isCancelled &&
+    order.paymentStatus === "paid";
+  const reissueExpired =
+    order.createdAt < startOfPreviousWorkingDay().getTime();
+  let tail: ReactNode = null;
+  if (order.invoiceStatus === InvoiceStatus.invoiced) {
+    tail = (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={openingPdf}
+        onClick={onViewPdf}
+        data-ocid={`accounting.view_pdf_button.${idx + 1}`}
+        className="text-info hover:text-info"
+      >
+        {openingPdf ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        ) : (
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        )}
+        Xem PDF
+      </Button>
+    );
+  } else if (
+    order.invoiceStatus === InvoiceStatus.none &&
+    !isCancelled &&
+    order.paymentStatus === "paid"
+  ) {
+    tail = (
+      <span
+        className="text-xs text-muted-foreground"
+        data-ocid={`accounting.invoice_pending.${idx + 1}`}
+      >
+        Đang chờ phát hành…
+      </span>
+    );
+  }
+  if (!isCancelled && !canReissue && !tail) return null;
+  return (
+    <div className={className}>
+      {isCancelled && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!!deleteReason || deletePending}
+          title={deleteReason ?? "Xoá vĩnh viễn đơn này"}
+          onClick={onDelete}
+          data-ocid={`accounting.delete_button.${idx + 1}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Xoá
+        </Button>
+      )}
+      {canReissue && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={reissueExpired || reissuePending}
+          title={
+            reissueExpired
+              ? "Quá 1 ngày làm việc kể từ khi tạo đơn — không phát hành lại tự động."
+              : "Đưa đơn về hàng chờ để phát hành lại hoá đơn Bkav"
+          }
+          onClick={onReissue}
+          data-ocid={`accounting.reissue_button.${idx + 1}`}
+        >
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+          Phát hành lại
+        </Button>
+      )}
+      {tail}
+    </div>
+  );
+}
+
 export function AccountingPage() {
   // BUG THẬT đã sửa ("Missing deviceId"): admin (Internet Identity) vào
   // trang này KHÔNG có thiết bị Kế toán nào được gắn → deviceId rỗng. VPS
@@ -215,6 +391,8 @@ export function AccountingPage() {
   // bị Kế toán thật (tạo mã + kích hoạt bằng đúng API sẵn có) — từ đó có
   // deviceId hợp lệ, canister xác nhận đúng role như thiết bị thường.
   const tenantId = useTenantId();
+  // < md: mỗi đơn là 1 thẻ; ≥ md: bảng 7 cột. Chỉ render 1 trong 2.
+  const isMobile = useIsMobile();
   const [deviceId, setDeviceId] = useState(() => readDeviceId(tenantId));
   const generateCodeMutation = useGenerateActivationCode();
   const activateMutation = useActivateDevice();
@@ -475,11 +653,21 @@ export function AccountingPage() {
   }
 
   return (
-    <section className="flex flex-col gap-6" data-ocid="accounting.page">
+    // Trong console (InvoicesTab bọc -mx-4) trang tự thêm lại lề px-4 để không
+    // dính sát mép điện thoại; ở trang /enterprise thì giữ lề của trang cha.
+    <section
+      className="flex min-w-0 flex-col gap-5 pb-4 [[data-ocid^='console.invoices']>&]:px-4"
+      data-ocid="accounting.page"
+    >
       {!deviceId && (
-        <Card data-ocid="accounting.bind_admin_card">
+        <Card
+          className="rounded-xl border-border shadow-panel"
+          data-ocid="accounting.bind_admin_card"
+        >
           <CardHeader>
-            <CardTitle>Trình duyệt này chưa gắn thiết bị Kế toán</CardTitle>
+            <CardTitle className="font-display text-lg">
+              Trình duyệt này chưa gắn thiết bị Kế toán
+            </CardTitle>
             <CardDescription>
               Bạn đang đăng nhập quản trị. Để xem đơn hàng (lưu trên máy chủ
               VPS), cần gắn trình duyệt này làm thiết bị Kế toán — chỉ làm 1
@@ -488,8 +676,10 @@ export function AccountingPage() {
           </CardHeader>
           <CardContent>
             <Button
+              type="button"
               onClick={handleBindAdminDevice}
               disabled={binding}
+              className="min-h-[44px] w-full whitespace-normal sm:w-auto"
               data-ocid="accounting.bind_admin_button"
             >
               {binding && (
@@ -501,10 +691,10 @@ export function AccountingPage() {
         </Card>
       )}
       <div
-        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground"
+        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground sm:px-4"
         data-ocid="accounting.live_bar"
       >
-        <span className="flex items-center gap-2">
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
           <span
             className={`inline-block h-2 w-2 rounded-full ${livePaused ? "bg-muted-foreground" : "bg-success"}`}
             aria-hidden="true"
@@ -515,7 +705,7 @@ export function AccountingPage() {
           {historyQuery.dataUpdatedAt > 0 && (
             <span data-ocid="accounting.last_updated">
               · cập nhật lúc{" "}
-              <b className="text-foreground">
+              <b className="num text-foreground">
                 {new Date(historyQuery.dataUpdatedAt).toLocaleTimeString(
                   "vi-VN",
                 )}
@@ -531,7 +721,7 @@ export function AccountingPage() {
           onClick={() => setLivePaused((v) => !v)}
           data-ocid="accounting.live_toggle"
           aria-pressed={livePaused}
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 font-medium text-foreground hover:bg-secondary"
+          className="btn btn-outline min-h-[40px] px-3 text-xs md:min-h-[32px]"
         >
           {livePaused ? (
             <Play className="h-3 w-3" aria-hidden="true" />
@@ -548,14 +738,11 @@ export function AccountingPage() {
             Hàng 2: Trạng thái đơn hàng · Hình thức thanh toán · Trạng thái hoá đơn */}
       <div className="flex flex-col gap-4" data-ocid="accounting.lookup_card">
         <div
-          className="flex flex-wrap items-end gap-x-3.5 gap-y-3"
+          className="grid grid-cols-2 items-end gap-3 md:flex md:flex-wrap md:gap-x-3.5"
           data-ocid="accounting.filter_row_1"
         >
-          <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor="restaurant-filter"
-              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            >
+          <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor="restaurant-filter" className={FILTER_LABEL}>
               Nhà hàng
             </Label>
             <select
@@ -563,7 +750,7 @@ export function AccountingPage() {
               value={filterRestaurantId}
               onChange={(e) => setFilterRestaurantId(e.target.value)}
               data-ocid="accounting.restaurant_filter"
-              className="h-10 min-w-[160px] rounded-md border border-input bg-card px-3 text-sm text-foreground shadow-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring"
+              className="h-11 w-full min-w-0 rounded-md border border-input bg-card px-3 text-sm text-foreground shadow-subtle outline-none transition-smooth focus:border-primary focus:ring-2 focus:ring-ring md:h-10 md:w-auto md:min-w-[160px]"
             >
               <option value="all">Tất cả nhà hàng</option>
               {(restaurants ?? []).map((r) => (
@@ -574,7 +761,7 @@ export function AccountingPage() {
             </select>
           </div>
           <div
-            className="flex flex-wrap gap-2 pb-0.5"
+            className="col-span-2 flex flex-wrap gap-2 md:pb-0.5"
             data-ocid="accounting.quick_ranges"
           >
             {QUICK_RANGES.map(({ value, label }) => {
@@ -590,22 +777,15 @@ export function AccountingPage() {
                   }}
                   data-ocid={`accounting.quick_range.${value}`}
                   aria-pressed={active}
-                  className={
-                    active
-                      ? "rounded-full border border-primary bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary"
-                      : "rounded-full border border-border bg-card px-4 py-1.5 text-sm font-medium text-muted-foreground hover:bg-secondary"
-                  }
+                  className={`${FILTER_CHIP} flex-1 justify-center md:flex-none ${active ? "chip-active" : "text-muted-foreground"}`}
                 >
                   {label}
                 </button>
               );
             })}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor="from-date"
-              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            >
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor="from-date" className={FILTER_LABEL}>
               Từ ngày
             </Label>
             <Input
@@ -614,15 +794,17 @@ export function AccountingPage() {
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
               data-ocid="accounting.from_date_input"
-              className="w-[150px] bg-card"
+              className="h-11 w-full min-w-0 bg-card md:h-10 md:w-[150px]"
             />
           </div>
-          <span className="pb-2 text-muted-foreground">—</span>
-          <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor="to-date"
-              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            >
+          <span
+            className="hidden pb-2 text-muted-foreground md:inline"
+            aria-hidden="true"
+          >
+            —
+          </span>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label htmlFor="to-date" className={FILTER_LABEL}>
               Đến ngày
             </Label>
             <Input
@@ -631,7 +813,7 @@ export function AccountingPage() {
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
               data-ocid="accounting.to_date_input"
-              className="w-[150px] bg-card"
+              className="h-11 w-full min-w-0 bg-card md:h-10 md:w-[150px]"
             />
           </div>
 
@@ -643,20 +825,20 @@ export function AccountingPage() {
           )}
           {historyQuery.data && (
             <div
-              className="flex flex-wrap items-center gap-2 pb-1.5"
+              className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 md:pb-1.5"
               data-ocid="accounting.summary"
             >
-              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+              <span className="ent-pill num border-border bg-card text-muted-foreground">
                 {filteredResults.length} đơn
               </span>
-              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+              <span className="ent-pill num border-border bg-card text-muted-foreground">
                 Tổng{" "}
                 {formatVnd(
                   filteredResults.reduce((sum, o) => sum + o.amount, 0),
                 )}
               </span>
               <span
-                className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground"
+                className="ent-pill num max-w-full flex-wrap border-border bg-card text-muted-foreground"
                 data-ocid="accounting.method_split"
               >
                 Tiền mặt {formatVnd(paidByMethod("cash"))} · Chuyển khoản{" "}
@@ -664,7 +846,7 @@ export function AccountingPage() {
               </span>
               {notInvoicedCount > 0 && (
                 <span
-                  className="rounded-full bg-destructive/12 px-3 py-1 text-xs font-semibold text-destructive"
+                  className="ent-pill badge-destructive"
                   data-ocid="accounting.not_invoiced_count"
                 >
                   {notInvoicedCount} đơn chưa phát hành hoá đơn
@@ -675,13 +857,11 @@ export function AccountingPage() {
         </div>
 
         <div
-          className="flex flex-wrap items-end gap-x-6 gap-y-3"
+          className="grid grid-cols-1 gap-4 md:flex md:flex-wrap md:items-end md:gap-x-6 md:gap-y-3"
           data-ocid="accounting.filter_row_2"
         >
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Trạng thái đơn hàng
-            </span>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className={FILTER_LABEL}>Trạng thái đơn hàng</span>
             <div className="flex flex-wrap gap-2">
               {(
                 [
@@ -693,10 +873,10 @@ export function AccountingPage() {
                 const active = statusFilter === value;
                 const activeCls =
                   value === "paid"
-                    ? "border-success bg-success/15 text-success"
+                    ? "border-success bg-success/15 text-success hover:bg-success/15"
                     : value === "cancelled"
-                      ? "border-destructive bg-destructive/15 text-destructive"
-                      : "border-info bg-info/15 text-info";
+                      ? "border-destructive bg-destructive/15 text-destructive hover:bg-destructive/15"
+                      : "chip-active";
                 return (
                   <button
                     key={value}
@@ -704,10 +884,8 @@ export function AccountingPage() {
                     onClick={() => setStatusFilter(value)}
                     aria-pressed={active}
                     data-ocid={`accounting.status_chip.${value}`}
-                    className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-3.5 py-1.5 text-xs font-semibold transition-smooth ${
-                      active
-                        ? activeCls
-                        : "border-border bg-card text-muted-foreground"
+                    className={`${FILTER_CHIP} text-xs ${
+                      active ? activeCls : "text-muted-foreground"
                     }`}
                   >
                     {value === "paid" && (
@@ -722,10 +900,8 @@ export function AccountingPage() {
               })}
             </div>
           </div>
-          <div className="flex flex-col gap-1.5 md:border-l md:border-border md:pl-6">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Hình thức thanh toán
-            </span>
+          <div className="flex min-w-0 flex-col gap-1.5 md:border-l md:border-border md:pl-6">
+            <span className={FILTER_LABEL}>Hình thức thanh toán</span>
             <div className="flex flex-wrap gap-2">
               {PAYMENT_METHOD_FILTERS.map(({ value, label }) => (
                 <button
@@ -734,10 +910,10 @@ export function AccountingPage() {
                   onClick={() => setPaymentMethodFilter(value)}
                   aria-pressed={paymentMethodFilter === value}
                   data-ocid={`accounting.payment_method_filter.${value}`}
-                  className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-3.5 py-1.5 text-xs font-semibold transition-smooth ${
+                  className={`${FILTER_CHIP} text-xs ${
                     paymentMethodFilter === value
-                      ? "border-info bg-info/15 text-info"
-                      : "border-border bg-card text-muted-foreground"
+                      ? "chip-active"
+                      : "text-muted-foreground"
                   }`}
                 >
                   {label}
@@ -745,10 +921,8 @@ export function AccountingPage() {
               ))}
             </div>
           </div>
-          <div className="flex flex-col gap-1.5 md:border-l md:border-border md:pl-6">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Trạng thái hoá đơn
-            </span>
+          <div className="flex min-w-0 flex-col gap-1.5 md:border-l md:border-border md:pl-6">
+            <span className={FILTER_LABEL}>Trạng thái hoá đơn</span>
             <div className="flex flex-wrap gap-2">
               {(
                 [
@@ -764,10 +938,10 @@ export function AccountingPage() {
                   onClick={() => setInvoiceFilter(value)}
                   aria-pressed={invoiceFilter === value}
                   data-ocid={`accounting.invoice_filter.${value}`}
-                  className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] px-3.5 py-1.5 text-xs font-semibold transition-smooth ${
+                  className={`${FILTER_CHIP} text-xs ${
                     invoiceFilter === value
-                      ? "border-info bg-info/15 text-info"
-                      : "border-border bg-card text-muted-foreground"
+                      ? "chip-active"
+                      : "text-muted-foreground"
                   }`}
                 >
                   {label}
@@ -777,7 +951,7 @@ export function AccountingPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           {/* Xoá hàng loạt KHÔNG phụ thuộc bộ lọc đang xem — luôn hiện. */}
           <Button
             type="button"
@@ -785,6 +959,7 @@ export function AccountingPage() {
             size="sm"
             onClick={handleOpenBulkDelete}
             disabled={bulkDeleteMutation.isPending}
+            className="min-h-[44px] whitespace-normal sm:min-h-0"
             data-ocid="accounting.bulk_delete_button"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -796,6 +971,7 @@ export function AccountingPage() {
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
+              className="min-h-[44px] sm:min-h-0"
               data-ocid="accounting.export_csv_button"
             >
               <Download className="h-3.5 w-3.5" aria-hidden="true" />
@@ -805,45 +981,146 @@ export function AccountingPage() {
         </div>
 
         {isLoading ? (
-          <div
-            className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-8 text-sm text-muted-foreground"
-            data-ocid="accounting.lookup.loading_state"
-          >
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-            Đang tải đơn hàng…
-          </div>
+          isMobile ? (
+            <SkeletonList
+              count={4}
+              avatar={false}
+              label="Đang tải đơn hàng…"
+              ocid="accounting.lookup.loading_state"
+            />
+          ) : (
+            <div aria-live="polite">
+              <span className="sr-only">Đang tải đơn hàng…</span>
+              <SkeletonTable
+                rows={6}
+                cols={7}
+                ocid="accounting.lookup.loading_state"
+              />
+            </div>
+          )
         ) : isError ? (
-          <div
-            className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-6 text-center"
-            data-ocid="accounting.lookup.error_state"
-            role="alert"
-          >
-            <p className="font-medium text-destructive">
-              Không tải được đơn hàng.
-            </p>
-            <p
-              className="mt-1 text-sm text-muted-foreground"
-              data-ocid="accounting.lookup.error_message"
-            >
-              {errorMessage}
-            </p>
+          <div role="alert">
+            <StateScreen
+              variant="error"
+              layout="inline"
+              ocid="accounting.lookup.error_state"
+              title="Không tải được đơn hàng."
+              description={
+                <span data-ocid="accounting.lookup.error_message">
+                  {errorMessage}
+                </span>
+              }
+              primaryAction={{
+                label: "Thử lại",
+                icon: RefreshCw,
+                onClick: () => {
+                  void historyQuery.refetch();
+                },
+                busy: historyQuery.isFetching,
+                ocid: "accounting.lookup.retry_button",
+              }}
+            />
           </div>
         ) : filteredResults.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/50 px-6 py-12 text-center"
-            data-ocid="accounting.lookup.empty_state"
+          <StateScreen
+            variant="empty"
+            icon={Search}
+            layout="inline"
+            ocid="accounting.lookup.empty_state"
+            title="Không có đơn nào khớp bộ lọc"
+          />
+        ) : isMobile ? (
+          <ul
+            className="flex flex-col gap-3"
+            data-ocid="accounting.lookup_list"
           >
-            <Search
-              className="h-10 w-10 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <h3 className="mt-3 font-display text-base font-semibold">
-              Không có đơn nào khớp bộ lọc
-            </h3>
-          </div>
+            {filteredResults.map((order, idx) => {
+              const isNew = newIds.has(order.orderId);
+              return (
+                <li
+                  key={order.orderId}
+                  className={`surface-card flex min-w-0 flex-col gap-3 p-4 transition-colors duration-1000 ${isNew ? "bg-warning/15" : ""}`}
+                  data-ocid={`accounting.row.${idx + 1}`}
+                  data-new={isNew ? "true" : undefined}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-mono text-xs font-semibold text-foreground">
+                          {order.orderId}
+                        </span>
+                        <CopyOrderIdButton
+                          orderId={order.orderId}
+                          ocid={`accounting.copy_order_id.${idx + 1}`}
+                        />
+                      </span>
+                      <span className="num text-xs text-muted-foreground">
+                        {formatDateTime(order.createdAt)}
+                      </span>
+                    </div>
+                    <span className="num shrink-0 text-lg font-bold text-foreground">
+                      {formatVnd(order.amount)}
+                    </span>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2.5 text-sm">
+                    <div className="col-span-2 min-w-0">
+                      <dt className="section-label">Khách hàng</dt>
+                      <dd className="mt-0.5 break-words font-medium text-foreground">
+                        {order.cusName || "Khách vãng lai"}
+                        {order.cusPhone && (
+                          <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                            {order.cusPhone}
+                          </span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="col-span-2 min-w-0">
+                      <dt className="section-label">Nhà hàng</dt>
+                      <dd className="mt-0.5 break-words text-xs text-muted-foreground">
+                        {restaurantName(restaurantNameById, order)}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="section-label">Trạng thái</dt>
+                      <dd className="mt-1">
+                        <OrderStatus order={order} idx={idx} />
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="section-label">Hoá đơn</dt>
+                      <dd className="mt-1">
+                        <OrderInvoice
+                          order={order}
+                          idx={idx}
+                          errorClassName="max-w-full"
+                        />
+                      </dd>
+                    </div>
+                  </dl>
+                  <OrderActions
+                    order={order}
+                    idx={idx}
+                    deletePending={deleteMutation.isPending}
+                    reissuePending={reissueMutation.isPending}
+                    openingPdf={openingPdfOrderId === order.orderId}
+                    onDelete={() =>
+                      setConfirmDelete({
+                        kind: "one",
+                        orderId: order.orderId,
+                        cusName: order.cusName || "Khách vãng lai",
+                      })
+                    }
+                    onReissue={() => handleReissue(order.orderId)}
+                    onViewPdf={() => handleViewPdf(order.orderId)}
+                    className="flex flex-wrap items-center gap-2 border-t border-border pt-3 [&>button]:min-h-[44px]"
+                  />
+                </li>
+              );
+            })}
+          </ul>
         ) : (
           <div
-            className="overflow-x-auto rounded-lg border border-border bg-card"
+            className="surface-card overflow-x-auto"
             data-ocid="accounting.lookup_table"
           >
             <Table>
@@ -860,7 +1137,6 @@ export function AccountingPage() {
               </TableHeader>
               <TableBody>
                 {filteredResults.map((order, idx) => {
-                  const isCancelled = order.bookingStatus === "cancelled";
                   return (
                     <TableRow
                       key={order.orderId}
@@ -879,15 +1155,14 @@ export function AccountingPage() {
                               ocid={`accounting.copy_order_id.${idx + 1}`}
                             />
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="num text-xs text-muted-foreground">
                             {formatDateTime(order.createdAt)}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="ent-td">
                         <span className="text-xs text-muted-foreground">
-                          {restaurantNameById.get(order.restaurantId) ??
-                            order.restaurantId}
+                          {restaurantName(restaurantNameById, order)}
                         </span>
                       </TableCell>
                       <TableCell className="ent-td">
@@ -903,153 +1178,34 @@ export function AccountingPage() {
                         </div>
                       </TableCell>
                       <TableCell className="ent-td">
-                        <span className="font-mono text-sm font-semibold text-foreground">
+                        <span className="num whitespace-nowrap text-sm font-semibold text-foreground">
                           {formatVnd(order.amount)}
                         </span>
                       </TableCell>
                       <TableCell className="ent-td">
-                        <span
-                          className={`ent-pill ${isCancelled ? "badge-destructive" : "badge-success"}`}
-                          data-ocid={`accounting.status_badge.${idx + 1}`}
-                        >
-                          {isCancelled ? "Đã huỷ" : "Đã thanh toán"}
-                        </span>
-                        {!isCancelled &&
-                          paymentMethodLabel(order.paymentMethod) && (
-                            <span
-                              className="mt-1 block text-xs text-muted-foreground"
-                              data-ocid={`accounting.payment_method.${idx + 1}`}
-                            >
-                              {paymentMethodLabel(order.paymentMethod)}
-                            </span>
-                          )}
+                        <OrderStatus order={order} idx={idx} />
                       </TableCell>
                       <TableCell className="ent-td">
-                        <span
-                          className={`ent-pill ${invoiceBadgeClass(order.invoiceStatus)}`}
-                          data-ocid={`accounting.invoice_badge.${idx + 1}`}
-                        >
-                          {INVOICE_LABELS[
-                            order.invoiceStatus as InvoiceStatus
-                          ] ?? order.invoiceStatus}
-                        </span>
-                        {/* Lý do THẬT Bkav từ chối (invoiceError từ VPS) —
-                              chỉ hiện cho đơn thất bại, để kế toán biết vì
-                              sao hoá đơn không phát hành được. */}
-                        {order.invoiceStatus === InvoiceStatus.failed &&
-                          order.invoiceError && (
-                            <span
-                              className="mt-1 block max-w-[240px] break-words text-xs text-destructive"
-                              title={order.invoiceError}
-                              data-ocid={`accounting.invoice_error.${idx + 1}`}
-                            >
-                              {order.invoiceError}
-                            </span>
-                          )}
+                        <OrderInvoice order={order} idx={idx} />
                       </TableCell>
                       <TableCell className="ent-td">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Nút "Xoá" (thay "Dọn dẹp") — chỉ hiện cho đơn đã
-                                huỷ; khoá kèm lý do nếu không đủ điều kiện (VPS
-                                vẫn kiểm tra lại toàn bộ). */}
-                          {isCancelled &&
-                            (() => {
-                              const reason = deleteBlockedReason(order);
-                              return (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={
-                                    !!reason || deleteMutation.isPending
-                                  }
-                                  title={reason ?? "Xoá vĩnh viễn đơn này"}
-                                  onClick={() =>
-                                    setConfirmDelete({
-                                      kind: "one",
-                                      orderId: order.orderId,
-                                      cusName:
-                                        order.cusName || "Khách vãng lai",
-                                    })
-                                  }
-                                  data-ocid={`accounting.delete_button.${idx + 1}`}
-                                >
-                                  <Trash2
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden="true"
-                                  />
-                                  Xoá
-                                </Button>
-                              );
-                            })()}
-                          {/* "Phát hành lại" — chỉ đơn hoá đơn Thất bại, đã
-                                thanh toán, chưa huỷ; khoá kèm lý do nếu quá 1
-                                ngày làm việc (VPS kiểm tra lại toàn bộ). */}
-                          {order.invoiceStatus === InvoiceStatus.failed &&
-                            !isCancelled &&
-                            order.paymentStatus === "paid" &&
-                            (() => {
-                              const expired =
-                                order.createdAt <
-                                startOfPreviousWorkingDay().getTime();
-                              return (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={
-                                    expired || reissueMutation.isPending
-                                  }
-                                  title={
-                                    expired
-                                      ? "Quá 1 ngày làm việc kể từ khi tạo đơn — không phát hành lại tự động."
-                                      : "Đưa đơn về hàng chờ để phát hành lại hoá đơn Bkav"
-                                  }
-                                  onClick={() => handleReissue(order.orderId)}
-                                  data-ocid={`accounting.reissue_button.${idx + 1}`}
-                                >
-                                  <RefreshCw
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden="true"
-                                  />
-                                  Phát hành lại
-                                </Button>
-                              );
-                            })()}
-                          {order.invoiceStatus === InvoiceStatus.invoiced ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={openingPdfOrderId === order.orderId}
-                              onClick={() => handleViewPdf(order.orderId)}
-                              data-ocid={`accounting.view_pdf_button.${idx + 1}`}
-                              className="text-info hover:text-info"
-                            >
-                              {openingPdfOrderId === order.orderId ? (
-                                <Loader2
-                                  className="h-3.5 w-3.5 animate-spin"
-                                  aria-hidden="true"
-                                />
-                              ) : (
-                                <ExternalLink
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
-                              )}
-                              Xem PDF
-                            </Button>
-                          ) : order.invoiceStatus === InvoiceStatus.none &&
-                            !isCancelled &&
-                            order.paymentStatus === "paid" ? (
-                            <span
-                              className="text-xs text-muted-foreground"
-                              data-ocid={`accounting.invoice_pending.${idx + 1}`}
-                            >
-                              Đang chờ phát hành…
-                            </span>
-                          ) : null}
-                        </div>
+                        <OrderActions
+                          order={order}
+                          idx={idx}
+                          deletePending={deleteMutation.isPending}
+                          reissuePending={reissueMutation.isPending}
+                          openingPdf={openingPdfOrderId === order.orderId}
+                          onDelete={() =>
+                            setConfirmDelete({
+                              kind: "one",
+                              orderId: order.orderId,
+                              cusName: order.cusName || "Khách vãng lai",
+                            })
+                          }
+                          onReissue={() => handleReissue(order.orderId)}
+                          onViewPdf={() => handleViewPdf(order.orderId)}
+                          className="flex items-center justify-end gap-2"
+                        />
                       </TableCell>
                     </TableRow>
                   );

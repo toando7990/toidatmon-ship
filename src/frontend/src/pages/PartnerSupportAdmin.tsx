@@ -88,7 +88,7 @@ export default function PartnerSupportAdmin() {
       </header>
 
       {tenant && (
-        <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
+        <div className="badge-warning mb-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold">
           <Eye className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
           <span>
             Đang mở trang quản lý của <b>{partnerName(tenant)}</b> ở chế độ hỗ

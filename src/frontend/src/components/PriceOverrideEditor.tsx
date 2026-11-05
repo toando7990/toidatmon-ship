@@ -7,6 +7,7 @@
 // ta để trống = không đổi, nhập số = override. Nút "Bỏ override" gọi với price=0n.
 
 import type { MenuItem, Restaurant } from "@/backend";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   useMenuForRestaurant,
   useSetRestaurantPriceOverride,
@@ -157,13 +158,12 @@ export function PriceOverrideEditor({
       </header>
 
       {menuQuery.isLoading && (
-        <div
-          className="flex items-center gap-2 rounded-md border border-border bg-card p-4 text-sm text-muted-foreground"
-          data-ocid="override.editor.loading_state"
-        >
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Đang tải menu…
-        </div>
+        <SkeletonList
+          count={3}
+          avatar={false}
+          label="Đang tải menu…"
+          ocid="override.editor.loading_state"
+        />
       )}
 
       {menuQuery.isError && (

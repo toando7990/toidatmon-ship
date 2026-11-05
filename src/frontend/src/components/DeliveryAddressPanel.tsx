@@ -4,6 +4,7 @@
 // THỰC — VPS tự chặn nếu chưa (xem lib/vps-client.ts).
 
 import { MapPicker } from "@/components/MapPicker";
+import { SkeletonList } from "@/components/Skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -220,13 +221,12 @@ export function DeliveryAddressPanel({ email }: DeliveryAddressPanelProps) {
       )}
 
       {addressesQuery.isLoading && (
-        <div
-          className="flex items-center gap-2 text-sm text-muted-foreground"
-          data-ocid="delivery_address.loading_state"
-        >
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Đang tải địa chỉ…
-        </div>
+        <SkeletonList
+          count={2}
+          avatar={false}
+          label="Đang tải địa chỉ…"
+          ocid="delivery_address.loading_state"
+        />
       )}
 
       {!addressesQuery.isLoading && addresses.length === 0 && !form && (

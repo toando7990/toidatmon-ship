@@ -7,6 +7,7 @@
 // — cách nhanh để tạo chương trình tương tự).
 
 import type { Promotion } from "@/backend";
+import { SkeletonTable } from "@/components/Skeletons";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,13 +180,7 @@ export function PromotionTable({
 
   if (isLoading) {
     return (
-      <div
-        className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-        data-ocid="promotion.table.loading_state"
-      >
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Đang tải danh sách chương trình…
-      </div>
+      <SkeletonTable rows={4} cols={5} ocid="promotion.table.loading_state" />
     );
   }
 

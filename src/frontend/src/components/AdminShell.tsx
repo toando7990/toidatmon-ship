@@ -173,7 +173,7 @@ function StoreSwitcher({ compact }: { compact?: boolean }) {
         aria-expanded={open}
         aria-label={`Đổi quán đang quản lý (${name})`}
         className={cn(
-          "flex max-w-[11rem] items-center gap-1 rounded-full bg-[var(--tdm-lime-soft)] px-2 py-0.5 text-[11.5px] font-bold text-[var(--tdm-olive)]",
+          "focus-ring flex max-w-[11rem] items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11.5px] font-bold text-secondary-foreground transition-smooth hover:bg-secondary/80",
           compact && "max-w-[13rem]",
         )}
         data-ocid="admin_shell.store_switcher"
@@ -183,7 +183,7 @@ function StoreSwitcher({ compact }: { compact?: boolean }) {
         <ChevronsUpDown className="h-3 w-3 shrink-0" aria-hidden="true" />
       </button>
       {open && (
-        <div className="absolute right-0 top-7 z-50 max-h-72 w-60 overflow-auto rounded-xl border bg-card p-1 shadow-lg">
+        <div className="absolute right-0 top-7 z-50 max-h-72 w-60 overflow-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-elevated">
           {(tenants ?? []).map((t) => (
             <button
               key={t.tenantId}
@@ -195,7 +195,7 @@ function StoreSwitcher({ compact }: { compact?: boolean }) {
                 }
               }}
               className={cn(
-                "flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left hover:bg-muted",
+                "focus-ring flex w-full flex-col items-start rounded-lg px-2.5 py-2 text-left transition-smooth hover:bg-muted",
                 t.tenantId === tenant?.tenantId && "bg-muted",
               )}
             >
@@ -270,7 +270,7 @@ function AdminNav({
 
   return (
     <nav aria-label="Menu quản trị" data-ocid="admin_shell.nav">
-      <label className="mb-1 flex h-10 items-center gap-2 rounded-xl bg-muted px-2.5 text-sm text-muted-foreground">
+      <label className="mb-1 flex h-10 items-center gap-2 rounded-md border border-input bg-card px-2.5 text-sm text-muted-foreground transition-smooth focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/30">
         <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
         <input
           ref={searchRef}
@@ -310,10 +310,10 @@ function AdminNav({
                 aria-current={on ? "page" : undefined}
                 data-ocid={`admin_shell.link.${item.to.replace(/\//g, "_")}`}
                 className={cn(
-                  "relative flex min-h-[44px] items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold transition-colors md:min-h-[38px]",
+                  "focus-ring relative flex min-h-[44px] items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition-smooth md:min-h-[38px]",
                   on
-                    ? "bg-primary/10 text-primary before:absolute before:-left-3 before:bottom-2 before:top-2 before:w-1 before:rounded-r before:bg-primary"
-                    : "text-foreground/85 hover:bg-muted",
+                    ? "bg-sidebar-accent text-primary before:absolute before:-left-3 before:bottom-2 before:top-2 before:w-1 before:rounded-r-full before:bg-accent"
+                    : "text-sidebar-foreground hover:bg-muted",
                 )}
               >
                 <Icon
@@ -325,7 +325,7 @@ function AdminNav({
                 />
                 <span className="flex-1 truncate">{item.label}</span>
                 {badge > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
+                  <span className="num flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground">
                     {badge}
                   </span>
                 )}
@@ -386,69 +386,74 @@ export function AdminShell({ children }: { children: ReactNode }) {
       className="flex min-h-screen flex-col bg-background"
       data-ocid="admin_shell"
     >
-      <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-card px-3 md:h-[60px] md:px-5">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Mở menu quản trị"
-          className="flex h-11 w-11 items-center justify-center rounded-xl border md:hidden"
-          data-ocid="admin_shell.menu_button"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <Link to="/admin" className="hidden items-center gap-2 md:flex">
-          <TdmIcon className="h-8 w-8" />
-          <span className="text-[17px] font-extrabold text-primary">
-            Tôi Đặt Món
-          </span>
-          <span className="rounded-full bg-[var(--tdm-lime-soft)] px-2 py-0.5 text-xs font-bold text-[var(--tdm-olive)]">
-            Quản trị
-          </span>
-        </Link>
-        <div className="min-w-0 flex-1 md:ml-6">
-          <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground md:hidden">
-            {current.group}
-          </p>
-          <p className="truncate text-base font-bold md:hidden">
-            {current.label}
-          </p>
-          <p
-            className="hidden items-center gap-1.5 text-sm text-muted-foreground md:flex"
-            data-ocid="admin_shell.breadcrumb"
+      <header className="app-header shadow-subtle">
+        <div className="flex h-14 items-center gap-3 px-3 md:h-[60px] md:px-5">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Mở menu quản trị"
+            className="icon-btn-bordered md:hidden"
+            data-ocid="admin_shell.menu_button"
           >
-            {current.group}
-            {current.label && (
-              <>
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                <b className="text-foreground">{current.label}</b>
-              </>
-            )}
-          </p>
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <Link
+            to="/admin"
+            className="focus-ring hidden items-center gap-2 rounded-lg md:flex"
+          >
+            <TdmIcon className="h-8 w-8" />
+            <span className="font-display text-[17px] font-bold text-primary">
+              Tôi Đặt Món
+            </span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">
+              Quản trị
+            </span>
+          </Link>
+          <div className="min-w-0 flex-1 md:ml-6">
+            <p className="section-label text-[11px] md:hidden">
+              {current.group}
+            </p>
+            <p className="truncate font-display text-base font-bold md:hidden">
+              {current.label}
+            </p>
+            <p
+              className="hidden items-center gap-1.5 text-sm text-muted-foreground md:flex"
+              data-ocid="admin_shell.breadcrumb"
+            >
+              {current.group}
+              {current.label && (
+                <>
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  <b className="text-foreground">{current.label}</b>
+                </>
+              )}
+            </p>
+          </div>
+          <a
+            href="/"
+            className="btn btn-outline hidden h-10 min-h-0 md:inline-flex"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            Trang đặt món
+          </a>
+          <button
+            type="button"
+            onClick={logout}
+            className="btn btn-ghost-destructive hidden h-10 min-h-0 md:inline-flex"
+            data-ocid="nav.logout_button"
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Đăng xuất
+          </button>
+          <TdmIcon className="h-8 w-8 md:hidden" />
         </div>
-        <a
-          href="/"
-          className="hidden h-10 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold hover:bg-muted md:flex"
-        >
-          <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          Trang đặt món
-        </a>
-        <button
-          type="button"
-          onClick={logout}
-          className="hidden h-10 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold hover:bg-destructive/10 hover:text-destructive md:flex"
-          data-ocid="nav.logout_button"
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          Đăng xuất
-        </button>
-        <TdmIcon className="h-8 w-8 md:hidden" />
       </header>
 
       <div className="flex flex-1">
-        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] w-[260px] shrink-0 overflow-y-auto border-r bg-card px-3 py-3.5 md:block">
+        <aside className="sticky top-[60px] hidden h-[calc(100vh-60px)] w-[260px] shrink-0 overflow-y-auto border-r border-sidebar-border bg-sidebar px-3 py-3.5 md:block">
           <AdminNav searchRef={searchRef} />
         </aside>
-        <main className="min-w-0 flex-1" data-ocid="page.main">
+        <main className="min-w-0 flex-1 pb-safe" data-ocid="page.main">
           {children}
         </main>
       </div>
@@ -456,21 +461,24 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="left"
-          className="w-[86%] max-w-sm overflow-y-auto p-3"
+          className="pt-safe pb-safe w-[86%] max-w-sm overflow-y-auto bg-sidebar p-3"
         >
           <SheetTitle className="mb-2 flex items-center gap-2 px-1 pt-1">
             <TdmIcon className="h-8 w-8" />
-            <span className="text-lg font-extrabold text-primary">
+            <span className="font-display text-lg font-bold text-primary">
               Tôi Đặt Món
             </span>
           </SheetTitle>
           <AdminNav onNavigate={() => setOpen(false)} />
-          <div className="mt-4 border-t pt-2">
+          <div className="mt-4 border-t border-border pt-2">
             <a
               href="/"
-              className="flex min-h-[44px] items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold hover:bg-muted"
+              className="focus-ring flex min-h-[44px] items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition-smooth hover:bg-muted"
             >
-              <ExternalLink className="h-[18px] w-[18px] text-muted-foreground" />
+              <ExternalLink
+                className="h-[18px] w-[18px] text-muted-foreground"
+                aria-hidden="true"
+              />
               Về trang đặt món
             </a>
             <button
@@ -479,9 +487,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 setOpen(false);
                 logout();
               }}
-              className="flex min-h-[44px] w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold hover:bg-destructive/10 hover:text-destructive"
+              className="focus-ring flex min-h-[44px] w-full items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold transition-smooth hover:bg-destructive/10 hover:text-destructive"
             >
-              <LogOut className="h-[18px] w-[18px] text-muted-foreground" />
+              <LogOut
+                className="h-[18px] w-[18px] text-muted-foreground"
+                aria-hidden="true"
+              />
               Đăng xuất
             </button>
           </div>

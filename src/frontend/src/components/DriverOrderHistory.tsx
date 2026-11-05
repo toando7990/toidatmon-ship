@@ -20,6 +20,7 @@
 
 import { matchesQuery } from "@/components/HighlightMatch";
 import { OrderCard } from "@/components/OrderCard";
+import { SkeletonList } from "@/components/Skeletons";
 import { useTenantId } from "@/hooks/useQueries";
 import { printInvoiceReceipt } from "@/lib/invoice-receipt";
 import { toOrder } from "@/lib/order-mapping";
@@ -192,13 +193,11 @@ export function DriverOrderHistory({
 
       {/* Danh sách đơn */}
       {isLoading ? (
-        <div
-          className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground"
-          data-ocid="driver_history.loading_state"
-        >
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Đang tải…
-        </div>
+        <SkeletonList
+          count={3}
+          label="Đang tải…"
+          ocid="driver_history.loading_state"
+        />
       ) : results.length > 0 ? (
         <div
           className="grid grid-cols-1 gap-3 sm:grid-cols-2"

@@ -1,20 +1,20 @@
 {
-  "overview": "A multi-partner food ordering and delivery platform where each partner runs their own restaurant chain, menu, and branded storefront on their own subdomain.",
+  "overview": "Nền tảng đặt món nhiều đối tác với trang khách, trang chủ nền tảng, bảng điều khiển đối tác, khu vực sàn và quản trị, dùng chung một giao diện thương hiệu.",
   "features": [
-    "Each partner gets their own branded storefront on a dedicated subdomain",
-    "Partners manage their own restaurant chain and menus",
-    "Customers order, track, and review their order history per partner",
-    "Staff activate devices scoped to their partner and restaurant",
-    "Central admin creates and manages all partners",
-    "Complete data separation between partners"
+    "Một hệ màu thương hiệu đỏ gạch và xanh lime cho mọi khu vực",
+    "Kiểu chữ, bo góc, đổ bóng và khoảng cách thống nhất",
+    "Nút, thẻ, công tắc, ô nhập và thanh điều hướng cùng kiểu dáng",
+    "Khung chờ khi đang tải nội dung",
+    "Mẫu chung cho màn hình đăng nhập, không có quyền, trống và lỗi",
+    "Giao diện điện thoại gọn gàng, không bị che bởi vùng an toàn"
   ],
   "category": "food-ordering",
   "tags": [
-    "multi-tenant",
-    "food-delivery",
     "restaurant",
-    "ordering",
-    "vietnam"
+    "multi-partner",
+    "vietnamese",
+    "design-system",
+    "mobile"
   ],
-  "last_updated": "2026-09-25T16:58:39.962Z"
+  "last_updated": "2026-11-05T13:24:41.469Z"
 }

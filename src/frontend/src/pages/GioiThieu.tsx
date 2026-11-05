@@ -8,6 +8,8 @@
 // thực được — tránh lặp lại bằng cách hiện đúng dữ liệu thật, tự cập nhật
 // khi có thêm/bớt chi nhánh, không cần sửa code mỗi lần đổi.
 
+import { StateScreen } from "@/components/AppStates";
+import { SkeletonTable } from "@/components/Skeletons";
 import { useRestaurants } from "@/hooks/useQueries";
 import { useTenant } from "@/hooks/useTenant";
 import { getCompanyInfo } from "@/lib/company-info";
@@ -16,7 +18,6 @@ import {
   Building2,
   Globe,
   Info,
-  Loader2,
   MapPin,
   Phone,
   ScrollText,
@@ -128,14 +129,15 @@ export default function GioiThieu() {
           cần sửa giao diện.
         </p>
         {restaurantsLoading ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Đang tải…
-          </div>
+          <SkeletonTable rows={3} cols={3} />
         ) : visibleRestaurants.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card px-4 py-7 text-center text-sm text-muted-foreground">
-            Chưa có thông tin chi nhánh.
-          </div>
+          <StateScreen
+            layout="inline"
+            variant="empty"
+            icon={Store}
+            title="Chưa có thông tin chi nhánh."
+            className="surface-card"
+          />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
             <table className="w-full border-collapse text-sm">
@@ -161,7 +163,7 @@ export default function GioiThieu() {
                   >
                     <td className="border-b border-border px-3 py-3 align-top">
                       <p className="font-bold text-foreground">{r.name}</p>
-                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-accent">
+                      <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-secondary-foreground">
                         <span
                           className="h-1.5 w-1.5 rounded-full bg-accent"
                           aria-hidden="true"

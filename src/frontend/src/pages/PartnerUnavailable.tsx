@@ -2,10 +2,10 @@
 // hidden. Never a blank screen: the customer sees a clear Vietnamese notice
 // with the attempted host and a way back to the home page.
 
+import { StateScreen } from "@/components/AppStates";
 import { useTenant } from "@/hooks/useTenant";
 import { PARTNER_ROOT_DOMAIN, partnerPath } from "@/lib/tenant";
-import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Home } from "lucide-react";
+import { Home } from "lucide-react";
 
 export function PartnerUnavailable() {
   const { slug } = useTenant();
@@ -15,32 +15,25 @@ export function PartnerUnavailable() {
       : PARTNER_ROOT_DOMAIN;
 
   return (
-    <section className="partner-notice" data-ocid="partner.notice">
-      <div className="partner-notice-card">
-        <div className="partner-notice-mark" aria-hidden="true">
-          <AlertTriangle className="h-7 w-7" />
-        </div>
-        <h1 className="partner-notice-title" data-ocid="partner.notice.title">
-          Không tìm thấy đối tác
-        </h1>
-        <p className="partner-notice-body">
-          Đối tác bạn đang truy cập không tồn tại hoặc đã tạm ngừng hoạt động.
-          Vui lòng kiểm tra lại đường dẫn, hoặc quay về trang chủ để tiếp tục.
-        </p>
+    <div className="bg-background" data-ocid="partner.notice">
+      <StateScreen
+        variant="warning"
+        className="min-h-[70vh]"
+        title={
+          <span data-ocid="partner.notice.title">Không tìm thấy đối tác</span>
+        }
+        description="Đối tác bạn đang truy cập không tồn tại hoặc đã tạm ngừng hoạt động. Vui lòng kiểm tra lại đường dẫn, hoặc quay về trang chủ để tiếp tục."
+        primaryAction={{
+          label: "Về trang chủ",
+          icon: Home,
+          to: "/",
+          ocid: "partner.notice.home_button",
+        }}
+      >
         <p className="partner-notice-slug" data-ocid="partner.notice.slug">
           {slug ? partnerPath(slug) : host}
         </p>
-        <div className="partner-notice-actions">
-          <Link
-            to="/"
-            data-ocid="partner.notice.home_button"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-smooth hover:opacity-90"
-          >
-            <Home className="h-4 w-4" aria-hidden="true" />
-            Về trang chủ
-          </Link>
-        </div>
-      </div>
-    </section>
+      </StateScreen>
+    </div>
   );
 }

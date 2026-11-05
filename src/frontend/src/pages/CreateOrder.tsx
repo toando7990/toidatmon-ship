@@ -4,7 +4,7 @@
 //       (lib/geo.ts) → chọn món (MenuPicker) → hồ sơ khách hàng (tự điền
 //       từ "Thông tin của bạn", xem Profile.tsx — không nhập lại trong giỏ)
 //       → đặt đơn (VPS /order/create).
-// Theme: bọc trong .bbh-order-theme (sơn mài đỏ / vàng hoàng cung, xem index.css).
+// Theme: bọc trong .bbh-order-theme (nay dùng chung token thương hiệu đỏ gạch / lime, xem index.css).
 // UI tiếng Việt. Mobile-first.
 //
 // TÁI CẤU TRÚC (Phần 3/6): trước đây khách tự chọn nhà hàng (dropdown) và
@@ -20,6 +20,7 @@
 // (POST /order/:id/qr). Sau khi tạo đơn thành công, chuyển khách sang
 // "Theo dõi đơn" (/track/$orderId).
 
+import { StateScreen } from "@/components/AppStates";
 import type { CustomerFormValues } from "@/components/CustomerForm";
 import { DeliveryAddressSelector } from "@/components/DeliveryAddressSelector";
 import { MenuPicker } from "@/components/MenuPicker";
@@ -72,6 +73,7 @@ import {
   Clock,
   Loader2,
   Receipt,
+  RefreshCw,
   ShoppingCart,
   Sparkles,
   User,
@@ -118,7 +120,7 @@ function CartLineThumbnail({ item }: { item: MenuItem }) {
   }, [imageUrl]);
 
   return (
-    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-md bg-muted">
+    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
       {imageUrl ? (
         <img
           src={imageUrl}
@@ -192,7 +194,12 @@ export default function CreateOrder() {
   const [favoriteRestaurantId, setFavoriteRestaurantId] = useState("");
   // Menu dùng chung cho toàn bộ chuỗi nhà hàng — hiện ngay từ đầu, không phụ thuộc
   // vào việc đã chọn nhà hàng hay chưa. Chỉ chặn ở bước THÊM MÓN (xem handleQuantityChange).
-  const { data: menuAll, isLoading: menuLoading } = useMenus();
+  const {
+    data: menuAll,
+    isLoading: menuLoading,
+    isError: menuError,
+    refetch: refetchMenu,
+  } = useMenus();
   // Ẩn món chủ quán/nhân viên báo "Hết hôm nay" (trang /quan-ly).
   const { data: soldOutToday } = useSoldOutToday(restaurantId);
   const menu = useMemo(() => {
@@ -691,10 +698,25 @@ export default function CreateOrder() {
   // xác thực (xem ghi chú trong applyPromotion, backend/mixins/promotion-api.mo).
   const cartDiscounts = useCartDiscounts(itemsTotal, identityEmail);
 
+  // Thanh cố định duy nhất ở đáy (gợi ý gọi thêm + giỏ hàng xếp chồng trong
+  // CÙNG một khối) — nằm ngay trên thanh điều hướng đáy (mobile) + vùng an
+  // toàn, nên 2 phần không bao giờ chồng lên nhau. Layout đã chừa chỗ cho
+  // thanh điều hướng đáy; phần đệm dưới của section khớp chiều cao khối này.
+  const showUpsell = upsellItems.length > 0;
+  const showCartBar = itemCount > 0;
+  const showFixedStack = showUpsell || showCartBar;
+  const sectionPadding = !showFixedStack
+    ? "pb-8"
+    : showUpsell && showCartBar
+      ? "pb-[calc(var(--fixed-bar-h)+var(--safe-bottom)+7rem)]"
+      : showUpsell
+        ? "pb-[calc(var(--safe-bottom)+7.5rem)]"
+        : "pb-fixed-bar";
+
   return (
     <div className="bbh-order-theme bg-background text-foreground">
       <section
-        className="mx-auto w-full max-w-2xl px-4 py-6 pb-28 md:px-6 md:py-10"
+        className={`mx-auto w-full max-w-2xl px-4 pt-5 md:px-6 md:pt-8 ${sectionPadding}`}
         data-ocid="create_order.page"
       >
         <header className="mb-4 flex flex-col gap-2.5">
@@ -737,105 +759,145 @@ export default function CreateOrder() {
                 notice={closedNotice}
               />
             </div>
-            <MenuPicker
-              menu={menu}
-              isLoading={menuLoading}
-              cart={cart}
-              onQuantityChange={handleQuantityChange}
-              disabled={submitting}
-              groupByCategory
-            />
+            {menuError ? (
+              <StateScreen
+                variant="error"
+                layout="inline"
+                className="surface-card"
+                title="Không tải được thực đơn"
+                description="Vui lòng kiểm tra kết nối mạng rồi thử lại."
+                primaryAction={{
+                  label: "Thử lại",
+                  icon: RefreshCw,
+                  onClick: () => void refetchMenu(),
+                  ocid: "create_order.menu_retry_button",
+                }}
+                ocid="create_order.menu_error_state"
+              />
+            ) : !menuLoading && !menu?.length ? (
+              <StateScreen
+                variant="empty"
+                icon={UtensilsCrossed}
+                layout="inline"
+                className="surface-card"
+                title="Chưa có món trong menu"
+                description="Vui lòng chọn nhà hàng khác hoặc quay lại sau."
+                ocid="menu_picker.empty_state"
+              />
+            ) : (
+              <MenuPicker
+                menu={menu}
+                isLoading={menuLoading}
+                cart={cart}
+                onQuantityChange={handleQuantityChange}
+                disabled={submitting}
+                groupByCategory
+              />
+            )}
           </div>
         </div>
 
-        {/* Gợi ý gọi thêm */}
-        {upsellItems.length > 0 && (
+        {/* Khối cố định ở đáy: gợi ý gọi thêm (nếu có) + thanh giỏ hàng.
+            Mobile: đặt ngay trên thanh điều hướng đáy (Layout.tsx) + vùng an
+            toàn; desktop không có thanh điều hướng đáy nên nằm sát đáy. */}
+        {showFixedStack && (
           <div
-            className="fixed inset-x-4 bottom-[calc(9rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-2xl rounded-xl border border-border bg-card p-3 shadow-elevated animate-fade-rise md:bottom-24"
-            data-ocid="create_order.upsell_strip"
+            className="fixed-bar max-md:!bottom-[calc(var(--bottom-nav-h)+var(--safe-bottom))] max-md:!pb-3"
+            data-ocid="create_order.fixed_stack"
           >
-            <div className="mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-[oklch(var(--bbh-gold))]">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                Gọi thêm cho tròn vị?
-              </span>
-              <button
-                type="button"
-                aria-label="Đóng gợi ý"
-                onClick={() => setUpsellItems([])}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-            <div
-              className="flex gap-2 overflow-x-auto pb-0.5"
-              data-ocid="create_order.upsell_scroll"
-            >
-              {upsellItems.map((m) => (
+            <div className="mx-auto flex w-full max-w-2xl flex-col gap-2.5">
+              {showUpsell && (
                 <div
-                  key={m.itemId}
-                  className="flex w-28 shrink-0 flex-col gap-1.5 rounded-lg bg-secondary p-2"
+                  className="animate-fade-rise"
+                  data-ocid="create_order.upsell_strip"
                 >
-                  <p className="line-clamp-2 text-xs font-semibold leading-snug">
-                    {m.name}
-                  </p>
-                  <div className="mt-auto flex items-center justify-between gap-1">
-                    <p className="text-[11px] text-muted-foreground">
-                      {formatVnd(Number(m.price))}
-                    </p>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      Gọi thêm cho tròn vị?
+                    </span>
                     <button
                       type="button"
-                      aria-label={`Thêm ${m.name}`}
-                      onClick={() => {
-                        handleQuantityChange(m.itemId, 1);
-                        setUpsellItems((prev) =>
-                          prev.filter((x) => x.itemId !== m.itemId),
-                        );
-                      }}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground"
+                      aria-label="Đóng gợi ý"
+                      onClick={() => setUpsellItems([])}
+                      className="icon-btn -mr-2 h-8 w-8 text-muted-foreground hover:text-foreground"
+                      data-ocid="create_order.upsell_close_button"
                     >
-                      +
+                      <X className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </div>
+                  <div
+                    className="flex gap-2 overflow-x-auto pb-0.5"
+                    data-ocid="create_order.upsell_scroll"
+                  >
+                    {upsellItems.map((m) => (
+                      <div
+                        key={m.itemId}
+                        className="flex w-40 shrink-0 items-center gap-2 rounded-lg border border-border bg-background py-1.5 pl-2.5 pr-1.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold leading-snug">
+                            {m.name}
+                          </p>
+                          <p className="num text-[11px] text-muted-foreground">
+                            {formatVnd(Number(m.price))}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Thêm ${m.name}`}
+                          onClick={() => {
+                            handleQuantityChange(m.itemId, 1);
+                            setUpsellItems((prev) =>
+                              prev.filter((x) => x.itemId !== m.itemId),
+                            );
+                          }}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-base font-bold text-accent-foreground transition-smooth focus-ring hover:opacity-90 active:scale-95"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {showCartBar && (
+                <button
+                  type="button"
+                  onClick={() => setCartOpen(true)}
+                  className="btn btn-primary h-14 w-full justify-between rounded-lg px-4"
+                  data-ocid="create_order.open_cart_button"
+                >
+                  <span className="flex flex-col items-start leading-tight">
+                    <span className="text-xs font-medium opacity-90">
+                      {itemCount} món
+                    </span>
+                    <span className="num text-base font-bold">
+                      {formatVnd(totalAmount + (shipQuote?.shippingFee ?? 0))}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground">
+                    <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+                    Xem giỏ hàng
+                  </span>
+                </button>
+              )}
             </div>
           </div>
-        )}
-
-        {/* Thanh giỏ hàng nổi — đẩy lên trên thanh điều hướng đáy (mobile,
-            Layout.tsx) bằng bottom-[calc(...)] + env(safe-area-inset-bottom);
-            desktop không có thanh điều hướng đáy nên giữ nguyên bottom-4. */}
-        {itemCount > 0 && (
-          <button
-            type="button"
-            onClick={() => setCartOpen(true)}
-            className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-2xl items-center justify-between rounded-2xl bg-gradient-primary px-5 py-4 text-primary-foreground shadow-elevated md:bottom-4"
-            data-ocid="create_order.open_cart_button"
-          >
-            <span className="flex flex-col items-start">
-              <span className="text-xs opacity-90">{itemCount} món</span>
-              <span className="font-display text-base font-bold">
-                {formatVnd(totalAmount + (shipQuote?.shippingFee ?? 0))}
-              </span>
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-3 py-1.5 text-sm font-semibold">
-              <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-              Xem giỏ hàng
-            </span>
-          </button>
         )}
 
         {/* Bottom sheet: giỏ hàng + thông tin khách + đặt đơn */}
         <Sheet open={cartOpen} onOpenChange={setCartOpen}>
           <SheetContent
             side="bottom"
-            className="bbh-order-theme flex max-h-[92vh] flex-col overflow-y-auto rounded-t-2xl bg-background text-foreground"
+            className="bbh-order-theme flex max-h-[92vh] flex-col overflow-y-auto rounded-t-2xl border-border bg-background text-foreground"
             data-ocid="create_order.cart_sheet"
           >
             <SheetHeader>
-              <SheetTitle className="font-display">Giỏ hàng của bạn</SheetTitle>
+              <SheetTitle className="font-display text-lg font-bold">
+                Giỏ hàng của bạn
+              </SheetTitle>
             </SheetHeader>
 
             <div className="flex flex-col gap-4 pb-4">
@@ -849,21 +911,21 @@ export default function CreateOrder() {
                   return (
                     <li
                       key={l.item.itemId}
-                      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-sm"
+                      className="surface-card flex items-center gap-3 p-3 text-sm"
                     >
                       <CartLineThumbnail item={l.item} />
                       <div className="min-w-0 flex-1">
-                        <p className="line-clamp-1 font-medium">
+                        <p className="line-clamp-1 font-semibold">
                           {l.item.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="num text-xs text-muted-foreground">
                           {formatVnd(Number(l.item.price))} × {l.quantity}
                         </p>
                       </div>
                       {isUtensil ? (
                         // Dòng dụng cụ là trạng thái DERIVED — số lượng tự
                         // đồng bộ theo món chính, không chỉnh sửa trực tiếp.
-                        <span className="shrink-0 text-xs text-muted-foreground">
+                        <span className="badge-lime shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold">
                           Tự động
                         </span>
                       ) : (
@@ -872,21 +934,21 @@ export default function CreateOrder() {
                             type="button"
                             variant="outline"
                             size="icon"
-                            className="h-11 w-11"
+                            className="h-11 w-11 rounded-full text-base"
                             onClick={() =>
                               handleQuantityChange(l.item.itemId, -1)
                             }
                           >
                             −
                           </Button>
-                          <span className="w-6 text-center font-mono">
+                          <span className="num w-6 text-center font-semibold">
                             {l.quantity}
                           </span>
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
-                            className="h-11 w-11"
+                            className="h-11 w-11 rounded-full text-base"
                             onClick={() =>
                               handleQuantityChange(l.item.itemId, 1)
                             }
@@ -901,13 +963,11 @@ export default function CreateOrder() {
               </ul>
 
               <div>
-                <h3 className="mb-2 text-sm font-semibold">
-                  Thông tin khách hàng
-                </h3>
+                <h3 className="section-label mb-2">Thông tin khách hàng</h3>
                 {verifiedEmail ? (
                   profileComplete ? (
                     <div
-                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-3 py-2.5"
+                      className="surface-card flex items-center justify-between gap-3 px-3 py-2.5"
                       data-ocid="create_order.profile_summary"
                     >
                       <div className="min-w-0">
@@ -920,7 +980,7 @@ export default function CreateOrder() {
                       </div>
                       <Link
                         to="/profile"
-                        className="shrink-0 text-xs font-semibold text-primary underline underline-offset-2"
+                        className="btn btn-outline min-h-[36px] shrink-0 px-3 text-xs"
                         data-ocid="create_order.profile_edit_link"
                       >
                         Sửa
@@ -928,16 +988,16 @@ export default function CreateOrder() {
                     </div>
                   ) : (
                     <div
-                      className="flex flex-col gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2.5"
+                      className="flex flex-col gap-2 rounded-xl border border-warning/45 bg-warning/15 px-3 py-2.5"
                       data-ocid="create_order.profile_incomplete_notice"
                     >
-                      <p className="text-sm text-warning">
+                      <p className="text-sm text-warning-foreground">
                         Vui lòng hoàn thành "Thông tin của bạn" (họ tên, SĐT)
                         trước khi đặt đơn.
                       </p>
                       <Link
                         to="/profile"
-                        className="inline-flex min-h-[36px] w-fit items-center gap-1.5 rounded-md bg-warning px-3 text-xs font-semibold text-warning-foreground transition-smooth hover:opacity-90"
+                        className="btn btn-primary min-h-[40px] w-fit px-3 text-xs"
                         data-ocid="create_order.profile_link"
                       >
                         <User className="h-3.5 w-3.5" aria-hidden="true" />
@@ -950,7 +1010,7 @@ export default function CreateOrder() {
                   // KHÔNG điều hướng sang trang khác, không nhắc gì về xác
                   // thực email (chỉ có đúng 1 chỗ cho việc đó: mục "Tôi").
                   <div
-                    className="flex flex-col gap-2 rounded-md border border-border bg-card p-3"
+                    className="surface-card flex flex-col gap-3 p-3"
                     data-ocid="create_order.guest_profile_form"
                   >
                     <div className="flex flex-col gap-1.5">
@@ -1009,7 +1069,7 @@ export default function CreateOrder() {
                   đơn (applyPromotion/applyVoucher), không đổi logic đã có. */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Tổng tiền hàng</span>
-                <span className="font-mono">{formatVnd(totalAmount)}</span>
+                <span className="num">{formatVnd(totalAmount)}</span>
               </div>
 
               {/* BUG THẬT đã sửa: phí ship Lalamove (shipQuote.shippingFee)
@@ -1026,7 +1086,7 @@ export default function CreateOrder() {
                   data-ocid="create_order.shipping_fee_line"
                 >
                   <span className="text-muted-foreground">Phí ship</span>
-                  <span className="font-mono">
+                  <span className="num">
                     {formatVnd(shipQuote.shippingFee)}
                   </span>
                 </div>
@@ -1038,7 +1098,7 @@ export default function CreateOrder() {
                   data-ocid="create_order.km_discount_line"
                 >
                   <span>{cartDiscounts.kmLabel || "Khuyến mãi giờ vàng"}</span>
-                  <span className="font-mono">
+                  <span className="num">
                     -{formatVnd(cartDiscounts.kmDiscount)}
                   </span>
                 </div>
@@ -1063,7 +1123,7 @@ export default function CreateOrder() {
                         e.target.value || null,
                       )
                     }
-                    className="h-9 rounded-md border border-border bg-card px-2 text-sm"
+                    className="h-11 rounded-md border border-input bg-card px-3 text-sm focus-ring"
                     data-ocid="create_order.voucher_select"
                   >
                     <option value="">Không dùng phiếu</option>
@@ -1083,7 +1143,7 @@ export default function CreateOrder() {
                   data-ocid="create_order.voucher_discount_line"
                 >
                   <span>Phiếu giảm giá</span>
-                  <span className="font-mono">
+                  <span className="num">
                     -{formatVnd(cartDiscounts.voucherDiscount)}
                   </span>
                 </div>
@@ -1096,26 +1156,26 @@ export default function CreateOrder() {
                   <Receipt className="h-4 w-4" aria-hidden="true" />
                   Tổng thanh toán
                 </span>
-                <span className="font-mono text-lg font-bold text-[oklch(var(--bbh-gold))]">
+                <span className="num text-xl font-bold text-primary">
                   {formatVnd(
                     cartDiscounts.finalTotal + (shipQuote?.shippingFee ?? 0),
                   )}
                 </span>
               </div>
 
-              <div className="sticky bottom-0 -mx-6 border-t border-border bg-background px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+              <div className="sticky bottom-0 -mx-6 border-t border-border bg-card px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-bar">
                 {storeClosed && (
                   <p
                     className="mb-2 text-center text-sm font-medium text-destructive"
                     data-ocid="create_order.closed_notice"
                   >
                     Ngoài giờ mở cửa — mở lại sau{" "}
-                    <span className="font-mono font-bold">{countdownText}</span>
+                    <span className="num font-bold">{countdownText}</span>
                   </p>
                 )}
                 <Button
                   type="button"
-                  className="min-h-[48px] w-full bg-gradient-primary text-primary-foreground"
+                  className="btn btn-primary btn-lg w-full rounded-md"
                   onClick={handleSubmit}
                   disabled={
                     submitting ||

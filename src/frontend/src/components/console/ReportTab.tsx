@@ -61,7 +61,7 @@ function Delta({
     <span
       className={cn(
         "text-xs font-bold",
-        good ? "text-green-700" : "text-red-700",
+        good ? "text-success" : "text-destructive",
       )}
     >
       {pct >= 0 ? "▲" : "▼"} {Math.abs(pct)}% so với kỳ trước
@@ -268,9 +268,7 @@ export function ReportTab({ ctx }: { ctx: Ctx }) {
                     <div
                       className={cn(
                         "w-full rounded-t-md",
-                        s.revenue === maxDay
-                          ? "bg-primary"
-                          : "bg-[var(--tdm-lime,#bacf50)]",
+                        s.revenue === maxDay ? "bg-primary" : "bg-accent",
                       )}
                       style={{
                         height: `${Math.max(2, (s.revenue / maxDay) * 100)}%`,
@@ -325,11 +323,11 @@ export function ReportTab({ ctx }: { ctx: Ctx }) {
                   style={{ width: `${pct(d.payments.online)}%` }}
                 />
                 <div
-                  className="bg-[var(--tdm-lime,#bacf50)]"
+                  className="bg-accent"
                   style={{ width: `${pct(d.payments.counterQr)}%` }}
                 />
                 <div
-                  className="bg-slate-400"
+                  className="bg-muted-foreground/50"
                   style={{ width: `${pct(d.payments.cash)}%` }}
                 />
               </div>
@@ -339,11 +337,11 @@ export function ReportTab({ ctx }: { ctx: Ctx }) {
                   Online {pct(d.payments.online)}%
                 </span>
                 <span>
-                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-[var(--tdm-lime,#bacf50)]" />
+                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-accent" />
                   QR tại quầy {pct(d.payments.counterQr)}%
                 </span>
                 <span>
-                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-slate-400" />
+                  <i className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-muted-foreground/50" />
                   Tiền mặt {pct(d.payments.cash)}%
                 </span>
               </div>
@@ -383,9 +381,7 @@ export function ReportTab({ ctx }: { ctx: Ctx }) {
                     <div
                       className={cn(
                         "w-full rounded-t-sm",
-                        h.orders === maxHour
-                          ? "bg-primary"
-                          : "bg-[var(--tdm-lime,#bacf50)]",
+                        h.orders === maxHour ? "bg-primary" : "bg-accent",
                       )}
                       style={{
                         height: `${Math.max(3, (h.orders / maxHour) * 100)}%`,

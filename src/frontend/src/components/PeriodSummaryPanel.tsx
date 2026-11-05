@@ -5,11 +5,12 @@
 // chỉ cung cấp cấu hình mức, phần "còn thiếu bao nhiêu" tính ở đây).
 
 import { OrderCard } from "@/components/OrderCard";
+import { SkeletonGrid } from "@/components/Skeletons";
 import { useCurrentSalesPromo, useTenantId } from "@/hooks/useQueries";
 import { toOrder } from "@/lib/order-mapping";
 import { getPeriodSummary } from "@/lib/vps-client";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
 function formatVnd(value: number): string {
   return new Intl.NumberFormat("vi-VN", {
@@ -68,12 +69,7 @@ export function PeriodSummaryPanel({ email, period }: PeriodSummaryPanelProps) {
   const periodLabel = period === "week" ? "tuần này" : "tháng này";
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Đang tải…
-      </div>
-    );
+    return <SkeletonGrid count={4} media={false} />;
   }
 
   if (isError) {
@@ -96,7 +92,7 @@ export function PeriodSummaryPanel({ email, period }: PeriodSummaryPanelProps) {
           Tổng doanh số {periodLabel} (đơn đã thanh toán)
         </p>
         <p
-          className="mt-0.5 font-mono text-2xl font-bold text-[oklch(var(--bbh-gold))]"
+          className="mt-0.5 font-mono text-2xl font-bold text-primary"
           data-ocid="order_history.period_summary.total"
         >
           {formatVnd(total)}

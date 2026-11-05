@@ -93,7 +93,7 @@ export function NearestRestaurantDisplay({
       </div>
       {notice && (
         <span
-          className="ml-6 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900"
+          className="badge-warning ml-6 rounded-md px-2 py-1 text-xs font-semibold"
           data-ocid="nearest_restaurant.closed_notice"
         >
           {notice}

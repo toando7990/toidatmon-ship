@@ -3,17 +3,21 @@
 // Mobile-first cards, large touch targets, Vietnamese labels.
 
 import { BookingStatus, type Order, PaymentStatus } from "@/backend";
+import { StateScreen } from "@/components/AppStates";
 import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
 import { HighlightMatch, matchesQuery } from "@/components/HighlightMatch";
 import { ManualPaymentPhotoDialog } from "@/components/ManualPaymentPhotoDialog";
+import { SkeletonList } from "@/components/Skeletons";
 import {
   DeliveryLine,
   useDeliveryStatuses,
 } from "@/components/delivery/DeliveryLine";
+import { cn } from "@/lib/utils";
 import { getManualPhotoConfirmEligibility } from "@/lib/vps-client";
 import { useQuery } from "@tanstack/react-query";
 import {
   Camera,
+  CircleAlert,
   Clock,
   Loader2,
   Search,
@@ -57,6 +61,8 @@ interface PaymentQueueProps {
   isError: boolean;
   onPay: (order: Order) => void;
   payingOrderId?: string | null;
+  /** Nằm trong khung đã có lề (vd. tab Tài xế ở /quan-ly) → không thêm lề. */
+  embedded?: boolean;
 }
 
 // Format VND từ bigint (amount tính bằng đồng).
@@ -114,6 +120,7 @@ export function PaymentQueue({
   isError,
   onPay,
   payingOrderId,
+  embedded = false,
 }: PaymentQueueProps) {
   const [photoConfirmOrder, setPhotoConfirmOrder] = useState<Order | null>(
     null,
@@ -150,11 +157,14 @@ export function PaymentQueue({
   const sorted = groups.flatMap((g) => g.orders);
   return (
     <section
-      className="mx-auto w-full max-w-2xl px-4 py-6 md:px-6 md:py-8"
+      className={cn(
+        "w-full",
+        embedded ? "py-1" : "mx-auto max-w-2xl px-4 py-6 md:px-6 md:py-8",
+      )}
       data-ocid="queue.section"
     >
       <header className="mb-4 flex items-center gap-3">
-        <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-card px-3 transition-smooth focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/30">
           <Search
             className="h-4 w-4 shrink-0 text-muted-foreground"
             aria-hidden="true"
@@ -165,7 +175,7 @@ export function PaymentQueue({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm theo tên hoặc SĐT khách…"
             data-ocid="queue.search_input"
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="h-11 w-full min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -173,14 +183,14 @@ export function PaymentQueue({
               onClick={() => setSearchQuery("")}
               aria-label="Xoá nội dung tìm kiếm"
               data-ocid="queue.search_clear_button"
-              className="shrink-0 text-muted-foreground transition-smooth hover:text-foreground"
+              className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-smooth hover:text-foreground focus-ring"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           )}
         </div>
         <span
-          className="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary"
+          className="num inline-flex shrink-0 items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary"
           data-ocid="queue.count"
         >
           {sorted.length} đơn
@@ -189,49 +199,42 @@ export function PaymentQueue({
 
       {isError && (
         <div
-          className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
           data-ocid="queue.error_state"
+          role="alert"
         >
+          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           Không tải được danh sách đơn. Đang thử lại tự động mỗi 5 giây…
         </div>
       )}
 
       {isLoading && sorted.length === 0 && (
-        <div
-          className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-4 py-10 text-center"
-          data-ocid="queue.loading_state"
-        >
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Đang tải đơn chờ…</p>
-        </div>
+        <SkeletonList
+          count={3}
+          avatar={false}
+          label="Đang tải đơn chờ…"
+          ocid="queue.loading_state"
+        />
       )}
 
       {!isLoading && sorted.length === 0 && !isError && (
-        <div
-          className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-card px-4 py-12 text-center"
-          data-ocid="queue.empty_state"
-        >
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground"
-            aria-hidden="true"
-          >
-            {searchQuery.trim() ? (
-              <Search className="h-7 w-7" />
-            ) : (
-              <ShoppingBag className="h-7 w-7" />
-            )}
-          </div>
-          <h2 className="font-display text-lg font-semibold">
-            {searchQuery.trim()
+        <StateScreen
+          variant="empty"
+          layout="inline"
+          icon={searchQuery.trim() ? Search : ShoppingBag}
+          title={
+            searchQuery.trim()
               ? `Không tìm thấy đơn khớp "${searchQuery.trim()}"`
-              : "Không có đơn chờ thanh toán"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {searchQuery.trim()
+              : "Không có đơn chờ thanh toán"
+          }
+          description={
+            searchQuery.trim()
               ? "Thử tìm theo tên hoặc SĐT khác."
-              : "Hàng đợi trống. Đơn mới sẽ xuất hiện tự động mỗi 5 giây."}
-          </p>
-        </div>
+              : "Hàng đợi trống. Đơn mới sẽ xuất hiện tự động mỗi 5 giây."
+          }
+          className="rounded-xl border border-dashed border-border bg-card"
+          ocid="queue.empty_state"
+        />
       )}
 
       {sorted.length > 0 && (
@@ -275,18 +278,19 @@ export function PaymentQueue({
                 <li
                   data-ocid={`queue.item.${idx + 1}`}
                   data-group={groupNo}
-                  className={`rounded-xl border p-4 shadow-sm transition-smooth hover:shadow-md ${
+                  className={cn(
+                    "rounded-xl border p-4 shadow-subtle ring-1 transition-smooth hover:shadow-panel",
                     expired
-                      ? "border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/40"
+                      ? "border-warning bg-warning/10 ring-warning/40"
                       : discounted
-                        ? "border-destructive bg-destructive/10 ring-1 ring-destructive/40"
-                        : "border-accent/50 bg-accent/5 ring-1 ring-accent/25"
-                  }`}
+                        ? "border-destructive bg-destructive/10 ring-destructive/40"
+                        : "border-accent/50 bg-accent/5 ring-accent/25",
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+                        <span className="num inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                           #{idx + 1}
                         </span>
                         <span
@@ -298,7 +302,7 @@ export function PaymentQueue({
                         </span>
                         {expired && (
                           <span
-                            className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-amber-50"
+                            className="inline-flex items-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-warning-foreground"
                             data-ocid={`queue.expired_badge.${idx + 1}`}
                           >
                             QR hết hạn — tạo lại
@@ -362,23 +366,24 @@ export function PaymentQueue({
                         </ul>
                       )}
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {/* Đã giảm (Giai đoạn 4c/cộng gộp KM Hệ 1 + phiếu) —
+                    <div className="flex flex-col gap-2 border-t border-border/60 pt-3 sm:w-auto sm:shrink-0 sm:items-end sm:border-t-0 sm:pt-0">
+                      <div className="flex items-baseline justify-between gap-2 sm:flex-col sm:items-end sm:gap-1">
+                        {/* Đã giảm (Giai đoạn 4c/cộng gộp KM Hệ 1 + phiếu) —
                         hiện ngay trên tổng tiền khi đơn có áp dụng chiết
                         khấu, khớp cách hiện ở OrderCard.tsx. */}
-                      {discounted && (
-                        <span
-                          className="font-mono text-xs font-medium text-destructive"
-                          data-ocid={`queue.discount.${idx + 1}`}
-                        >
-                          Đã giảm -
-                          {formatVnd(
-                            order.kmDiscountAmount +
-                              order.voucherDiscountAmount,
-                          )}
-                        </span>
-                      )}
-                      {/* Chỉ hiện tiền hàng — order.amount ĐÃ LÀ tiền hàng
+                        {discounted && (
+                          <span
+                            className="num text-xs font-medium text-destructive"
+                            data-ocid={`queue.discount.${idx + 1}`}
+                          >
+                            Đã giảm -
+                            {formatVnd(
+                              order.kmDiscountAmount +
+                                order.voucherDiscountAmount,
+                            )}
+                          </span>
+                        )}
+                        {/* Chỉ hiện tiền hàng — order.amount ĐÃ LÀ tiền hàng
                         thuần (không bao giờ cộng phí ship vào từ đầu —
                         xem routes/create.js), KHÔNG được trừ thêm
                         shippingFee nữa (BUG THẬT đã sửa: trước đây trừ
@@ -388,9 +393,10 @@ export function PaymentQueue({
                         thật khác 0, phép trừ này khiến số tiền hiện ra
                         THẤP HƠN số thật tài xế cần trả cho quán). Khớp
                         với số trên màn QR. */}
-                      <span className="font-display text-xl font-bold text-primary">
-                        {formatVnd(order.amount)}
-                      </span>
+                        <span className="num ml-auto text-xl font-bold text-primary sm:ml-0">
+                          {formatVnd(order.amount)}
+                        </span>
+                      </div>
                       {isCancelled ? (
                         <span
                           data-ocid={`queue.cancelled_badge.${idx + 1}`}
@@ -399,14 +405,17 @@ export function PaymentQueue({
                           Đơn đã huỷ
                         </span>
                       ) : (
-                        <>
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-col sm:items-stretch">
                           <button
                             type="button"
                             onClick={() => onPay(order)}
                             disabled={isPaying}
                             data-ocid={`queue.pay_button.${idx + 1}`}
                             aria-label={`Thanh toán đơn ${order.cusName || order.orderId}`}
-                            className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-smooth hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            className={cn(
+                              "btn btn-primary min-w-0",
+                              isPaying && "is-busy",
+                            )}
                           >
                             {isPaying ? (
                               <>
@@ -435,15 +444,15 @@ export function PaymentQueue({
                                 ? "Chỉ dùng được sau khi đơn đã từng tạo QR"
                                 : undefined
                             }
-                            className="inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-smooth hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-card"
+                            className="btn btn-outline min-w-0 whitespace-normal px-3 text-xs leading-tight disabled:pointer-events-auto disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             <Camera
-                              className="h-3.5 w-3.5"
+                              className="h-3.5 w-3.5 shrink-0"
                               aria-hidden="true"
                             />
                             Xác nhận bằng ảnh
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>

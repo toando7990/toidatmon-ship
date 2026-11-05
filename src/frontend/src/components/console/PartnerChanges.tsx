@@ -59,9 +59,9 @@ const FIELDS: Record<ChangeKind, string[]> = {
 };
 
 const STATUS_STYLE: Record<ChangeRequest["status"], [string, string]> = {
-  pending: ["Chờ duyệt", "bg-amber-100 text-amber-900"],
-  approved: ["Đã duyệt", "bg-green-100 text-green-800"],
-  rejected: ["Từ chối", "bg-red-100 text-red-800"],
+  pending: ["Chờ duyệt", "badge-warning"],
+  approved: ["Đã duyệt", "badge-success"],
+  rejected: ["Từ chối", "badge-destructive"],
 };
 
 function mask(num: string) {
@@ -172,7 +172,7 @@ function RequestSheet({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/45">
       <section
         aria-label="Gửi yêu cầu thay đổi"
         className="flex max-h-[94vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-t-3xl bg-background p-5"

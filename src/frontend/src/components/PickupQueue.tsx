@@ -5,6 +5,7 @@
 
 import type { Order } from "@/backend";
 import { CopyOrderIdButton } from "@/components/CopyOrderIdButton";
+import { SkeletonList } from "@/components/Skeletons";
 import { useMarkPickedUp } from "@/hooks/useQueries";
 import {
   CheckCircle2,
@@ -102,15 +103,11 @@ export function PickupQueue({ orders, isLoading, isError }: PickupQueueProps) {
       )}
 
       {isLoading && sorted.length === 0 && (
-        <div
-          className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card px-4 py-10 text-center"
-          data-ocid="pickup.loading_state"
-        >
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Đang tải đơn chờ nhận…
-          </p>
-        </div>
+        <SkeletonList
+          count={3}
+          label="Đang tải đơn chờ nhận…"
+          ocid="pickup.loading_state"
+        />
       )}
 
       {!isLoading && sorted.length === 0 && !isError && (

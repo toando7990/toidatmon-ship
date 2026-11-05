@@ -48,7 +48,7 @@ export function PromoMarquee() {
   if (registrationPromo) {
     items.push({
       key: "registration",
-      className: "text-accent",
+      className: "text-[var(--tdm-olive)]",
       icon: "🎉",
       text: `Khuyến mại đăng ký: Xác thực email lần đầu nhận ngay voucher ${formatVnd(registrationPromo.voucherValue)}`,
     });
@@ -109,7 +109,7 @@ export function PromoMarquee() {
       className="relative mb-4 overflow-hidden rounded-md border border-border bg-gradient-to-r from-accent/10 to-primary/10 py-2.5"
       data-ocid="promo_marquee"
     >
-      <div className="flex w-max animate-promo-marquee">
+      <div className="flex w-max animate-promo-marquee motion-reduce:animate-none">
         {renderItems("a")}
         {renderItems("b")}
       </div>

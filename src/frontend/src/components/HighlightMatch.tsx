@@ -47,7 +47,7 @@ export function HighlightMatch({
   return (
     <Fragment>
       {before}
-      <mark className="rounded-sm bg-amber-300/60 text-inherit">{match}</mark>
+      <mark className="rounded-sm bg-accent/60 text-inherit">{match}</mark>
       {after}
     </Fragment>
   );

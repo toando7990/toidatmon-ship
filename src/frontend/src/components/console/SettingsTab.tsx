@@ -210,7 +210,7 @@ export function StartChecklist({
       </button>
       <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-[var(--tdm-lime,#bacf50)]"
+          className="h-full rounded-full bg-accent"
           style={{ width: `${(done / steps.length) * 100}%` }}
         />
       </div>
@@ -225,8 +225,8 @@ export function StartChecklist({
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
                   s.done
-                    ? "border-green-700 bg-green-700 text-white"
-                    : "border-stone-300",
+                    ? "border-success bg-success text-success-foreground"
+                    : "border-input",
                 )}
               >
                 {s.done && <Check className="h-3.5 w-3.5" />}
@@ -352,7 +352,7 @@ function RestaurantSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center sm:justify-center"
+      className="fixed inset-0 z-50 flex items-end bg-foreground/40 sm:items-center sm:justify-center"
       data-ocid="console.restaurant_sheet"
     >
       <div className="flex max-h-[92vh] w-full flex-col gap-3 overflow-y-auto rounded-t-3xl bg-background p-4 sm:max-w-lg sm:rounded-3xl">
@@ -452,7 +452,7 @@ function RestaurantSheet({
                 <span
                   className={cn(
                     "text-[13px]",
-                    hasPin(d) ? "text-green-700" : "text-amber-700",
+                    hasPin(d) ? "text-success" : "text-warning-foreground",
                   )}
                 >
                   {hasPin(d)
@@ -675,7 +675,7 @@ function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
               className="flex w-full items-start gap-3 border-b py-3 text-left last:border-0"
               data-ocid="console.restaurant_row"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--tdm-lime-soft,#e9f0c9)] text-[var(--tdm-olive,#3f4a12)]">
+              <span className="badge-lime flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
                 <Store className="h-5 w-5" />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -687,7 +687,7 @@ function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
                   <StatusChip status={statusQ.data?.get(r.restaurantId)} />
                 )}
                 {!hasPin(r) ? (
-                  <span className="flex items-center gap-1 text-xs font-bold text-amber-700">
+                  <span className="flex items-center gap-1 text-xs font-bold text-warning-foreground">
                     <AlertTriangle className="h-3.5 w-3.5" /> Chưa ghim vị trí —
                     chưa gọi được tài xế
                   </span>
@@ -696,7 +696,7 @@ function RestaurantsPanel({ ctx }: { ctx: Ctx }) {
                     Đang ẩn với khách
                   </span>
                 ) : (
-                  <span className="text-xs font-bold text-green-700">
+                  <span className="text-xs font-bold text-success">
                     ✓ Đã ghim vị trí · hiện cho khách
                   </span>
                 )}
@@ -825,7 +825,7 @@ const DEVICE_ROLES: {
     role: DeviceRole.cashier,
     label: "Nhân viên",
     desc: "Đơn của 1 nhà hàng, bán quầy, gạt còn/hết món",
-    chip: "bg-blue-100 text-blue-800",
+    chip: "badge-info",
     branch: true,
     path: "quan-ly",
   },
@@ -833,7 +833,7 @@ const DEVICE_ROLES: {
     role: DeviceRole.driver,
     label: "Giao nhận",
     desc: "Quét QR tài xế, thu tiền tài xế, in phiếu — 1 nhà hàng",
-    chip: "bg-cyan-100 text-cyan-800",
+    chip: "badge-success",
     branch: true,
     path: "driver",
   },
@@ -841,7 +841,7 @@ const DEVICE_ROLES: {
     role: DeviceRole.accounting,
     label: "Kế toán",
     desc: "Báo cáo, hoá đơn, tiền đối soát — mọi nhà hàng",
-    chip: "bg-violet-100 text-violet-800",
+    chip: "badge-lime",
     branch: false,
     path: "enterprise/management",
   },
@@ -849,7 +849,7 @@ const DEVICE_ROLES: {
     role: DeviceRole.salesPromoReporting,
     label: "Khuyến mại",
     desc: "Tạo / dừng khuyến mại, xem báo cáo — mọi nhà hàng",
-    chip: "bg-orange-100 text-orange-800",
+    chip: "badge-warning",
     branch: false,
     path: "enterprise/management",
   },
@@ -1050,7 +1050,7 @@ function DevicesCard({ ctx }: { ctx: Ctx }) {
           {code ? (
             <>
               <div
-                className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center text-sm leading-relaxed text-blue-900"
+                className="badge-info rounded-xl border p-3 text-center text-sm leading-relaxed"
                 data-ocid="console.device_code"
               >
                 Trên máy mới, mở{" "}
@@ -1146,7 +1146,7 @@ function RecoveryCard({ ctx }: { ctx: Ctx }) {
           <span className="text-2xl font-extrabold tracking-[3px]">
             {shown}
           </span>
-          <span className="text-[13px] font-bold text-red-700">
+          <span className="text-[13px] font-bold text-destructive">
             Mã chỉ hiện 1 lần — chụp màn hình hoặc chép ra giấy ngay.
           </span>
           <BigButton variant="outline" onClick={() => setShown(null)}>
@@ -1250,8 +1250,8 @@ function PlanAndPromo({ ctx }: { ctx: Ctx }) {
             className={cn(
               "rounded-full px-2.5 py-1 text-xs font-extrabold",
               ctx.settings?.counterPlan
-                ? "bg-green-100 text-green-800"
-                : "bg-stone-200 text-stone-600",
+                ? "badge-success"
+                : "bg-muted text-muted-foreground",
             )}
           >
             {ctx.settings?.counterPlan ? "Đang dùng" : "Chưa đăng ký"}

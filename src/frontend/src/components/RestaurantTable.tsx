@@ -2,6 +2,7 @@
 // Responsive: card list trên mobile, table trên md+. UI tiếng Việt.
 
 import type { Restaurant } from "@/backend";
+import { SkeletonTable } from "@/components/Skeletons";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff, Pencil, Tag, Trash2 } from "lucide-react";
 
@@ -33,12 +34,7 @@ export function RestaurantTable({
 }: RestaurantTableProps) {
   if (loading) {
     return (
-      <div
-        className="rounded-md border border-border bg-card p-6 text-sm text-muted-foreground"
-        data-ocid="restaurant.table.loading_state"
-      >
-        Đang tải danh sách nhà hàng…
-      </div>
+      <SkeletonTable rows={4} cols={4} ocid="restaurant.table.loading_state" />
     );
   }
 

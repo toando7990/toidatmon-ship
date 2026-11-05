@@ -76,7 +76,7 @@ export function DriverTab({ ctx }: { ctx: Ctx }) {
       <button
         type="button"
         onClick={() => setScanOpen(true)}
-        className="flex h-[76px] items-center justify-center gap-3 rounded-2xl bg-foreground text-lg font-extrabold text-background"
+        className="btn btn-dark h-[72px] w-full gap-3 rounded-lg text-lg font-bold"
         data-ocid="console.driver_scan"
       >
         <ScanLine className="h-7 w-7" /> Quét QR tài xế
@@ -85,20 +85,20 @@ export function DriverTab({ ctx }: { ctx: Ctx }) {
         <button
           type="button"
           onClick={() => setPrinterOpen(true)}
-          className="flex h-10 items-center gap-1.5 rounded-xl border bg-card px-3 text-sm font-bold"
+          className="btn btn-outline gap-1.5 px-3"
+          data-ocid="console.driver_printer_button"
         >
           <Printer className="h-4 w-4" /> Máy in
         </button>
       </div>
-      <div className="-mx-4">
-        <PaymentQueue
-          orders={pending.data ?? []}
-          isLoading={pending.isLoading}
-          isError={pending.isError}
-          onPay={(order) => setPaying({ order })}
-          payingOrderId={paying?.order.orderId ?? null}
-        />
-      </div>
+      <PaymentQueue
+        orders={pending.data ?? []}
+        isLoading={pending.isLoading}
+        isError={pending.isError}
+        onPay={(order) => setPaying({ order })}
+        payingOrderId={paying?.order.orderId ?? null}
+        embedded
+      />
       <QrScannerDialog
         open={scanOpen}
         onOpenChange={setScanOpen}
@@ -137,7 +137,7 @@ export function DriverHistoryTab({ ctx }: { ctx: Ctx }) {
   const [period, setPeriod] = useState<RestaurantHistoryPeriod>("today");
   return (
     <div className="flex flex-col gap-3" data-ocid="console.driver_history">
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
         {PERIODS.map(([p, label]) => (
           <button
             key={p}
@@ -145,11 +145,10 @@ export function DriverHistoryTab({ ctx }: { ctx: Ctx }) {
             aria-pressed={period === p}
             onClick={() => setPeriod(p)}
             className={cn(
-              "min-h-[44px] rounded-full border px-4 text-[15px] font-bold",
-              period === p
-                ? "border-foreground bg-foreground text-background"
-                : "bg-card text-muted-foreground",
+              "chip h-11 px-4 text-[15px] focus-ring",
+              period === p ? "chip-active" : "text-muted-foreground",
             )}
+            data-ocid={`console.driver_history_period_${p}`}
           >
             {label}
           </button>

@@ -5,8 +5,10 @@
 // LƯU Ý: route và nav link đã được đăng ký sẵn ở App.tsx/Layout.tsx — file này
 // chỉ dựng phần thân trang.
 
+import { StateScreen } from "@/components/AppStates";
 import { CounterPlanPanel } from "@/components/CounterPlanPanel";
 import { PartnerBankPanel } from "@/components/PartnerBank";
+import { SkeletonTable } from "@/components/Skeletons";
 import { TenantForm, type TenantFormValues } from "@/components/TenantForm";
 import { TenantTable } from "@/components/TenantTable";
 import {
@@ -23,7 +25,7 @@ import { useCanister } from "@/lib/canister";
 import { hasProfileApi, setPartnerProfile } from "@/lib/partner-profile";
 import type { Tenant } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { Building2, Loader2, Plus, X } from "lucide-react";
+import { Building2, Plus, X } from "lucide-react";
 import { useState } from "react";
 
 type Mode =
@@ -247,25 +249,25 @@ export default function PartnerManager() {
       {mode.kind === "list" && (
         <div className="mt-6">
           {tenantsQuery.isLoading && (
-            <div
-              className="flex items-center gap-2 rounded-md border border-border bg-card p-6 text-sm text-muted-foreground"
-              data-ocid="tenant.loading_state"
-            >
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Đang tải danh sách đối tác…
-            </div>
+            <SkeletonTable rows={4} cols={5} ocid="tenant.loading_state" />
           )}
           {tenantsQuery.isError && (
-            <div
-              className="rounded-md border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive"
-              data-ocid="tenant.error_state"
-              role="alert"
-            >
-              Lỗi tải danh sách đối tác:{" "}
-              {tenantsQuery.error instanceof Error
-                ? tenantsQuery.error.message
-                : "Không xác định"}
-            </div>
+            <StateScreen
+              layout="inline"
+              variant="error"
+              title="Lỗi tải danh sách đối tác"
+              description={
+                tenantsQuery.error instanceof Error
+                  ? tenantsQuery.error.message
+                  : "Không xác định"
+              }
+              primaryAction={{
+                label: "Thử lại",
+                onClick: () => void tenantsQuery.refetch(),
+              }}
+              ocid="tenant.error_state"
+              className="surface-card"
+            />
           )}
           {!tenantsQuery.isLoading && !tenantsQuery.isError && (
             <TenantTable

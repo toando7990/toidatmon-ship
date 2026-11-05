@@ -14,19 +14,14 @@ export function isValidBrandColor(value: string | null | undefined): boolean {
   return typeof value === "string" && HEX_COLOR.test(value.trim());
 }
 
-// Build the inline style that applies a partner's brand color at the app
-// root. Returns an empty object when there is no valid brand color, which
-// leaves the --brand-* defaults (aliases of the existing tokens) in place.
+// Inline style for the storefront root. The platform uses ONE brand palette
+// (brick red + lime) everywhere, so a partner's brandColor no longer
+// overrides the --brand-* tokens; they always resolve to the unified
+// defaults defined in index.css. Kept as a function so callers stay stable.
 export function tenantBrandStyle(
-  tenant: Tenant | null | undefined,
+  _tenant: Tenant | null | undefined,
 ): CSSProperties {
-  if (!tenant || !isValidBrandColor(tenant.brandColor)) return {};
-  const color = tenant.brandColor.trim();
-  return {
-    "--brand-primary": color,
-    "--brand-accent": color,
-    "--brand-ring": color,
-  } as CSSProperties;
+  return {};
 }
 
 // First letter of the partner name, used for the monogram fallback when a
